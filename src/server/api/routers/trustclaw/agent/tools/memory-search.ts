@@ -110,6 +110,16 @@ export async function searchMemoriesForContext(
   maxResults = 5,
 ): Promise<string[]> {
   try {
+    // Skip the embedding round-trip entirely when there's nothing to recall -
+    // avoids a gateway call on every turn for buckets with no memories yet.
+    const count = await db.memory.count({
+      where: {
+        instanceId,
+        category: { in: [activeBucket, DEFAULT_MEMORY_BUCKET] },
+      },
+    });
+    if (count === 0) return [];
+
     const embeddingString = await embedQuery(query);
 
     const results = z.array(memoryContextRow).parse(
