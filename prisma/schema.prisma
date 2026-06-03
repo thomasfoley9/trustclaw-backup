@@ -102,6 +102,14 @@ model ComposioClawInstance {
   // Anthropic config
   anthropicModel String @default("claude-sonnet-4-5-20250929")
 
+  // Memory routing: which bucket new memories save to, and whether the
+  // current chat runs incognito (no recall, no save, no history).
+  activeMemoryBucket String  @default("general")
+  incognitoMode      Boolean @default(false)
+
+  // Active personality (swappable "skin" for the agent's voice).
+  activePersonalityId String?
+
   // Telegram linking
   telegramChatId             String?   @unique
   telegramLinkToken          String?   @unique
@@ -124,12 +132,31 @@ model ComposioClawInstance {
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  messages Message[]
-  memories Memory[]
-  cronJobs CronJob[]
+  messages      Message[]
+  memories      Memory[]
+  cronJobs      CronJob[]
+  personalities Personality[]
 
   @@index([userId])
   @@map("composio_claw_instance")
+}
+
+model Personality {
+  id         String   @id @default(cuid())
+  instanceId String
+  name       String
+  prompt     String
+  emoji      String?
+  avatarKey  String?
+  isPreset   Boolean  @default(false)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  instance ComposioClawInstance @relation(fields: [instanceId], references: [id], onDelete: Cascade)
+
+  @@unique([instanceId, name])
+  @@index([instanceId])
+  @@map("composio_claw_personality")
 }
 
 model Message {
@@ -156,12 +183,14 @@ model Memory {
   id         String                      @id @default(cuid())
   instanceId String
   content    String
+  category   String                      @default("general")
   embedding  Unsupported("VECTOR(1024)")
   createdAt  DateTime                    @default(now())
 
   instance ComposioClawInstance @relation(fields: [instanceId], references: [id], onDelete: Cascade)
 
   @@index([instanceId, createdAt])
+  @@index([instanceId, category])
   @@map("composio_claw_memory")
 }
 

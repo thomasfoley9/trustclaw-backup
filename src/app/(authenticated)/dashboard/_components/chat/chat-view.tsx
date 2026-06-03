@@ -81,6 +81,24 @@ export function ChatView({
     pageCountRef.current = historyPageCount;
   }, [historyPageCount, initialMessages, setMessages]);
 
+  // Virtuoso can fail to paint its items on initial mount/hydration (the rows
+  // exist in the DOM at the right position but aren't rendered until a
+  // scroll/reflow). Force one scroll-to-bottom once messages first appear so
+  // the conversation isn't invisible on load.
+  const didInitialScrollRef = useRef(false);
+  useEffect(() => {
+    if (didInitialScrollRef.current || messages.length === 0) return;
+    didInitialScrollRef.current = true;
+    // A few staggered nudges: Virtuoso may not have finished mounting on the
+    // first frame, so retry over the next ~400ms to guarantee it paints.
+    const timers = [60, 200, 400].map((delay) =>
+      setTimeout(() => {
+        virtuosoRef.current?.scrollToIndex({ index: "LAST", align: "end" });
+      }, delay),
+    );
+    return () => timers.forEach(clearTimeout);
+  }, [messages.length]);
+
   const handleStartReached = useCallback(() => {
     if (hasOlderMessages && !isFetchingOlderMessages) {
       void fetchOlderMessages();
@@ -198,6 +216,7 @@ export function ChatView({
                 )
               }
               className="!overflow-y-auto"
+              style={{ height: "100%" }}
             />
           )}
 

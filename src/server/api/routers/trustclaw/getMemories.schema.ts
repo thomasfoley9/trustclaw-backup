@@ -10,6 +10,7 @@ export type GetMemoriesInput = z.infer<typeof getMemoriesInput>;
 export const memoryRow = z.object({
   id: z.string(),
   content: z.string(),
+  category: z.string(),
   createdAt: z.coerce.date(),
 });
 

@@ -38,9 +38,21 @@ export const CURATED_EMOJIS = [
 
 export const MODELS = [
   {
+    value: "claude-opus-4-8" as const,
+    label: "Claude Opus 4.8",
+    description: "Most capable",
+    cost: "$$$",
+  },
+  {
+    value: "claude-opus-4-7" as const,
+    label: "Claude Opus 4.7",
+    description: "Highly capable",
+    cost: "$$$",
+  },
+  {
     value: "claude-opus-4-6" as const,
     label: "Claude Opus 4.6",
-    description: "Most capable",
+    description: "Very capable",
     cost: "$$$",
   },
   {

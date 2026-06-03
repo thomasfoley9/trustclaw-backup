@@ -5,6 +5,8 @@ interface SystemPromptParams {
   identityPrompt: string | null;
   userPrompt: string | null;
   relevantMemories?: string[];
+  productKnowledge?: string[];
+  activePersonalityName?: string | null;
   hasCompactionSummary?: boolean;
   userTimezone: string;
 }
@@ -184,6 +186,15 @@ export function buildSystemPrompt(params: SystemPromptParams): string {
     sections.push(params.userPrompt);
   }
 
+  if (params.activePersonalityName) {
+    sections.push(
+      `## Active Personality: ${params.activePersonalityName}\n\n` +
+        `The "Who You Are" voice section above is your CURRENTLY ACTIVE personality, "${params.activePersonalityName}". ` +
+        `It is authoritative and governs your tone, voice, and style. It OVERRIDES any "Personality" or "Writing Style" line in the Identity section (those were set at onboarding and may differ). ` +
+        `If asked what personality you are, answer "${params.activePersonalityName}".`,
+    );
+  }
+
   sections.push(COMPOSIO_TOOLS_DESCRIPTION);
   sections.push(CUSTOM_TOOLS_DESCRIPTION);
   sections.push(SCHEDULED_TASK_NOTE);
@@ -191,6 +202,15 @@ export function buildSystemPrompt(params: SystemPromptParams): string {
 
   if (params.hasCompactionSummary) {
     sections.push(SESSION_CONTINUITY_NOTE);
+  }
+
+  if (params.productKnowledge && params.productKnowledge.length > 0) {
+    const knowledgeLines = params.productKnowledge
+      .map((m) => `- ${m}`)
+      .join("\n");
+    sections.push(
+      `## Product Knowledge\n\nCurated product knowledge you should always rely on. Treat these as established facts about the product:\n\n${knowledgeLines}`,
+    );
   }
 
   if (params.relevantMemories && params.relevantMemories.length > 0) {

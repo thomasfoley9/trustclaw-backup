@@ -16,9 +16,19 @@ import {
 
 const MODELS = [
   {
+    value: "claude-opus-4-8",
+    label: "Claude Opus 4.8",
+    description: "Most capable",
+  },
+  {
+    value: "claude-opus-4-7",
+    label: "Claude Opus 4.7",
+    description: "Highly capable",
+  },
+  {
     value: "claude-opus-4-6",
     label: "Claude Opus 4.6",
-    description: "Most capable",
+    description: "Very capable",
   },
   {
     value: "claude-sonnet-4-5-20250929",

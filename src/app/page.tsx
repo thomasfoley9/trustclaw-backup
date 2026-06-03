@@ -3,9 +3,9 @@ import { LandingPage } from "./_components/landing-page";
 const jsonLd = {
   "@context": "https://schema.org",
   "@type": "SoftwareApplication",
-  name: "TrustClaw",
+  name: "The Almost Epic AI Club",
   description:
-    "Your 24/7 AI assistant with 1000+ integrations via OAuth and sandboxed execution.",
+    "Made By Sales People....it probably sucks and your data is now being sold on Temu.",
   applicationCategory: "Productivity",
   operatingSystem: "Web",
   offers: {
@@ -15,8 +15,7 @@ const jsonLd = {
   },
   creator: {
     "@type": "Organization",
-    name: "Composio",
-    url: "https://composio.dev",
+    name: "Sales People",
   },
 };
 

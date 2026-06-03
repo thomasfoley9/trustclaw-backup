@@ -18,7 +18,7 @@ const code = IBM_Plex_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "trustclaw",
+  title: "The Almost Epic AI Club",
   icons: [{ rel: "icon", url: "/favicon.ico" }],
 };
 

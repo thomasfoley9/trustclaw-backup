@@ -10,6 +10,7 @@ import {
   CardHeader,
   CardTitle,
 } from "~/components/ui/card";
+import { Badge } from "~/components/ui/badge";
 import { Skeleton } from "~/components/ui/skeleton";
 
 export function MemorySettings() {
@@ -47,9 +48,14 @@ export function MemorySettings() {
                 className="border-border bg-card flex flex-col gap-1 rounded-md border p-3"
               >
                 <p className="text-foreground text-sm">{memory.content}</p>
-                <span className="text-muted-foreground text-xs">
-                  {moment(memory.createdAt).fromNow()}
-                </span>
+                <div className="flex items-center gap-2">
+                  <Badge variant="secondary" className="capitalize">
+                    {memory.category}
+                  </Badge>
+                  <span className="text-muted-foreground text-xs">
+                    {moment(memory.createdAt).fromNow()}
+                  </span>
+                </div>
               </li>
             ))}
           </ul>

@@ -4,6 +4,13 @@ import { env } from "~/env";
 
 function ensureVerifyFullSsl(url: string): string {
   const parsed = new URL(url);
+  // Local Postgres (e.g. the Docker dev container) does not speak SSL; only
+  // enforce verify-full for remote databases like Neon.
+  const isLocal =
+    parsed.hostname === "localhost" || parsed.hostname === "127.0.0.1";
+  if (isLocal) {
+    return url;
+  }
   if (parsed.searchParams.get("sslmode") !== "verify-full") {
     parsed.searchParams.set("sslmode", "verify-full");
   }

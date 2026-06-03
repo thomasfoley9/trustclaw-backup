@@ -472,7 +472,9 @@ trpc.domain.procedure.useSubscription(input, {
 
 The local tRPC backend uses Prisma with Neon PostgreSQL (including pgvector for embeddings).
 
-**Schema changes:** Use `npx prisma db push` for development (not migrations). Verify `DATABASE_URL` contains `ep-holy-salad` before pushing.
+**Schema changes:** This project uses **Prisma Migrate** (versioned migrations in `prisma/migrations/`), not `db push`. For a schema change, run `npx prisma migrate dev --name <change>` locally; deploy to other environments (incl. cloud/Neon) with `npx prisma migrate deploy`. Do NOT use `db push` anymore — it drifts from migration history.
+
+**pgvector indexes:** The `embedding` column is `Unsupported("VECTOR(1024)")`, so pgvector indexes (e.g. HNSW) can't be expressed via `@@index`. Add them as raw SQL inside a migration (see `prisma/migrations/20260602120100_memory_hnsw_index/`), using `vector_cosine_ops` to match the `<=>` operator used in memory search.
 
 **Prisma in tRPC context:** Access via `ctx.prisma` in procedures.
 

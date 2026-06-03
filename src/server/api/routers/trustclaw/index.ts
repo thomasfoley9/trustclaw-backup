@@ -12,6 +12,10 @@ import { deleteCronJob } from "./deleteCronJob";
 import { getHistory } from "./getHistory";
 import { getStreamingMessage } from "./getStreamingMessage";
 import { getMemories } from "./getMemories";
+import { getPersonalities } from "./getPersonalities";
+import { createPersonality } from "./createPersonality";
+import { updatePersonality } from "./updatePersonality";
+import { deletePersonality } from "./deletePersonality";
 import { getIntegrationAuthLinks } from "./getIntegrationAuthLinks";
 import { saveOnboardingState } from "./saveOnboardingState";
 import { checkConnectionStatus } from "./checkConnectionStatus";
@@ -30,6 +34,10 @@ export const trustclawRouter = router({
   getHistory,
   getStreamingMessage,
   getMemories,
+  getPersonalities,
+  createPersonality,
+  updatePersonality,
+  deletePersonality,
   getIntegrationAuthLinks,
   saveOnboardingState,
   checkConnectionStatus,

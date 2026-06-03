@@ -20,6 +20,8 @@ import { ThemeToggle } from "~/components/core/theme-toggle";
 import { TrustClawBrand } from "~/app/_components/trustclaw-brand";
 import { authClient } from "~/clients/auth/react";
 import { useTerminalStore } from "./terminal-store";
+import { MemoryBucketControl } from "./memory-bucket-control";
+import { PersonalityControl } from "./personality-control";
 
 export function DashboardNavbar() {
   const pathname = usePathname();
@@ -43,6 +45,13 @@ export function DashboardNavbar() {
       <TrustClawBrand size="sm" logoLink="/dashboard" />
 
       <div className="flex items-center gap-1">
+        {isChat && (
+          <div className="hidden items-center gap-1 md:flex">
+            <PersonalityControl />
+            <MemoryBucketControl />
+          </div>
+        )}
+
         <Tooltip>
           <TooltipTrigger asChild>
             <Link href="/dashboard">

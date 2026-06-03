@@ -19,15 +19,42 @@ export const updateSettings = protectedProcedure
       });
     }
 
+    // Don't let a client point activePersonalityId at a personality that
+    // isn't theirs (or doesn't exist).
+    if (input.activePersonalityId) {
+      const owned = await db.personality.findFirst({
+        where: { id: input.activePersonalityId, instanceId: instance.id },
+        select: { id: true },
+      });
+      if (!owned) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Personality not found",
+        });
+      }
+    }
+
     const [updated] = await db.$transaction([
       db.composioClawInstance.update({
         where: { userId },
         data: {
           ...(input.anthropicModel && { anthropicModel: input.anthropicModel }),
+          ...(input.activeMemoryBucket && {
+            activeMemoryBucket: input.activeMemoryBucket,
+          }),
+          ...(input.incognitoMode !== undefined && {
+            incognitoMode: input.incognitoMode,
+          }),
+          ...(input.activePersonalityId !== undefined && {
+            activePersonalityId: input.activePersonalityId,
+          }),
         },
         select: {
           id: true,
           anthropicModel: true,
+          activeMemoryBucket: true,
+          incognitoMode: true,
+          activePersonalityId: true,
           updatedAt: true,
         },
       }),

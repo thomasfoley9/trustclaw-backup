@@ -1,12 +1,31 @@
+import type { ToolSet } from "ai";
 import { createMemorySaveTool } from "./memory-save";
 import { createMemorySearchTool } from "./memory-search";
 import { createScheduleTool } from "./schedule";
-export { searchMemoriesForContext } from "./memory-search";
+export { searchMemoriesForContext, getBucketMemories } from "./memory-search";
 
-export function createCustomTools(instanceId: string, userTimezone = "UTC") {
-  return {
-    memory_save: createMemorySaveTool(instanceId),
-    memory_search: createMemorySearchTool(instanceId),
+interface CustomToolOptions {
+  activeBucket?: string;
+  // When true, memory tools are omitted entirely (incognito chats neither
+  // recall nor write to the long-term memory store).
+  incognito?: boolean;
+}
+
+export function createCustomTools(
+  instanceId: string,
+  userTimezone = "UTC",
+  options: CustomToolOptions = {},
+): ToolSet {
+  const { activeBucket, incognito = false } = options;
+
+  const tools: ToolSet = {
     schedule: createScheduleTool(instanceId, userTimezone),
   };
+
+  if (!incognito) {
+    tools.memory_save = createMemorySaveTool(instanceId, activeBucket);
+    tools.memory_search = createMemorySearchTool(instanceId, activeBucket);
+  }
+
+  return tools;
 }

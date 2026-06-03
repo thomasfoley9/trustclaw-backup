@@ -9,6 +9,7 @@ import { ModelSettings } from "./model-settings";
 import { TelegramSettings } from "./telegram-settings";
 import { CronJobsSettings } from "./cron-jobs-settings";
 import { MemorySettings } from "./memory-settings";
+import { PersonalitySettings } from "./personality-settings";
 import { DangerZone } from "./danger-zone";
 import { SettingsPageSkeleton } from "./settings-page.skeleton";
 
@@ -55,6 +56,10 @@ export function SettingsPageClient() {
 
       <ErrorBoundary>
         <ModelSettings currentModel={instance.anthropicModel} />
+      </ErrorBoundary>
+
+      <ErrorBoundary>
+        <PersonalitySettings />
       </ErrorBoundary>
 
       {data?.telegramConfigured && (

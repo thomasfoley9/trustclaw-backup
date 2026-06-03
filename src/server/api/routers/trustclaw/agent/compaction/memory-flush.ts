@@ -1,6 +1,7 @@
 import { generateText, stepCountIs } from "ai";
 import { db } from "~/server/clients/db";
-import { createCustomTools } from "../tools";
+import { createMemorySaveTool } from "../tools/memory-save";
+import { createMemorySearchTool } from "../tools/memory-search";
 import { serializeMessages } from "./prompts";
 import type { ReconstructedMessage } from "../types";
 
@@ -54,10 +55,15 @@ export async function runMemoryFlush(
       ? anthropicModel
       : `anthropic/${anthropicModel}`;
 
-    const allCustomTools = createCustomTools(instanceId);
+    const instanceForBucket = await db.composioClawInstance.findUnique({
+      where: { id: instanceId },
+      select: { activeMemoryBucket: true },
+    });
+    const activeBucket = instanceForBucket?.activeMemoryBucket;
+
     const memoryTools = {
-      memory_save: allCustomTools.memory_save,
-      memory_search: allCustomTools.memory_search,
+      memory_save: createMemorySaveTool(instanceId, activeBucket),
+      memory_search: createMemorySearchTool(instanceId, activeBucket),
     };
 
     const contextSummary = serializeMessages(messages);

@@ -135,6 +135,7 @@ export function Onboarding({
   const createInstance = trpc.trustclaw.createInstance.useMutation({
     onSuccess: () => {
       void utils.trustclaw.getInstance.invalidate();
+      void utils.trustclaw.getPersonalities.invalidate();
     },
   });
 

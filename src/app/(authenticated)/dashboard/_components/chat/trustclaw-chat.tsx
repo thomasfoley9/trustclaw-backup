@@ -2,6 +2,7 @@
 
 import type { UIMessage } from "@ai-sdk/react";
 import { trpc } from "~/clients/trpc";
+import { ErrorDisplay } from "~/components/core/error-display";
 import { TrustClawChatSkeleton } from "./trustclaw-chat.skeleton";
 import { ChatView } from "./chat-view";
 
@@ -20,6 +21,23 @@ export function TrustClawChat() {
     },
   );
 
+  if (historyQuery.error || streamingQuery.error) {
+    return (
+      <ErrorDisplay
+        message={
+          historyQuery.error?.message ??
+          streamingQuery.error?.message ??
+          "Failed to load chat."
+        }
+        retryText="Try again"
+        onRetry={() => {
+          void historyQuery.refetch();
+          void streamingQuery.refetch();
+        }}
+      />
+    );
+  }
+
   if (!historyQuery.data || streamingQuery.isLoading) {
     return <TrustClawChatSkeleton />;
   }
@@ -27,12 +45,17 @@ export function TrustClawChat() {
   const pages = historyQuery.data.pages;
   const allHistoryMessages = [...pages].reverse().flatMap((p) => p.messages);
 
-  // Direct mapping - DB content is already UIMessage parts format
-  const initialMessages: UIMessage[] = allHistoryMessages.map((msg) => ({
-    id: msg.id,
-    role: msg.role,
-    parts: msg.content as UIMessage["parts"],
-  }));
+  // Direct mapping - DB content is already UIMessage parts format.
+  // Skip orphaned rows (empty content) left behind if a stream errored/aborted
+  // before its assistant row was filled in - they would render as invisible
+  // zero-height bubbles.
+  const initialMessages: UIMessage[] = allHistoryMessages
+    .filter((msg) => Array.isArray(msg.content) && msg.content.length > 0)
+    .map((msg) => ({
+      id: msg.id,
+      role: msg.role,
+      parts: msg.content as UIMessage["parts"],
+    }));
 
   const streamId = streamingQuery.data?.messageId ?? null;
 

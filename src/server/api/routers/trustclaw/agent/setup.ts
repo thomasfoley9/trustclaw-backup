@@ -6,7 +6,9 @@ import { buildSystemPrompt } from "./system-prompt";
 import {
   createCustomTools,
   searchMemoriesForContext,
+  getBucketMemories,
 } from "./tools";
+import { ALWAYS_INJECT_BUCKETS } from "../memory-buckets";
 import { getContextWindow } from "./context/context-window";
 import { pruneContext } from "./context/context-pruning";
 import {
@@ -90,26 +92,60 @@ export async function prepareAgentRun(
 
   const userTimezone = user?.timezone ?? "UTC";
 
-  const relevantMemories = await searchMemoriesForContext(instanceId, userMessage);
+  const incognito = instance.incognitoMode;
+  const activeBucket = instance.activeMemoryBucket;
+
+  // Active personality overrides the instance soul prompt when set.
+  const activePersonality = instance.activePersonalityId
+    ? await db.personality.findUnique({
+        where: { id: instance.activePersonalityId },
+        select: { name: true, prompt: true, instanceId: true },
+      })
+    : null;
+  const personaApplies = activePersonality?.instanceId === instanceId;
+  const effectiveSoulPrompt =
+    personaApplies && activePersonality
+      ? activePersonality.prompt
+      : instance.soulPrompt;
+  const activePersonalityName =
+    personaApplies && activePersonality ? activePersonality.name : null;
+
+  // Incognito chats start fresh: no memory recall, no prior history.
+  const relevantMemories = incognito
+    ? []
+    : await searchMemoriesForContext(instanceId, userMessage, activeBucket);
+
+  // Always-inject buckets (curated product knowledge) are loaded every turn,
+  // regardless of similarity or the active bucket. Skipped in incognito.
+  const productKnowledge = incognito
+    ? []
+    : (
+        await Promise.all(
+          ALWAYS_INJECT_BUCKETS.map((bucket) =>
+            getBucketMemories(instanceId, bucket),
+          ),
+        )
+      ).flat();
 
   const systemPrompt = sanitizeString(
     buildSystemPrompt({
-      soulPrompt: instance.soulPrompt,
+      soulPrompt: effectiveSoulPrompt,
       identityPrompt: instance.identityPrompt,
       userPrompt: instance.userPrompt,
+      activePersonalityName,
       relevantMemories,
+      productKnowledge,
       hasCompactionSummary: !!instance.lastCompactionSummary,
       userTimezone,
     }),
   );
 
-  const dbMessages = await loadContextMessages(
-    instanceId,
-    instance.lastCompactionAt,
-  );
+  const dbMessages = incognito
+    ? []
+    : await loadContextMessages(instanceId, instance.lastCompactionAt);
   const aiMessages = buildContext(
     dbMessages,
-    instance.lastCompactionSummary,
+    incognito ? null : instance.lastCompactionSummary,
     userMessage,
   );
 
@@ -129,13 +165,17 @@ export async function prepareAgentRun(
     };
   }
 
+  // Incognito messages are stored as `hidden` so they never re-enter
+  // context loading or chat history on subsequent turns.
+  const effectiveMessageType = incognito ? "hidden" : userMessageType;
+
   await db.message.create({
     data: {
       instanceId,
       role: "user",
       content: [{ type: "text", text: userMessage }],
       source,
-      ...(userMessageType && { messageType: userMessageType }),
+      ...(effectiveMessageType && { messageType: effectiveMessageType }),
     },
   });
 
@@ -147,7 +187,10 @@ export async function prepareAgentRun(
   });
   const composioTools = await session.tools();
 
-  const customTools = createCustomTools(instanceId, userTimezone);
+  const customTools = createCustomTools(instanceId, userTimezone, {
+    activeBucket,
+    incognito,
+  });
 
   const allTools: ToolSet = sanitizeToolResults({
     ...composioTools,
@@ -161,6 +204,7 @@ export async function prepareAgentRun(
       role: "assistant",
       content: toPrismaJson([]),
       source,
+      ...(incognito && { messageType: "hidden" as const }),
       inputTokens: 0,
       outputTokens: 0,
       cacheReadTokens: 0,
@@ -238,6 +282,11 @@ export async function prepareAgentRun(
           contextWindow,
           ...DEFAULT_COMPACTION_SETTINGS,
         };
+
+        // Incognito turns never flush memory or compact - nothing persists.
+        if (incognito) {
+          return;
+        }
 
         void runPostResponseTasks({
           instanceId,

@@ -24,7 +24,7 @@ export const getMemories = protectedProcedure
         instanceId: instance.id,
         ...(cursorDate ? { createdAt: { lt: cursorDate } } : {}),
       },
-      select: { id: true, content: true, createdAt: true },
+      select: { id: true, content: true, category: true, createdAt: true },
       orderBy: { createdAt: "desc" },
       take: input.limit + 1,
     });

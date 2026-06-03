@@ -1,9 +1,7 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
 import { OpenClawLogo } from "./openclaw-logo";
-import { ComposioWordmark } from "./composio-wordmark";
 
 interface TrustClawBrandProps {
   size?: "sm" | "md" | "lg";
@@ -11,9 +9,9 @@ interface TrustClawBrandProps {
 }
 
 const SIZES = {
-  sm: { logo: 20, text: "text-xs", wordmark: 9, by: "text-[8px]", gap: "gap-1.5", composioLogo: 10 },
-  md: { logo: 24, text: "text-lg", wordmark: 11, by: "text-[9px]", gap: "gap-2", composioLogo: 12 },
-  lg: { logo: 48, text: "text-2xl", wordmark: 12, by: "text-[10px]", gap: "gap-3", composioLogo: 14 },
+  sm: { logo: 20, text: "text-xs", by: "text-[8px]", gap: "gap-1.5", tagline: "max-w-[180px]" },
+  md: { logo: 24, text: "text-lg", by: "text-[9px]", gap: "gap-2", tagline: "max-w-[260px]" },
+  lg: { logo: 48, text: "text-2xl", by: "text-[10px]", gap: "gap-3", tagline: "max-w-[360px]" },
 } as const;
 
 export function TrustClawBrand({ size = "md", logoLink }: TrustClawBrandProps) {
@@ -23,34 +21,15 @@ export function TrustClawBrand({ size = "md", logoLink }: TrustClawBrandProps) {
 
   return (
     <div className={`flex items-center ${s.gap}`}>
-      {logoLink ? (
-        <Link href={logoLink}>{logo}</Link>
-      ) : (
-        logo
-      )}
-      <div className="relative">
-        <span className={`${s.text} font-bold leading-tight text-foreground`}>
-          TrustClaw
+      {logoLink ? <Link href={logoLink}>{logo}</Link> : logo}
+      <div className="flex flex-col leading-tight">
+        <span className={`${s.text} font-bold text-foreground`}>
+          The Almost Epic AI Club
         </span>
-        <Link
-          href="https://composio.dev"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="group absolute bottom-0 right-0 flex translate-y-[80%] items-center gap-0.5"
-        >
-          <span className={`${s.by} text-muted-foreground`}>by</span>
-          <Image
-            src="/images/logo/ComposioTransparent.png"
-            alt=""
-            width={s.composioLogo}
-            height={s.composioLogo}
-            className="-mr-0.5 opacity-50 transition-opacity group-hover:opacity-100 dark:invert"
-          />
-          <ComposioWordmark
-            height={s.wordmark}
-            className="translate-y-px text-muted-foreground transition-colors group-hover:text-foreground"
-          />
-        </Link>
+        <span className={`${s.by} ${s.tagline} text-muted-foreground`}>
+          Made By Sales People....it probably sucks and your data is now being
+          sold on Temu
+        </span>
       </div>
     </div>
   );
