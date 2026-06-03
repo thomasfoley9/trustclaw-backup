@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
 import { motion } from "framer-motion";
 import { Check, ExternalLink, Loader2 } from "lucide-react";
 import { trpc } from "~/clients/trpc";
@@ -33,7 +33,7 @@ export function IntegrationsStep({
       refetchInterval: 5000,
     });
 
-  const integrations = data?.integrations ?? [];
+  const integrations = useMemo(() => data?.integrations ?? [], [data]);
 
   useEffect(() => {
     const currentConnected = new Set(

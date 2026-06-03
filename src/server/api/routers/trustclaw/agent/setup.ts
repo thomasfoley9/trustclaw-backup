@@ -110,6 +110,18 @@ export async function prepareAgentRun(
   const activePersonalityName =
     personaApplies && activePersonality ? activePersonality.name : null;
 
+  // When a persona is active it owns the voice. The onboarding-generated
+  // identity prompt hard-codes "**Personality:**" / "**Writing Style:**" lines
+  // that contradict it - strip those so the active persona isn't overridden by
+  // a stale label the model would otherwise anchor on. (Format is produced by
+  // assembleIdentityPrompt, so these line patterns are stable.)
+  const effectiveIdentityPrompt =
+    personaApplies && instance.identityPrompt
+      ? instance.identityPrompt
+          .replace(/^\*\*Personality:\*\*.*$/gm, "")
+          .replace(/^\*\*Writing Style:\*\*.*$/gm, "")
+      : instance.identityPrompt;
+
   // Incognito chats start fresh: no memory recall, no prior history.
   const relevantMemories = incognito
     ? []
@@ -130,7 +142,7 @@ export async function prepareAgentRun(
   const systemPrompt = sanitizeString(
     buildSystemPrompt({
       soulPrompt: effectiveSoulPrompt,
-      identityPrompt: instance.identityPrompt,
+      identityPrompt: effectiveIdentityPrompt,
       userPrompt: instance.userPrompt,
       activePersonalityName,
       relevantMemories,

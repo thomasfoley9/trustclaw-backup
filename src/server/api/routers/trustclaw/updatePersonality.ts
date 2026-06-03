@@ -27,6 +27,23 @@ export const updatePersonality = protectedProcedure
       });
     }
 
+    if (input.name !== undefined) {
+      const clash = await db.personality.findFirst({
+        where: {
+          instanceId: instance.id,
+          name: input.name,
+          id: { not: personality.id },
+        },
+        select: { id: true },
+      });
+      if (clash) {
+        throw new TRPCError({
+          code: "CONFLICT",
+          message: "A personality with that name already exists",
+        });
+      }
+    }
+
     return db.personality.update({
       where: { id: personality.id },
       data: {
