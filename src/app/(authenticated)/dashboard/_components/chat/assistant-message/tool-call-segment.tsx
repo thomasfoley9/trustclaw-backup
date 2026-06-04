@@ -33,6 +33,15 @@ function getInlineConnectionActions(
   return actions;
 }
 
+function getGeneratedImageUrl(
+  toolCall: DynamicToolUIPart | ToolUIPart,
+): string | null {
+  if (getToolName(toolCall) !== "generate_image") return null;
+  if (toolCall.state !== "output-available" || !toolCall.output) return null;
+  const out = toolCall.output as Record<string, unknown>;
+  return typeof out.url === "string" ? out.url : null;
+}
+
 interface ToolCallSegmentProps {
   toolCall: DynamicToolUIPart | ToolUIPart;
   onOpenTerminal: () => void;
@@ -42,6 +51,7 @@ export function ToolCallSegment({
   toolCall,
   onOpenTerminal,
 }: ToolCallSegmentProps) {
+  const generatedImageUrl = getGeneratedImageUrl(toolCall);
   const connectionActions = getInlineConnectionActions(toolCall);
 
   const allToolkits = connectionActions.map((a) => a.toolkit);
@@ -71,6 +81,14 @@ export function ToolCallSegment({
   return (
     <div className="my-2 space-y-2">
       <ToolInvocation toolCall={toolCall} onClick={handleClick} />
+      {generatedImageUrl && (
+        // eslint-disable-next-line @next/next/no-img-element -- runtime-generated local image with unknown dimensions
+        <img
+          src={generatedImageUrl}
+          alt="Generated image"
+          className="border-border max-h-[512px] w-auto max-w-full rounded-lg border"
+        />
+      )}
       {connectionActions.length > 0 && (
         <div className="flex flex-wrap gap-2">
           {connectionActions.map((action) =>

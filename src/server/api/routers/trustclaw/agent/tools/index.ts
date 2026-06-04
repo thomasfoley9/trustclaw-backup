@@ -2,6 +2,7 @@ import type { ToolSet } from "ai";
 import { createMemorySaveTool } from "./memory-save";
 import { createMemorySearchTool } from "./memory-search";
 import { createScheduleTool } from "./schedule";
+import { createGenerateImageTool } from "./generate-image";
 export { searchMemoriesForContext, getBucketMemories } from "./memory-search";
 
 interface CustomToolOptions {
@@ -20,6 +21,7 @@ export function createCustomTools(
 
   const tools: ToolSet = {
     schedule: createScheduleTool(instanceId, userTimezone),
+    generate_image: createGenerateImageTool(),
   };
 
   if (!incognito) {

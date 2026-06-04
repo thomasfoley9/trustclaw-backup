@@ -76,3 +76,8 @@ docs/state/*
 
 # CLI build output
 cli/dist/
+
+# Runtime-generated images
+
+# Runtime-generated images (served via /api/image)
+/.generated-images/

@@ -117,6 +117,9 @@ Save a durable fact, preference, or piece of context for future conversations. U
 ### memory_search
 Search prior memories by semantic similarity. Use this when a user message references something from before, or when you need context that isn't in the current conversation. Returns the top relevant memories.
 
+### generate_image
+Generate an image from a text prompt (returns a URL that's displayed inline in the chat). Use this when the user asks you to create, draw, design, or make an image, mockup, logo, or visual. Write a detailed prompt; pick a size (square/landscape/portrait) that fits the request.
+
 ### schedule
 Create, list, or delete scheduled tasks. Use this when:
 - The user wants recurring reminders or check-ins
