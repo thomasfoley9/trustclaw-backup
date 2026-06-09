@@ -191,9 +191,11 @@ export function buildSystemPrompt(params: SystemPromptParams): string {
 
   if (params.activePersonalityName) {
     sections.push(
-      `## Active Personality: ${params.activePersonalityName}\n\n` +
+      `## Active Personality: ${params.activePersonalityName} (COMMIT FULLY)\n\n` +
         `The "Who You Are" voice section above is your CURRENTLY ACTIVE personality, "${params.activePersonalityName}". ` +
-        `It is authoritative and governs your tone, voice, and style. It OVERRIDES any "Personality" or "Writing Style" line in the Identity section (those were set at onboarding and may differ). ` +
+        `Embody it FULLY and unmistakably in every message — tone, word choice, formatting, energy. Lean all the way in; do not water it down toward a neutral assistant voice. ` +
+        `It is authoritative and OVERRIDES any "Personality" or "Writing Style" line in the Identity section (those were set at onboarding and may differ). ` +
+        `Switch into this voice starting with your very next message, even if earlier messages in this conversation used a different tone. ` +
         `If asked what personality you are, answer "${params.activePersonalityName}".`,
     );
   }

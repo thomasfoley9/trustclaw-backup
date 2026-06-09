@@ -14,8 +14,10 @@ export const getPersonalities = protectedProcedure.query(async ({ ctx }) => {
     return { personalities: [], activePersonalityId: null };
   }
 
-  // Seed presets only when the instance has none, so deleted presets don't
-  // resurrect on every load.
+  // Seed presets on a fresh instance; otherwise keep existing preset rows in
+  // sync with the canonical code definitions (so prompt/emoji/avatar tweaks
+  // land everywhere). updateMany on a missing row is a no-op, so presets the
+  // user deleted are NOT resurrected.
   const count = await db.personality.count({
     where: { instanceId: instance.id },
   });
@@ -31,6 +33,19 @@ export const getPersonalities = protectedProcedure.query(async ({ ctx }) => {
       })),
       skipDuplicates: true,
     });
+  } else {
+    await Promise.all(
+      PRESET_PERSONALITIES.map((p) =>
+        db.personality.updateMany({
+          where: { instanceId: instance.id, name: p.name, isPreset: true },
+          data: {
+            emoji: p.emoji,
+            avatarKey: p.avatarKey,
+            prompt: buildPersonaPrompt(p.voice),
+          },
+        }),
+      ),
+    );
   }
 
   let activePersonalityId = instance.activePersonalityId;
