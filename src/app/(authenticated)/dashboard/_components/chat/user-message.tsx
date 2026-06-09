@@ -1,11 +1,43 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { Copy, Check } from "lucide-react";
+import { Copy, Check, FileText } from "lucide-react";
 import type { UIMessage } from "@ai-sdk/react";
 
 interface UserMessageProps {
   message: UIMessage;
+}
+
+interface RenderedAttachment {
+  key: string;
+  name: string;
+  mediaType: string;
+  url?: string;
+}
+
+// Attachments arrive two ways: as AI SDK "file" parts (live send, carry a data
+// URL) or as our persisted "file-attachment" markers (reloaded history, name
+// only). Normalize both for display.
+function extractAttachments(message: UIMessage): RenderedAttachment[] {
+  const parts = message.parts as Array<Record<string, unknown>>;
+  const out: RenderedAttachment[] = [];
+  parts.forEach((p, i) => {
+    if (p.type === "file") {
+      out.push({
+        key: `f${i}`,
+        name: typeof p.filename === "string" ? p.filename : "file",
+        mediaType: typeof p.mediaType === "string" ? p.mediaType : "",
+        url: typeof p.url === "string" ? p.url : undefined,
+      });
+    } else if (p.type === "file-attachment") {
+      out.push({
+        key: `a${i}`,
+        name: typeof p.name === "string" ? p.name : "file",
+        mediaType: typeof p.mediaType === "string" ? p.mediaType : "",
+      });
+    }
+  });
+  return out;
 }
 
 export function UserMessage({ message }: UserMessageProps) {
@@ -23,6 +55,8 @@ export function UserMessage({ message }: UserMessageProps) {
     .map((p) => p.text)
     .join("\n");
 
+  const fileAttachments = extractAttachments(message);
+
   const handleCopy = () => {
     void navigator.clipboard.writeText(textContent);
     setCopied(true);
@@ -32,11 +66,37 @@ export function UserMessage({ message }: UserMessageProps) {
 
   return (
     <div className="flex flex-col items-end">
-      <div className="relative max-w-[80%]">
-        <div className="rounded-2xl bg-muted px-3 py-2 text-sm text-foreground">
-          <p className="whitespace-pre-wrap">{textContent}</p>
+      {fileAttachments.length > 0 && (
+        <div className="mb-1 flex max-w-[80%] flex-wrap justify-end gap-2">
+          {fileAttachments.map((a) =>
+            a.mediaType.startsWith("image/") && a.url ? (
+              // eslint-disable-next-line @next/next/no-img-element -- inline attachment preview
+              <img
+                key={a.key}
+                src={a.url}
+                alt={a.name}
+                className="border-border max-h-48 rounded-lg border object-cover"
+              />
+            ) : (
+              <div
+                key={a.key}
+                className="border-border bg-muted flex items-center gap-2 rounded-lg border px-3 py-2"
+              >
+                <FileText className="text-muted-foreground h-4 w-4 shrink-0" />
+                <span className="max-w-[200px] truncate text-xs">{a.name}</span>
+              </div>
+            ),
+          )}
         </div>
-      </div>
+      )}
+
+      {textContent && (
+        <div className="relative max-w-[80%]">
+          <div className="rounded-2xl bg-muted px-3 py-2 text-sm text-foreground">
+            <p className="whitespace-pre-wrap">{textContent}</p>
+          </div>
+        </div>
+      )}
 
       <button
         onClick={handleCopy}

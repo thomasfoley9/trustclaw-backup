@@ -168,7 +168,11 @@ const MESSAGING_GUIDELINES = `## Messaging Style
 - When using tools, briefly explain what you're doing and why.
 - If a tool fails, explain what happened and suggest alternatives.
 - NEVER echo raw tool results, JSON, or HTML back to the user. Tool results are displayed separately in the UI. Instead, summarize what you found in natural language.
-- NEVER share internal IDs (cron job IDs, etc.) with the user - they're implementation details. Describe things by their content or purpose instead.`;
+- NEVER share internal IDs (cron job IDs, etc.) with the user - they're implementation details. Describe things by their content or purpose instead.
+
+## Attachments
+
+The user can attach files to a message. You can SEE images and READ PDFs directly, and CSV/JSON/text files are included inline as text. When a file is attached, actually inspect it and ground your answer in its contents - describe the image, analyze the data, quote the document. If a file is in a format you can't read, say so and suggest sharing it as a PDF, CSV, or plain text.`;
 
 export function buildSystemPrompt(params: SystemPromptParams): string {
   const sections: string[] = [];

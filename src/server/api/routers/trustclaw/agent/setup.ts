@@ -71,6 +71,9 @@ interface PrepareAgentRunParams {
   // the user's active one - used by cron ("Scheduled tasks") and Telegram so
   // automated runs never pollute the chat the user currently has open.
   dedicatedConversationTitle?: string;
+  // Files attached to this turn. Images/PDFs become native model parts;
+  // text-like files (csv/txt/json/md) are inlined as text.
+  attachments?: Array<{ name: string; mediaType: string; data: string }>;
 }
 
 interface PrepareAgentRunResult {
@@ -90,6 +93,7 @@ export async function prepareAgentRun(
     userMessageType,
     conversationId: pinnedConversationId,
     dedicatedConversationTitle,
+    attachments = [],
   } = params;
 
   const instance = await db.composioClawInstance.findUnique({
@@ -258,10 +262,68 @@ export async function prepareAgentRun(
 
   // The model sees a switch note when the persona just changed; the persisted
   // user message (below) stays the raw text.
-  const modelUserMessage =
+  let modelUserMessage =
     personaSwitched && activePersonalityName
       ? `[Your active personality was just switched to "${activePersonalityName}". Starting with this reply, fully adopt the ${activePersonalityName} voice and drop the previous tone entirely.]\n\n${userMessage}`
       : userMessage;
+
+  // Build attachment parts. Images/PDFs are native model parts (Claude reads
+  // them directly); text-like files are inlined into the message text. The
+  // persisted message stores lightweight markers only (no bytes), so DB and
+  // future context stay lean - attachments inform the turn they're sent on.
+  type ImagePart = { type: "image"; image: Uint8Array; mediaType: string };
+  type FilePart = {
+    type: "file";
+    data: Uint8Array;
+    mediaType: string;
+    filename: string;
+  };
+  const mediaParts: Array<ImagePart | FilePart> = [];
+  const attachmentMarkers: Array<{
+    type: "file-attachment";
+    name: string;
+    mediaType: string;
+  }> = [];
+  const TEXT_FILE_RE = /\.(csv|tsv|txt|md|markdown|json|ya?ml|xml|log)$/i;
+  const isTextual = (a: { name: string; mediaType: string }) =>
+    a.mediaType.startsWith("text/") ||
+    ["application/json", "application/xml", "application/csv"].includes(
+      a.mediaType,
+    ) ||
+    TEXT_FILE_RE.test(a.name);
+
+  for (const att of attachments) {
+    attachmentMarkers.push({
+      type: "file-attachment",
+      name: att.name,
+      mediaType: att.mediaType,
+    });
+    const bytes = Buffer.from(att.data, "base64");
+    if (att.mediaType.startsWith("image/")) {
+      mediaParts.push({
+        type: "image",
+        image: new Uint8Array(bytes),
+        mediaType: att.mediaType,
+      });
+    } else if (att.mediaType === "application/pdf") {
+      mediaParts.push({
+        type: "file",
+        data: new Uint8Array(bytes),
+        mediaType: "application/pdf",
+        filename: att.name,
+      });
+    } else if (isTextual(att)) {
+      const text = bytes.toString("utf8").slice(0, 200_000);
+      modelUserMessage += `\n\n--- Attached file: ${att.name} ---\n${text}`;
+    } else {
+      modelUserMessage += `\n\n[Attached file "${att.name}" (${att.mediaType}) — unsupported format; ask the user to share it as PDF, CSV, or text if you need its contents.]`;
+    }
+  }
+
+  const userContent =
+    mediaParts.length > 0
+      ? [{ type: "text" as const, text: modelUserMessage }, ...mediaParts]
+      : modelUserMessage;
   // Used to scrub the note from post-response tasks (memory flush) so the
   // switch instruction can never be saved as a durable "memory".
   const personaSwitchNoteRe =
@@ -273,7 +335,7 @@ export async function prepareAgentRun(
   const aiMessages = buildContext(
     dbMessages,
     incognito ? null : conversation.lastCompactionSummary,
-    modelUserMessage,
+    userContent,
   );
 
   const contextWindow = getContextWindow(instance.anthropicModel);
@@ -301,7 +363,10 @@ export async function prepareAgentRun(
       instanceId,
       conversationId,
       role: "user",
-      content: [{ type: "text", text: userMessage }],
+      content: [
+        { type: "text", text: userMessage },
+        ...attachmentMarkers,
+      ],
       source,
       ...(effectiveMessageType && { messageType: effectiveMessageType }),
     },

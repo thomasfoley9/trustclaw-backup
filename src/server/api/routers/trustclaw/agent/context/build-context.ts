@@ -129,10 +129,12 @@ export async function loadContextMessages(
     .filter((r) => Array.isArray(r.content) && r.content.length > 0);
 }
 
+type UserContent = Extract<ReconstructedMessage, { role: "user" }>["content"];
+
 export function buildContext(
   dbMessages: Awaited<ReturnType<typeof loadContextMessages>>,
   lastCompactionSummary: string | null,
-  userMessage: string,
+  userContent: UserContent,
 ): ReconstructedMessage[] {
   const aiMessages = deepSanitize(reconstructMessages(dbMessages));
 
@@ -145,7 +147,15 @@ export function buildContext(
     });
   }
 
-  aiMessages.push({ role: "user" as const, content: sanitizeString(userMessage) });
+  // userContent is a plain string for text-only turns, or an array of content
+  // parts (text + image/file) when files are attached.
+  aiMessages.push({
+    role: "user" as const,
+    content:
+      typeof userContent === "string"
+        ? sanitizeString(userContent)
+        : userContent,
+  });
 
   return aiMessages;
 }

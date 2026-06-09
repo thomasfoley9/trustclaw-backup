@@ -15,7 +15,13 @@ export type ToolResultOutput =
   | { type: "json"; value: JsonValue };
 
 export type ReconstructedMessage =
-  | { role: "user"; content: string; providerOptions?: ProviderOptions }
+  // Content is a string for normal/historical turns, or an array of parts
+  // (text + image/file) for the current turn when files are attached.
+  | {
+      role: "user";
+      content: UserModelMessage["content"];
+      providerOptions?: ProviderOptions;
+    }
   | {
       role: "assistant";
       content:

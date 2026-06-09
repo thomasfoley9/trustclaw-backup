@@ -6,6 +6,13 @@ import type { UIMessage } from "@ai-sdk/react";
 import { DefaultChatTransport } from "ai";
 import { trpc } from "~/clients/trpc";
 
+export type ChatFilePart = {
+  type: "file";
+  mediaType: string;
+  url: string;
+  filename: string;
+};
+
 export function useChatHook({ initialMessages, streamId, conversationId }: {
   initialMessages: UIMessage[];
   streamId: string | null;
@@ -57,9 +64,14 @@ export function useChatHook({ initialMessages, streamId, conversationId }: {
   const sendMessageRef = useRef(chat.sendMessage);
   sendMessageRef.current = chat.sendMessage;
 
-  const sendMessage = useCallback((text: string) => {
-    void sendMessageRef.current({ text });
-  }, []);
+  const sendMessage = useCallback(
+    (text: string, files?: ChatFilePart[]) => {
+      void sendMessageRef.current(
+        files && files.length > 0 ? { text, files } : { text },
+      );
+    },
+    [],
+  );
 
   const stopRef = useRef(chat.stop);
   stopRef.current = chat.stop;

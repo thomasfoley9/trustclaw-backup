@@ -11,6 +11,8 @@ import {
 import { getStreamContext } from "./stream-store";
 
 const MAX_MESSAGE_CHARS = 32_000;
+const MAX_ATTACHMENTS = 8;
+const MAX_ATTACHMENT_BYTES = 25 * 1024 * 1024;
 
 // Per-instance request rate limit (sliding window) + single-stream guard.
 // In-memory: correct for a single-node deployment; swap to Redis when
@@ -123,7 +125,46 @@ export async function POST(request: Request) {
       )
       .map((p) => p.text)
       .join("\n") ?? "";
-  if (!userText.trim()) {
+
+  // Extract attached files (AI SDK sends them as file parts with data URLs).
+  const attachments: Array<{ name: string; mediaType: string; data: string }> =
+    [];
+  let attachmentBytes = 0;
+  for (const p of lastUserMessage?.parts ?? []) {
+    if (
+      typeof p !== "object" ||
+      p === null ||
+      (p as { type?: unknown }).type !== "file"
+    ) {
+      continue;
+    }
+    const fp = p as { mediaType?: unknown; url?: unknown; filename?: unknown };
+    if (typeof fp.url !== "string") continue;
+    const match = /^data:([^;,]+)(?:;base64)?,(.*)$/s.exec(fp.url);
+    if (!match) continue;
+    const base64 = match[2]!;
+    attachmentBytes += Math.floor(base64.length * 0.75);
+    attachments.push({
+      name: typeof fp.filename === "string" ? fp.filename : "file",
+      mediaType:
+        typeof fp.mediaType === "string"
+          ? fp.mediaType
+          : (match[1] ?? "application/octet-stream"),
+      data: base64,
+    });
+  }
+  if (attachments.length > MAX_ATTACHMENTS) {
+    return new Response(`Too many files (max ${MAX_ATTACHMENTS})`, {
+      status: 400,
+    });
+  }
+  if (attachmentBytes > MAX_ATTACHMENT_BYTES) {
+    return new Response("Attachments too large (max 25MB total)", {
+      status: 413,
+    });
+  }
+
+  if (!userText.trim() && attachments.length === 0) {
     return new Response("Empty message", { status: 400 });
   }
   if (userText.length > MAX_MESSAGE_CHARS) {
@@ -140,6 +181,7 @@ export async function POST(request: Request) {
       userMessage: userText,
       source: "web",
       conversationId,
+      attachments,
     });
 
     const { agent, messages } = prepareResult.result;

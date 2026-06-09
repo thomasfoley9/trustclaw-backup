@@ -12,7 +12,7 @@ import { Loader2, ArrowDown } from "lucide-react";
 import { ErrorBoundary } from "~/components/core/error-boundary";
 import { Button } from "~/components/ui/button";
 import { useTerminalStore } from "../terminal-store";
-import { useChatHook } from "../use-chat-hook";
+import { useChatHook, type ChatFilePart } from "../use-chat-hook";
 import { UserMessage } from "./user-message";
 import { AssistantMessage } from "./assistant-message/assistant-message";
 import { ThinkingIndicator } from "./assistant-message/thinking-indicator";
@@ -129,8 +129,8 @@ export function ChatView({
   }, [hasOlderMessages, isFetchingOlderMessages, fetchOlderMessages]);
 
   const handleSend = useCallback(
-    (text: string) => {
-      const result = sendMessage(text);
+    (text: string, files?: ChatFilePart[]) => {
+      const result = sendMessage(text, files);
       atBottomRef.current = true;
       requestAnimationFrame(() => scrollToBottom("smooth"));
       return result;
