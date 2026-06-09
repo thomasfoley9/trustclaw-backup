@@ -70,6 +70,7 @@ export function TrustClawChat() {
   return (
     <ChatView
       key={activeConversationId}
+      conversationId={activeConversationId}
       initialMessages={initialMessages}
       streamId={streamId}
       historyPageCount={pages.length}

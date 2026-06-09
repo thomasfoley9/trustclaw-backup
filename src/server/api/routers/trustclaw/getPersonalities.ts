@@ -48,8 +48,10 @@ export const getPersonalities = protectedProcedure.query(async ({ ctx }) => {
     );
   }
 
+  // Only default-activate Professional on a freshly-seeded instance - if the
+  // user explicitly cleared their personality, respect that.
   let activePersonalityId = instance.activePersonalityId;
-  if (!activePersonalityId) {
+  if (!activePersonalityId && count === 0) {
     const professional = await db.personality.findFirst({
       where: { instanceId: instance.id, name: "Professional" },
       select: { id: true },

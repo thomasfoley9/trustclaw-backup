@@ -63,6 +63,14 @@ interface PrepareAgentRunParams {
   userMessage: string;
   source: MessageSource;
   userMessageType?: "hidden";
+  // Pins the run to a specific session (validated against the instance). The
+  // web client sends this so a sidebar switch in another tab can't reroute an
+  // in-flight message to the wrong conversation.
+  conversationId?: string;
+  // Routes the run into a dedicated named session (find-or-create) instead of
+  // the user's active one - used by cron ("Scheduled tasks") and Telegram so
+  // automated runs never pollute the chat the user currently has open.
+  dedicatedConversationTitle?: string;
 }
 
 interface PrepareAgentRunResult {
@@ -75,7 +83,14 @@ type PrepareResult = { status: "ready"; result: PrepareAgentRunResult };
 export async function prepareAgentRun(
   params: PrepareAgentRunParams,
 ): Promise<PrepareResult> {
-  const { instanceId, userMessage, source, userMessageType } = params;
+  const {
+    instanceId,
+    userMessage,
+    source,
+    userMessageType,
+    conversationId: pinnedConversationId,
+    dedicatedConversationTitle,
+  } = params;
 
   const instance = await db.composioClawInstance.findUnique({
     where: { id: instanceId },
@@ -95,8 +110,10 @@ export async function prepareAgentRun(
   const incognito = instance.incognitoMode;
   const activeBucket = instance.activeMemoryBucket;
 
-  // Resolve the active chat session (lazily create one if none is set). All
-  // entry points append to this conversation; each has its own context window.
+  // Resolve which session this run writes to, in priority order:
+  //   1. explicit pin from the caller (web client pins what it's viewing)
+  //   2. dedicated named session (cron/telegram - never touches the active one)
+  //   3. the instance's active session, lazily created if missing
   const conversationSelect = {
     id: true,
     title: true,
@@ -106,21 +123,67 @@ export async function prepareAgentRun(
     lastCompactionSummary: true,
     lastCompactionAt: true,
   } as const;
-  let conversation = instance.activeConversationId
+
+  let conversation = pinnedConversationId
     ? await db.conversation.findFirst({
-        where: { id: instance.activeConversationId, instanceId },
+        where: { id: pinnedConversationId, instanceId },
         select: conversationSelect,
       })
     : null;
+
+  if (!conversation && dedicatedConversationTitle) {
+    conversation =
+      (await db.conversation.findFirst({
+        where: { instanceId, title: dedicatedConversationTitle },
+        select: conversationSelect,
+        orderBy: { createdAt: "asc" },
+      })) ??
+      (await db.conversation.create({
+        data: { instanceId, title: dedicatedConversationTitle },
+        select: conversationSelect,
+      }));
+  }
+
+  if (!conversation && instance.activeConversationId) {
+    conversation = await db.conversation.findFirst({
+      where: { id: instance.activeConversationId, instanceId },
+      select: conversationSelect,
+    });
+  }
   if (!conversation) {
-    conversation = await db.conversation.create({
+    // Lazy create, race-safe: claim the active pointer only if it's still
+    // unset; the loser of a concurrent race re-reads the winner's conversation
+    // and deletes its own orphan.
+    const created = await db.conversation.create({
       data: { instanceId, title: "New chat" },
       select: conversationSelect,
     });
-    await db.composioClawInstance.update({
-      where: { id: instanceId },
-      data: { activeConversationId: conversation.id },
+    const claimed = await db.composioClawInstance.updateMany({
+      where: { id: instanceId, activeConversationId: null },
+      data: { activeConversationId: created.id },
     });
+    if (claimed.count === 0) {
+      const fresh = await db.composioClawInstance.findUnique({
+        where: { id: instanceId },
+        select: { activeConversationId: true },
+      });
+      const winner = fresh?.activeConversationId
+        ? await db.conversation.findFirst({
+            where: { id: fresh.activeConversationId, instanceId },
+            select: conversationSelect,
+          })
+        : null;
+      if (winner) {
+        await db.conversation
+          .delete({ where: { id: created.id } })
+          .catch(() => undefined);
+        conversation = winner;
+      } else {
+        conversation = created;
+      }
+    } else {
+      conversation = created;
+    }
   }
   const conversationId = conversation.id;
 
@@ -143,8 +206,11 @@ export async function prepareAgentRun(
 
   // Detect a mid-conversation personality switch. When it changes, the prior
   // assistant turns in this session anchor the model to the old tone; a
-  // recency-positioned note on the new user turn forces the new voice.
+  // recency-positioned note on the new user turn forces the new voice. Only
+  // for visible user turns - cron/incognito triggers don't need tone notes.
   const personaSwitched =
+    !incognito &&
+    !userMessageType &&
     !!conversation.lastPersonalityId &&
     conversation.lastPersonalityId !== currentPersonalityId;
 
@@ -196,6 +262,10 @@ export async function prepareAgentRun(
     personaSwitched && activePersonalityName
       ? `[Your active personality was just switched to "${activePersonalityName}". Starting with this reply, fully adopt the ${activePersonalityName} voice and drop the previous tone entirely.]\n\n${userMessage}`
       : userMessage;
+  // Used to scrub the note from post-response tasks (memory flush) so the
+  // switch instruction can never be saved as a durable "memory".
+  const personaSwitchNoteRe =
+    /^\[Your active personality was just switched[^\]]*\]\n\n/;
 
   const dbMessages = incognito
     ? []
@@ -237,18 +307,21 @@ export async function prepareAgentRun(
     },
   });
 
-  // Auto-title the session from its first visible user message, and keep it
-  // sorted by recency. Skipped for incognito/hidden trigger messages.
-  if (!incognito && !effectiveMessageType) {
+  // Track the persona used on every non-incognito turn (hidden cron triggers
+  // included, so a stale value can't re-trigger switch notes later). Title
+  // and recency only update for visible user messages.
+  if (!incognito) {
+    const isVisible = !effectiveMessageType;
     const isFirstTitle = conversation.title === "New chat";
     await db.conversation.update({
       where: { id: conversationId },
       data: {
-        lastMessageAt: new Date(),
         lastPersonalityId: currentPersonalityId,
-        ...(isFirstTitle && {
-          title: userMessage.trim().slice(0, 60) || "New chat",
-        }),
+        ...(isVisible && { lastMessageAt: new Date() }),
+        ...(isVisible &&
+          isFirstTitle && {
+            title: userMessage.trim().slice(0, 60) || "New chat",
+          }),
       },
     });
   }
@@ -363,6 +436,12 @@ export async function prepareAgentRun(
           return;
         }
 
+        const flushSafeMessages = prunedMessages.map((m) =>
+          m.role === "user" && typeof m.content === "string"
+            ? { ...m, content: m.content.replace(personaSwitchNoteRe, "") }
+            : m,
+        );
+
         void runPostResponseTasks({
           instanceId,
           conversationId,
@@ -375,7 +454,7 @@ export async function prepareAgentRun(
           },
           contextTokens: totalContextTokens,
           settings,
-          prunedMessages,
+          prunedMessages: flushSafeMessages,
         });
       } catch (error) {
         console.error("[agent/onFinish] post-stream processing failed:", error);

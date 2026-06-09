@@ -32,6 +32,7 @@ const NEAR_TOP_PX = 120;
 interface ChatViewProps {
   initialMessages: UIMessage[];
   streamId: string | null;
+  conversationId: string;
   historyPageCount: number;
   fetchOlderMessages: () => void;
   hasOlderMessages: boolean;
@@ -41,6 +42,7 @@ interface ChatViewProps {
 export function ChatView({
   initialMessages,
   streamId,
+  conversationId,
   historyPageCount,
   fetchOlderMessages,
   hasOlderMessages,
@@ -49,6 +51,7 @@ export function ChatView({
   const { sendMessage, stop, messages, status, setMessages } = useChatHook({
     initialMessages,
     streamId,
+    conversationId,
   });
   const terminalOpen = useTerminalStore((s) => s.terminalOpen);
   const setTerminalOpen = useTerminalStore((s) => s.setTerminalOpen);

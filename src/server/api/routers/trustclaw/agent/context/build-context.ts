@@ -118,9 +118,15 @@ export async function loadContextMessages(
     select: {
       role: true,
       content: true,
+      createdAt: true,
     },
   });
-  return rows.reverse();
+  // Drop rows whose content never got filled (aborted/errored streams leave
+  // empty assistant rows) - they'd otherwise become "(empty)" turns in every
+  // future model context.
+  return rows
+    .reverse()
+    .filter((r) => Array.isArray(r.content) && r.content.length > 0);
 }
 
 export function buildContext(
@@ -278,13 +284,36 @@ export async function runPostResponseTasks(params: {
         conversationId,
         conversation.lastCompactionAt,
       );
-      const freshAiMessages = reconstructMessages(freshDbMessages);
+
+      // Find the cut over DB rows (newest-first accumulation of ~chars/4
+      // estimates until keepRecentTokens). Rows before the cut are
+      // summarized; rows at/after it stay loadable. Storing the first KEPT
+      // row's createdAt as lastCompactionAt is what keeps the recent window
+      // alive - `new Date()` here would silently drop it (every existing
+      // message would predate the boundary).
+      let accumulated = 0;
+      let cutRowIndex = 0;
+      for (let i = freshDbMessages.length - 1; i >= 0; i--) {
+        accumulated += Math.ceil(
+          JSON.stringify(freshDbMessages[i]!.content).length / 4,
+        );
+        if (accumulated >= settings.keepRecentTokens) {
+          cutRowIndex = i;
+          break;
+        }
+      }
+      if (cutRowIndex <= 0) return;
+
+      const messagesToCompact = reconstructMessages(
+        freshDbMessages.slice(0, cutRowIndex),
+      );
+      const cutAt = freshDbMessages[cutRowIndex]!.createdAt;
 
       await runCompaction({
         conversationId,
         anthropicModel: conversation.anthropicModel,
-        messages: freshAiMessages,
-        keepRecentTokens: settings.keepRecentTokens,
+        messagesToCompact,
+        cutAt,
         previousSummary: conversation.lastCompactionSummary,
         compactionCount: conversation.compactionCount,
       });

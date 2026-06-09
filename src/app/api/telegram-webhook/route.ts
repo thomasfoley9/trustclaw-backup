@@ -170,10 +170,13 @@ async function handleRegularMessage(
 
   await sendChatAction(chatId, "typing");
 
+  // Telegram chats live in their own dedicated session so phone messages
+  // never teleport into whatever web chat the user has open.
   const prepareResult = await prepareAgentRun({
     instanceId: instance.id,
     userMessage: text,
     source: "telegram",
+    dedicatedConversationTitle: "Telegram",
   });
 
   const { agent, messages } = prepareResult.result;

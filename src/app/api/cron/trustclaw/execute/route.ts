@@ -71,11 +71,14 @@ async function executeJobs(
       .map((j) => `<scheduled-task>\n${j.prompt}\n</scheduled-task>`)
       .join("\n\n");
 
+    // Runs in a dedicated "Scheduled tasks" session so automated turns never
+    // land in whatever chat the user has open. The trigger stays visible
+    // there (no "hidden" type) so the session reads as a coherent transcript.
     const prepareResult = await prepareAgentRun({
       instanceId,
       userMessage: combinedMessage,
       source: "cron",
-      userMessageType: "hidden",
+      dedicatedConversationTitle: "Scheduled tasks",
     });
 
     const { agent, messages } = prepareResult.result;

@@ -6,9 +6,10 @@ import type { UIMessage } from "@ai-sdk/react";
 import { DefaultChatTransport } from "ai";
 import { trpc } from "~/clients/trpc";
 
-export function useChatHook({ initialMessages, streamId }: {
+export function useChatHook({ initialMessages, streamId, conversationId }: {
   initialMessages: UIMessage[];
   streamId: string | null;
+  conversationId: string;
 }) {
   const utils = trpc.useUtils();
   const seededRef = useRef(false);
@@ -17,11 +18,14 @@ export function useChatHook({ initialMessages, streamId }: {
   const transport = useMemo(() => {
     return new DefaultChatTransport({
       api: "/api/chat",
+      // Pin every send to the session this view is showing, so a sidebar
+      // switch elsewhere can't reroute an in-flight message.
+      body: { conversationId },
       prepareReconnectToStreamRequest: () => {
         return { api: `/api/chat?streamId=${streamId}` };
       },
     });
-  }, [streamId]);
+  }, [streamId, conversationId]);
 
   const chat = useChat({
     id: "chat",

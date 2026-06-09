@@ -4,7 +4,6 @@
 import { generateText } from "ai";
 import { db } from "~/server/clients/db";
 import type { ReconstructedMessage } from "../types";
-import { estimateMessageTokens } from "../context/token-estimation";
 import {
   COMPACTION_SYSTEM_PROMPT,
   INITIAL_SUMMARIZATION_PROMPT,
@@ -18,51 +17,23 @@ import { sanitizeString } from "../context/build-context";
 interface CompactionParams {
   conversationId: string;
   anthropicModel: string;
-  messages: ReconstructedMessage[];
-  keepRecentTokens: number;
+  // Messages BEFORE the cut point (already sliced by the caller, which
+  // computes the cut over DB rows so it can also derive cutAt).
+  messagesToCompact: ReconstructedMessage[];
+  // createdAt of the first KEPT message - stored as lastCompactionAt so the
+  // recent window stays loadable after compaction.
+  cutAt: Date;
   previousSummary: string | null;
   compactionCount: number;
 }
 
 interface CompactionResult {
   summary: string;
-  keptMessageCount: number;
   compactedMessageCount: number;
 }
 
 const ADAPTIVE_CHUNK_THRESHOLD = 100_000;
 const LARGE_TOOL_RESULT_THRESHOLD = 10_000;
-
-export function findCutPoint(
-  messages: ReconstructedMessage[],
-  keepRecentTokens: number,
-): number {
-  if (messages.length <= 2) return 0;
-
-  let accumulatedTokens = 0;
-  let foundCut = false;
-  let rawCutIndex = 0;
-
-  for (let i = messages.length - 1; i >= 0; i--) {
-    accumulatedTokens += estimateMessageTokens(messages[i]!);
-    if (accumulatedTokens >= keepRecentTokens) {
-      rawCutIndex = i;
-      foundCut = true;
-      break;
-    }
-  }
-
-  if (!foundCut) return 0;
-
-  for (let i = rawCutIndex; i < messages.length; i++) {
-    const msg = messages[i]!;
-    if (msg.role === "user" || msg.role === "assistant") {
-      return i;
-    }
-  }
-
-  return 0;
-}
 
 async function summarize(
   anthropicModel: string,
@@ -156,13 +127,9 @@ function stripLargeToolResults(
 export async function runCompaction(
   params: CompactionParams,
 ): Promise<CompactionResult | null> {
-  const { conversationId, anthropicModel, messages, keepRecentTokens, previousSummary, compactionCount } = params;
+  const { conversationId, anthropicModel, messagesToCompact, cutAt, previousSummary, compactionCount } = params;
 
-  const cutIndex = findCutPoint(messages, keepRecentTokens);
-  if (cutIndex <= 0) return null;
-
-  const messagesToCompact = messages.slice(0, cutIndex);
-  const keptMessageCount = messages.length - cutIndex;
+  if (messagesToCompact.length === 0) return null;
 
   let summary: string;
 
@@ -209,7 +176,7 @@ export async function runCompaction(
       data: {
         lastCompactionSummary: summary,
         compactionCount: { increment: 1 },
-        lastCompactionAt: new Date(),
+        lastCompactionAt: cutAt,
         tokensAtCompaction: estimatedTokens,
       },
     });
@@ -219,7 +186,6 @@ export async function runCompaction(
 
   return {
     summary,
-    keptMessageCount,
-    compactedMessageCount: cutIndex,
+    compactedMessageCount: messagesToCompact.length,
   };
 }

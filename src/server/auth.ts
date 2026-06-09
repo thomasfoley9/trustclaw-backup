@@ -88,6 +88,12 @@ export const auth = betterAuth({
         window: 60,
         max: 5,
       },
+      // Each request generates a token and prints a reset link to the server
+      // log - keep it tight to prevent token churn / log flooding.
+      "/request-password-reset": {
+        window: 900,
+        max: 3,
+      },
     },
     ...redisRateLimitStorage,
   },

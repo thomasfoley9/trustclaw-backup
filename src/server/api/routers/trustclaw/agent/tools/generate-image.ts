@@ -17,7 +17,9 @@ export const GENERATED_IMAGES_DIR = path.join(
   process.cwd(),
   ".generated-images",
 );
-export function createGenerateImageTool(): Tool<
+export function createGenerateImageTool(
+  instanceId: string,
+): Tool<
   GenerateImageInput,
   { url: string; prompt: string } | { error: string }
 > {
@@ -33,12 +35,13 @@ export function createGenerateImageTool(): Tool<
           size: size ?? "1024x1024",
         });
 
+        // Per-instance subdirectory: the serving route only reads from the
+        // requesting user's own directory, so users can't fetch each other's
+        // generated images.
         const id = crypto.randomUUID();
-        await mkdir(GENERATED_IMAGES_DIR, { recursive: true });
-        await writeFile(
-          path.join(GENERATED_IMAGES_DIR, `${id}.png`),
-          image.uint8Array,
-        );
+        const dir = path.join(GENERATED_IMAGES_DIR, instanceId);
+        await mkdir(dir, { recursive: true });
+        await writeFile(path.join(dir, `${id}.png`), image.uint8Array);
 
         return { url: `/api/image/${id}`, prompt };
       } catch (error) {

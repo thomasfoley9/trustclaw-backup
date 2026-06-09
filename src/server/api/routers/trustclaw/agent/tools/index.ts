@@ -21,7 +21,7 @@ export function createCustomTools(
 
   const tools: ToolSet = {
     schedule: createScheduleTool(instanceId, userTimezone),
-    generate_image: createGenerateImageTool(),
+    generate_image: createGenerateImageTool(instanceId),
   };
 
   if (!incognito) {
