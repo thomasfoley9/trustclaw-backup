@@ -95,6 +95,34 @@ export async function prepareAgentRun(
   const incognito = instance.incognitoMode;
   const activeBucket = instance.activeMemoryBucket;
 
+  // Resolve the active chat session (lazily create one if none is set). All
+  // entry points append to this conversation; each has its own context window.
+  const conversationSelect = {
+    id: true,
+    title: true,
+    compactionCount: true,
+    memoryFlushCount: true,
+    lastCompactionSummary: true,
+    lastCompactionAt: true,
+  } as const;
+  let conversation = instance.activeConversationId
+    ? await db.conversation.findFirst({
+        where: { id: instance.activeConversationId, instanceId },
+        select: conversationSelect,
+      })
+    : null;
+  if (!conversation) {
+    conversation = await db.conversation.create({
+      data: { instanceId, title: "New chat" },
+      select: conversationSelect,
+    });
+    await db.composioClawInstance.update({
+      where: { id: instanceId },
+      data: { activeConversationId: conversation.id },
+    });
+  }
+  const conversationId = conversation.id;
+
   // Active personality overrides the instance soul prompt when set.
   const activePersonality = instance.activePersonalityId
     ? await db.personality.findUnique({
@@ -147,17 +175,17 @@ export async function prepareAgentRun(
       activePersonalityName,
       relevantMemories,
       productKnowledge,
-      hasCompactionSummary: !!instance.lastCompactionSummary,
+      hasCompactionSummary: !!conversation.lastCompactionSummary,
       userTimezone,
     }),
   );
 
   const dbMessages = incognito
     ? []
-    : await loadContextMessages(instanceId, instance.lastCompactionAt);
+    : await loadContextMessages(conversationId, conversation.lastCompactionAt);
   const aiMessages = buildContext(
     dbMessages,
-    incognito ? null : instance.lastCompactionSummary,
+    incognito ? null : conversation.lastCompactionSummary,
     userMessage,
   );
 
@@ -184,12 +212,28 @@ export async function prepareAgentRun(
   await db.message.create({
     data: {
       instanceId,
+      conversationId,
       role: "user",
       content: [{ type: "text", text: userMessage }],
       source,
       ...(effectiveMessageType && { messageType: effectiveMessageType }),
     },
   });
+
+  // Auto-title the session from its first visible user message, and keep it
+  // sorted by recency. Skipped for incognito/hidden trigger messages.
+  if (!incognito && !effectiveMessageType) {
+    const isFirstTitle = conversation.title === "New chat";
+    await db.conversation.update({
+      where: { id: conversationId },
+      data: {
+        lastMessageAt: new Date(),
+        ...(isFirstTitle && {
+          title: userMessage.trim().slice(0, 60) || "New chat",
+        }),
+      },
+    });
+  }
 
   const composio = createComposioClient();
   const session = await composio.create(instance.userId, {
@@ -213,6 +257,7 @@ export async function prepareAgentRun(
   const assistantMessageRow = await db.message.create({
     data: {
       instanceId,
+      conversationId,
       role: "assistant",
       content: toPrismaJson([]),
       source,
@@ -302,12 +347,13 @@ export async function prepareAgentRun(
 
         void runPostResponseTasks({
           instanceId,
-          instance: {
+          conversationId,
+          conversation: {
             anthropicModel: instance.anthropicModel,
-            compactionCount: instance.compactionCount,
-            memoryFlushCount: instance.memoryFlushCount,
-            lastCompactionSummary: instance.lastCompactionSummary,
-            lastCompactionAt: instance.lastCompactionAt,
+            compactionCount: conversation.compactionCount,
+            memoryFlushCount: conversation.memoryFlushCount,
+            lastCompactionSummary: conversation.lastCompactionSummary,
+            lastCompactionAt: conversation.lastCompactionAt,
           },
           contextTokens: totalContextTokens,
           settings,

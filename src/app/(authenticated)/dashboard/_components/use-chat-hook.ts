@@ -29,6 +29,8 @@ export function useChatHook({ initialMessages, streamId }: {
     resume: streamId !== null,
     onFinish: () => {
       void utils.trustclaw.getHistory.invalidate();
+      // Refresh the sidebar so a new session's auto-title + ordering update.
+      void utils.trustclaw.getConversations.invalidate();
     },
     onError: () => {
       void utils.trustclaw.getHistory.invalidate();

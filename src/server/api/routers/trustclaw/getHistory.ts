@@ -9,16 +9,30 @@ export const getHistory = protectedProcedure
 
     const instance = await db.composioClawInstance.findUnique({
       where: { userId },
-      select: { id: true },
+      select: { id: true, activeConversationId: true },
     });
 
     if (!instance) {
       return { messages: [], nextCursor: undefined };
     }
 
+    // Load the requested conversation (verified to belong to this instance) or
+    // fall back to the active one.
+    let conversationId = instance.activeConversationId;
+    if (input.conversationId) {
+      const owned = await db.conversation.findFirst({
+        where: { id: input.conversationId, instanceId: instance.id },
+        select: { id: true },
+      });
+      conversationId = owned?.id ?? null;
+    }
+    if (!conversationId) {
+      return { messages: [], nextCursor: undefined };
+    }
+
     const messages = await db.message.findMany({
       where: {
-        instanceId: instance.id,
+        conversationId,
         messageType: "regular",
         ...(input.cursor ? { createdAt: { lt: new Date(input.cursor) } } : {}),
       },

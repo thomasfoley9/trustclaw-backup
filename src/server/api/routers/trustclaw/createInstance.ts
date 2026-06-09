@@ -166,5 +166,16 @@ export const createInstance = protectedProcedure
       select: INSTANCE_SELECT,
     });
 
+    // Every instance starts with one active chat session so the chat UI has a
+    // conversation to load immediately.
+    const conversation = await db.conversation.create({
+      data: { instanceId: instance.id, title: "New chat" },
+      select: { id: true },
+    });
+    await db.composioClawInstance.update({
+      where: { id: instance.id },
+      data: { activeConversationId: conversation.id },
+    });
+
     return instance;
   });

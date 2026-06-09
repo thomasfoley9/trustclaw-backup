@@ -14,6 +14,7 @@ export const getInstance = protectedProcedure.query(async ({ ctx }) => {
         anthropicModel: true,
         activeMemoryBucket: true,
         incognitoMode: true,
+        activeConversationId: true,
         telegramChatId: true,
         telegramLinkToken: true,
         telegramLinkTokenExpiresAt: true,

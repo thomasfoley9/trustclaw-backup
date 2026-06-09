@@ -16,6 +16,11 @@ import { getPersonalities } from "./getPersonalities";
 import { createPersonality } from "./createPersonality";
 import { updatePersonality } from "./updatePersonality";
 import { deletePersonality } from "./deletePersonality";
+import { getConversations } from "./getConversations";
+import { createConversation } from "./createConversation";
+import { setActiveConversation } from "./setActiveConversation";
+import { renameConversation } from "./renameConversation";
+import { deleteConversation } from "./deleteConversation";
 import { getIntegrationAuthLinks } from "./getIntegrationAuthLinks";
 import { saveOnboardingState } from "./saveOnboardingState";
 import { checkConnectionStatus } from "./checkConnectionStatus";
@@ -38,6 +43,11 @@ export const trustclawRouter = router({
   createPersonality,
   updatePersonality,
   deletePersonality,
+  getConversations,
+  createConversation,
+  setActiveConversation,
+  renameConversation,
+  deleteConversation,
   getIntegrationAuthLinks,
   saveOnboardingState,
   checkConnectionStatus,

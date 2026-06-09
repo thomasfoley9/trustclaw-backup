@@ -16,7 +16,7 @@ import {
 import { sanitizeString } from "../context/build-context";
 
 interface CompactionParams {
-  instanceId: string;
+  conversationId: string;
   anthropicModel: string;
   messages: ReconstructedMessage[];
   keepRecentTokens: number;
@@ -156,7 +156,7 @@ function stripLargeToolResults(
 export async function runCompaction(
   params: CompactionParams,
 ): Promise<CompactionResult | null> {
-  const { instanceId, anthropicModel, messages, keepRecentTokens, previousSummary, compactionCount } = params;
+  const { conversationId, anthropicModel, messages, keepRecentTokens, previousSummary, compactionCount } = params;
 
   const cutIndex = findCutPoint(messages, keepRecentTokens);
   if (cutIndex <= 0) return null;
@@ -204,8 +204,8 @@ export async function runCompaction(
   const estimatedTokens = Math.ceil(summary.length / 4);
 
   try {
-    await db.composioClawInstance.update({
-      where: { id: instanceId, compactionCount },
+    await db.conversation.update({
+      where: { id: conversationId, compactionCount },
       data: {
         lastCompactionSummary: summary,
         compactionCount: { increment: 1 },

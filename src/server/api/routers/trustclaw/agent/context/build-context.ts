@@ -99,7 +99,7 @@ export function toPrismaJson(value: unknown): Prisma.InputJsonValue {
 }
 
 export async function loadContextMessages(
-  instanceId: string,
+  conversationId: string,
   lastCompactionAt: Date | null,
 ) {
   // Prisma applies `take` at the database query level, so ordering matters
@@ -109,7 +109,7 @@ export async function loadContextMessages(
   // reverse back into chronological order before returning.
   const rows = await db.message.findMany({
     where: {
-      instanceId,
+      conversationId,
       messageType: "regular",
       ...(lastCompactionAt ? { createdAt: { gte: lastCompactionAt } } : {}),
     },
@@ -230,7 +230,8 @@ export function reconstructMessages(
 
 export async function runPostResponseTasks(params: {
   instanceId: string;
-  instance: {
+  conversationId: string;
+  conversation: {
     anthropicModel: string;
     compactionCount: number;
     memoryFlushCount: number;
@@ -243,7 +244,8 @@ export async function runPostResponseTasks(params: {
 }): Promise<void> {
   const {
     instanceId,
-    instance,
+    conversationId,
+    conversation,
     contextTokens,
     settings,
     prunedMessages,
@@ -253,16 +255,17 @@ export async function runPostResponseTasks(params: {
     shouldFlushMemory(
       contextTokens,
       settings,
-      instance.compactionCount,
-      instance.memoryFlushCount,
+      conversation.compactionCount,
+      conversation.memoryFlushCount,
     )
   ) {
     try {
       await runMemoryFlush({
         instanceId,
-        anthropicModel: instance.anthropicModel,
+        conversationId,
+        anthropicModel: conversation.anthropicModel,
         messages: prunedMessages,
-        compactionCount: instance.compactionCount,
+        compactionCount: conversation.compactionCount,
       });
     } catch {
       // Flush failure is non-fatal
@@ -272,18 +275,18 @@ export async function runPostResponseTasks(params: {
   if (shouldCompact(contextTokens, settings)) {
     try {
       const freshDbMessages = await loadContextMessages(
-        instanceId,
-        instance.lastCompactionAt,
+        conversationId,
+        conversation.lastCompactionAt,
       );
       const freshAiMessages = reconstructMessages(freshDbMessages);
 
       await runCompaction({
-        instanceId,
-        anthropicModel: instance.anthropicModel,
+        conversationId,
+        anthropicModel: conversation.anthropicModel,
         messages: freshAiMessages,
         keepRecentTokens: settings.keepRecentTokens,
-        previousSummary: instance.lastCompactionSummary,
-        compactionCount: instance.compactionCount,
+        previousSummary: conversation.lastCompactionSummary,
+        compactionCount: conversation.compactionCount,
       });
     } catch {
       // Compaction failure is non-fatal - next turn will retry

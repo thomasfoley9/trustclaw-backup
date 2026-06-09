@@ -110,6 +110,10 @@ model ComposioClawInstance {
   // Active personality (swappable "skin" for the agent's voice).
   activePersonalityId String?
 
+  // Currently-selected chat session. All entry points (web/cron/telegram)
+  // append to this conversation; the sidebar switches it.
+  activeConversationId String?
+
   // Telegram linking
   telegramChatId             String?   @unique
   telegramLinkToken          String?   @unique
@@ -136,9 +140,34 @@ model ComposioClawInstance {
   memories      Memory[]
   cronJobs      CronJob[]
   personalities Personality[]
+  conversations Conversation[]
 
   @@index([userId])
   @@map("composio_claw_instance")
+}
+
+model Conversation {
+  id         String @id @default(cuid())
+  instanceId String
+  title      String @default("New chat")
+
+  // Per-session context/compaction state (each session has its own context
+  // window, independent of other sessions).
+  compactionCount       Int       @default(0)
+  lastCompactionSummary String?
+  lastCompactionAt      DateTime?
+  tokensAtCompaction    Int?
+  memoryFlushCount      Int       @default(0)
+
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  lastMessageAt DateTime @default(now())
+
+  instance ComposioClawInstance @relation(fields: [instanceId], references: [id], onDelete: Cascade)
+  messages Message[]
+
+  @@index([instanceId, lastMessageAt])
+  @@map("composio_claw_conversation")
 }
 
 model Personality {
@@ -160,22 +189,25 @@ model Personality {
 }
 
 model Message {
-  id          String        @id @default(cuid())
-  instanceId  String
-  role        MessageRole
-  content     Json
-  source      MessageSource @default(web)
-  messageType MessageType   @default(regular)
+  id             String        @id @default(cuid())
+  instanceId     String
+  conversationId String?
+  role           MessageRole
+  content        Json
+  source         MessageSource @default(web)
+  messageType    MessageType   @default(regular)
 
   inputTokens      Int?
   outputTokens     Int?
   cacheReadTokens  Int?
   cacheWriteTokens Int?
 
-  createdAt DateTime             @default(now())
-  instance  ComposioClawInstance @relation(fields: [instanceId], references: [id], onDelete: Cascade)
+  createdAt    DateTime             @default(now())
+  instance     ComposioClawInstance @relation(fields: [instanceId], references: [id], onDelete: Cascade)
+  conversation Conversation?        @relation(fields: [conversationId], references: [id], onDelete: Cascade)
 
   @@index([instanceId, createdAt])
+  @@index([conversationId, createdAt])
   @@map("composio_claw_message")
 }
 

@@ -20,6 +20,7 @@ const FLUSH_USER_PROMPT =
 
 interface MemoryFlushParams {
   instanceId: string;
+  conversationId: string;
   anthropicModel: string;
   messages: ReconstructedMessage[];
   compactionCount: number;
@@ -32,17 +33,18 @@ interface MemoryFlushResult {
 export async function runMemoryFlush(
   params: MemoryFlushParams,
 ): Promise<MemoryFlushResult> {
-  const { instanceId, anthropicModel, messages, compactionCount } = params;
+  const { instanceId, conversationId, anthropicModel, messages, compactionCount } =
+    params;
 
   try {
     // Atomically claim this flush cycle BEFORE invoking the LLM. Two
-    // concurrent post-response tasks for the same instance can both
-    // observe the same stale `memoryFlushCount` via `shouldFlushMemory`,
-    // but only one can win this UPDATE. The loser sees count === 0 and
-    // exits without spending tokens or duplicating memory_save inserts.
-    const claim = await db.composioClawInstance.updateMany({
+    // concurrent post-response tasks for the same conversation can both
+    // observe the same stale `memoryFlushCount`, but only one can win this
+    // UPDATE. The loser sees count === 0 and exits without spending tokens
+    // or duplicating memory_save inserts.
+    const claim = await db.conversation.updateMany({
       where: {
-        id: instanceId,
+        id: conversationId,
         memoryFlushCount: { lte: compactionCount },
       },
       data: { memoryFlushCount: compactionCount + 1 },
@@ -55,6 +57,8 @@ export async function runMemoryFlush(
       ? anthropicModel
       : `anthropic/${anthropicModel}`;
 
+    // Memory is shared across all sessions (instance-scoped), so the flush
+    // writes to the instance's active bucket regardless of conversation.
     const instanceForBucket = await db.composioClawInstance.findUnique({
       where: { id: instanceId },
       select: { activeMemoryBucket: true },
@@ -94,6 +98,7 @@ export async function runMemoryFlush(
       await tx.message.create({
         data: {
           instanceId,
+          conversationId,
           role: "user",
           content: [{ type: "text", text: FLUSH_USER_PROMPT }],
           source: "web",
@@ -104,6 +109,7 @@ export async function runMemoryFlush(
       await tx.message.create({
         data: {
           instanceId,
+          conversationId,
           role: "assistant",
           content: [{ type: "text", text: result.text || "<silent/>" }],
           source: "web",

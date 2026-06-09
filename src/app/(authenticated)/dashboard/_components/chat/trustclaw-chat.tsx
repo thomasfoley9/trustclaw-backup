@@ -7,10 +7,14 @@ import { TrustClawChatSkeleton } from "./trustclaw-chat.skeleton";
 import { ChatView } from "./chat-view";
 
 export function TrustClawChat() {
+  const conversationsQuery = trpc.trustclaw.getConversations.useQuery();
+  const activeConversationId = conversationsQuery.data?.activeConversationId;
+
   const historyQuery = trpc.trustclaw.getHistory.useInfiniteQuery(
-    { limit: 10 },
+    { limit: 10, conversationId: activeConversationId ?? undefined },
     {
       getNextPageParam: (lastPage) => lastPage.nextCursor,
+      enabled: !!activeConversationId,
     },
   );
 
@@ -38,7 +42,11 @@ export function TrustClawChat() {
     );
   }
 
-  if (!historyQuery.data || streamingQuery.isLoading) {
+  if (
+    !activeConversationId ||
+    !historyQuery.data ||
+    streamingQuery.isLoading
+  ) {
     return <TrustClawChatSkeleton />;
   }
 
@@ -61,6 +69,7 @@ export function TrustClawChat() {
 
   return (
     <ChatView
+      key={activeConversationId}
       initialMessages={initialMessages}
       streamId={streamId}
       historyPageCount={pages.length}
