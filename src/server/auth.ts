@@ -53,6 +53,19 @@ export const auth = betterAuth({
   emailAndPassword: {
     enabled: true,
     requireEmailVerification: false,
+    sendResetPassword: async ({ user, url }) => {
+      // No email provider is wired in, so the reset link is surfaced in the
+      // server logs for this self-hosted instance. To enable real email
+      // delivery, replace this body with your provider (Resend / SMTP /
+      // Composio Gmail) — it's the only line that needs to change.
+      console.warn(
+        `\n========== PASSWORD RESET REQUEST ==========\n` +
+          `account: ${user.email}\n` +
+          `reset link: ${url}\n` +
+          `(open this link to set a new password)\n` +
+          `============================================\n`,
+      );
+    },
   },
   emailVerification: {
     sendOnSignUp: false,

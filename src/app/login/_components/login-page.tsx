@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { TrustClawBrand } from "~/app/_components/trustclaw-brand";
 import { Button } from "~/components/ui/button";
@@ -107,6 +108,12 @@ export function LoginPage({ firstTime = false }: LoginPageProps) {
                 <Button type="submit" className="w-full" disabled={pending}>
                   {pending ? "Signing in..." : "Sign in"}
                 </Button>
+                <Link
+                  href="/forgot-password"
+                  className="text-muted-foreground hover:text-foreground block text-center text-sm"
+                >
+                  Forgot password?
+                </Link>
               </form>
             </TabsContent>
 
