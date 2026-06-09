@@ -151,6 +151,10 @@ model Conversation {
   instanceId String
   title      String @default("New chat")
 
+  // Last personality used in this session, so a mid-conversation switch can be
+  // detected and the new voice forced against the established tone.
+  lastPersonalityId String?
+
   // Per-session context/compaction state (each session has its own context
   // window, independent of other sessions).
   compactionCount       Int       @default(0)

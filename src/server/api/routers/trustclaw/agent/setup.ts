@@ -100,6 +100,7 @@ export async function prepareAgentRun(
   const conversationSelect = {
     id: true,
     title: true,
+    lastPersonalityId: true,
     compactionCount: true,
     memoryFlushCount: true,
     lastCompactionSummary: true,
@@ -137,6 +138,15 @@ export async function prepareAgentRun(
       : instance.soulPrompt;
   const activePersonalityName =
     personaApplies && activePersonality ? activePersonality.name : null;
+  const currentPersonalityId =
+    personaApplies && activePersonality ? instance.activePersonalityId : null;
+
+  // Detect a mid-conversation personality switch. When it changes, the prior
+  // assistant turns in this session anchor the model to the old tone; a
+  // recency-positioned note on the new user turn forces the new voice.
+  const personaSwitched =
+    !!conversation.lastPersonalityId &&
+    conversation.lastPersonalityId !== currentPersonalityId;
 
   // When a persona is active it owns the voice. The onboarding-generated
   // identity prompt hard-codes "**Personality:**" / "**Writing Style:**" lines
@@ -180,13 +190,20 @@ export async function prepareAgentRun(
     }),
   );
 
+  // The model sees a switch note when the persona just changed; the persisted
+  // user message (below) stays the raw text.
+  const modelUserMessage =
+    personaSwitched && activePersonalityName
+      ? `[Your active personality was just switched to "${activePersonalityName}". Starting with this reply, fully adopt the ${activePersonalityName} voice and drop the previous tone entirely.]\n\n${userMessage}`
+      : userMessage;
+
   const dbMessages = incognito
     ? []
     : await loadContextMessages(conversationId, conversation.lastCompactionAt);
   const aiMessages = buildContext(
     dbMessages,
     incognito ? null : conversation.lastCompactionSummary,
-    userMessage,
+    modelUserMessage,
   );
 
   const contextWindow = getContextWindow(instance.anthropicModel);
@@ -228,6 +245,7 @@ export async function prepareAgentRun(
       where: { id: conversationId },
       data: {
         lastMessageAt: new Date(),
+        lastPersonalityId: currentPersonalityId,
         ...(isFirstTitle && {
           title: userMessage.trim().slice(0, 60) || "New chat",
         }),
