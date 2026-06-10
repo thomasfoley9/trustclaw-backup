@@ -21,6 +21,14 @@ const handler = (req: NextRequest) =>
     req,
     router: appRouter,
     createContext: () => createContext(req),
+    // Authenticated, per-user API responses must never be cached. Without
+    // this, GET query responses carry no Cache-Control at all, so browsers
+    // may heuristically disk-cache them - including ERROR responses, which
+    // then replay from cache on every page load (frozen-app class of bugs),
+    // and user data lingers in the browser cache.
+    responseMeta: () => ({
+      headers: { "cache-control": "no-store, max-age=0" },
+    }),
     onError:
       env.NODE_ENV === "development"
         ? ({ path, error }) => {

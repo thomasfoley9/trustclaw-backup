@@ -7,7 +7,7 @@ import { trpcToastOnError } from "~/components/core/toast-notifications";
 
 export function ConversationSidebar() {
   const utils = trpc.useUtils();
-  const { data } = trpc.trustclaw.getConversations.useQuery();
+  const { data, error, refetch } = trpc.trustclaw.getConversations.useQuery();
 
   const refresh = () => {
     void utils.trustclaw.getConversations.invalidate();
@@ -48,7 +48,20 @@ export function ConversationSidebar() {
       </div>
 
       <div className="min-h-0 flex-1 overflow-y-auto px-2 pb-2">
-        {conversations.length === 0 ? (
+        {error ? (
+          <div className="px-2 py-4">
+            <p className="text-muted-foreground text-xs">
+              Couldn&apos;t load chats.
+            </p>
+            <button
+              type="button"
+              onClick={() => void refetch()}
+              className="text-primary mt-1 text-xs hover:underline"
+            >
+              Try again
+            </button>
+          </div>
+        ) : conversations.length === 0 ? (
           <p className="text-muted-foreground px-2 py-4 text-xs">
             No chats yet.
           </p>

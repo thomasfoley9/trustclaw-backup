@@ -25,16 +25,18 @@ export function TrustClawChat() {
     },
   );
 
-  if (historyQuery.error || streamingQuery.error) {
+  if (conversationsQuery.error || historyQuery.error || streamingQuery.error) {
     return (
       <ErrorDisplay
         message={
+          conversationsQuery.error?.message ??
           historyQuery.error?.message ??
           streamingQuery.error?.message ??
           "Failed to load chat."
         }
         retryText="Try again"
         onRetry={() => {
+          void conversationsQuery.refetch();
           void historyQuery.refetch();
           void streamingQuery.refetch();
         }}

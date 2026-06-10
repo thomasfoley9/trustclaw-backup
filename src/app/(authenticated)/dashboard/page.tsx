@@ -4,15 +4,16 @@ import { TrustClawChat } from "./_components/chat/trustclaw-chat";
 import { ConversationSidebar } from "./_components/conversation-sidebar";
 import { OnboardingClient } from "./_components/onboarding/onboarding-client";
 
+// NOTE: deliberately NO data prefetching for the chat tree. Streamed prefetch
+// hydration raced client hydration here (server HTML rendered from data the
+// client didn't have yet, or vice versa), causing React #418 and a wedged,
+// frozen page. Client components fetch on mount instead - server and client
+// both deterministically render loading states first. Slightly later first
+// paint of data, but no hydration mismatch class at all.
 export default async function Page() {
-  void trpcServer.api.trustclaw.getStreamingMessage.prefetch();
-  void trpcServer.api.trustclaw.getConversations.prefetch();
-
   const status = await trpcServer.api.trustclaw.getStatus();
 
   if (!status.hasInstance) {
-    void trpcServer.api.trustclaw.getInstance.prefetch();
-
     return (
       <HydrateClient>
         <ErrorBoundary>
