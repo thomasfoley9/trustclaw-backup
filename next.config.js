@@ -18,6 +18,15 @@ const config = {
         source: "/:path*",
         headers: [
           {
+            // One-time browser cache purge: transient API errors were
+            // heuristically disk-cached (before tRPC sent no-store) and kept
+            // replaying, freezing the app. "cache" only - cookies/storage
+            // untouched. Safe to remove after a while; harmless to keep
+            // locally (chunks just re-download per load).
+            key: "Clear-Site-Data",
+            value: '"cache"',
+          },
+          {
             key: "X-Frame-Options",
             value: "DENY",
           },
