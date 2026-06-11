@@ -40,5 +40,9 @@ export function parseAgentError(error: unknown): string {
     return "Rate limit exceeded. Please wait a moment and try again.";
   }
 
+  if (raw.includes("credit balance") || raw.includes("insufficient_funds")) {
+    return "The AI Gateway is out of credits. Add credits in the Vercel dashboard (AI → top up), then try again.";
+  }
+
   return "Something went wrong. Please try again.";
 }

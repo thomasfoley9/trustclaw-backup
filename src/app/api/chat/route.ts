@@ -4,6 +4,7 @@ import { z } from "zod";
 import { auth } from "~/server/auth";
 import { db } from "~/server/clients/db";
 import { prepareAgentRun } from "~/server/api/routers/trustclaw/agent/setup";
+import { parseAgentError } from "~/server/api/routers/trustclaw/agent/error-parser";
 import {
   tryClaimRun,
   markRunEnded,
@@ -182,6 +183,8 @@ export async function POST(request: Request) {
   }
 
   const streamId = crypto.randomUUID();
+  // Set by the response transform's onError; read by the background settle.
+  let capturedError: unknown = null;
   let result;
   // The run is driven by a server-side controller, NOT request.signal: closing
   // the tab or switching sessions detaches the viewer but the run continues in
@@ -216,14 +219,20 @@ export async function POST(request: Request) {
     });
   } catch (error) {
     // Run died before streaming started (e.g. provider rejected the call):
-    // clean the pre-created empty assistant row so it can't pollute history.
+    // turn the pre-created assistant row into a visible error bubble so the
+    // failure is never silent.
     await db.message
-      .deleteMany({
+      .updateMany({
         where: {
           conversationId,
           role: "assistant",
           source: "web",
           content: { equals: [] },
+        },
+        data: {
+          content: [
+            { type: "text", text: `⚠️ ${parseAgentError(error)}` },
+          ],
         },
       })
       .catch(() => undefined);
@@ -233,25 +242,53 @@ export async function POST(request: Request) {
   }
 
   // Drive the run to completion independently of the client connection, then
-  // clean up: if the run errored/was stopped before onFinish filled the
-  // pre-created assistant row, remove the empty row + stream marker so they
-  // never pollute history/context.
+  // settle the pre-created assistant row: onFinish fills it on success; on
+  // failure it becomes a visible error bubble (silent no-reply failures are
+  // worse than ugly ones); on user-initiated stop it's removed.
   after(async () => {
+    let runError: unknown = null;
     try {
-      await result.consumeStream({ onError: () => undefined });
-    } catch {
-      // consumeStream shouldn't throw with onError set; belt and suspenders.
+      // Drive the run to completion ourselves and read provider errors
+      // directly off the source stream (they arrive as 'error' PARTS, which
+      // consumeStream's onError does not surface).
+      for await (const part of result.fullStream) {
+        if (
+          typeof part === "object" &&
+          part !== null &&
+          (part as { type?: unknown }).type === "error"
+        ) {
+          runError = (part as { error?: unknown }).error ?? part;
+        }
+      }
+    } catch (error) {
+      runError = error;
     } finally {
-      await db.message
-        .deleteMany({
-          where: {
-            conversationId,
-            role: "assistant",
-            source: "web",
-            content: { equals: [] },
-          },
-        })
-        .catch(() => undefined);
+      runError = runError ?? capturedError;
+      const emptyRowFilter = {
+        conversationId,
+        role: "assistant" as const,
+        source: "web" as const,
+        content: { equals: [] },
+      };
+      // Branch on ROW STATE, not error plumbing: onFinish fills the row on
+      // success, so a still-empty row means the run produced nothing. Unless
+      // the user stopped it, turn it into a visible error bubble - silent
+      // no-reply failures are worse than ugly ones.
+      if (runController.signal.aborted) {
+        await db.message
+          .deleteMany({ where: emptyRowFilter })
+          .catch(() => undefined);
+      } else {
+        const text = runError
+          ? parseAgentError(runError)
+          : "The model didn't return a response. Please try again.";
+        await db.message
+          .updateMany({
+            where: emptyRowFilter,
+            data: { content: [{ type: "text", text: `⚠️ ${text}` }] },
+          })
+          .catch(() => undefined);
+      }
       await clearStreamingMessage(instanceId).catch(() => undefined);
       await markRunEnded(conversationId);
     }
@@ -261,6 +298,12 @@ export async function POST(request: Request) {
   return result.toUIMessageStreamResponse({
     headers: {
       "X-Stream-Id": streamId,
+    },
+    // Live viewers get the parsed, actionable message instead of a raw
+    // provider error blob; the capture also feeds the persisted error bubble.
+    onError: (error) => {
+      capturedError = error;
+      return `⚠️ ${parseAgentError(error)}`;
     },
     ...(streamContext
       ? {
