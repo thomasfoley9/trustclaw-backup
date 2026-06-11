@@ -18,6 +18,9 @@ export default defineConfig({
     path: "prisma/migrations",
   },
   datasource: {
+    // Migrations against pooled endpoints are handled by
+    // scripts/migrate-deploy.mjs, which overrides DATABASE_URL with
+    // DIRECT_DATABASE_URL for the migrate step.
     url: env("DATABASE_URL"),
   },
 });

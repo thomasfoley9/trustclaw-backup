@@ -5,9 +5,8 @@ import { auth } from "~/server/auth";
 import { db } from "~/server/clients/db";
 import { prepareAgentRun } from "~/server/api/routers/trustclaw/agent/setup";
 import {
-  markRunStarted,
+  tryClaimRun,
   markRunEnded,
-  runIsFresh,
   RUN_STALE_MS,
 } from "~/server/api/routers/trustclaw/agent/run-registry";
 import {
@@ -101,16 +100,10 @@ export async function POST(request: Request) {
   // per session, up to MAX_CONCURRENT_RUNS per account).
   const owned = await db.conversation.findFirst({
     where: { id: body.data.conversationId, instanceId },
-    select: { id: true, activeRunStartedAt: true },
+    select: { id: true },
   });
   if (!owned) {
     return new Response("Conversation not found", { status: 404 });
-  }
-  if (runIsFresh(owned.activeRunStartedAt)) {
-    return new Response(
-      "This chat is still answering - wait for it to finish",
-      { status: 409 },
-    );
   }
   const runningCount = await db.conversation.count({
     where: {
@@ -193,8 +186,15 @@ export async function POST(request: Request) {
   // The run is driven by a server-side controller, NOT request.signal: closing
   // the tab or switching sessions detaches the viewer but the run continues in
   // the background and persists its result via onFinish. Explicit stop comes
-  // through /api/chat/stop, which aborts this controller.
-  const runController = await markRunStarted(conversationId);
+  // through /api/chat/stop, which aborts this controller. The claim is atomic:
+  // concurrent sends to the same session can't start two runs.
+  const runController = await tryClaimRun(conversationId);
+  if (!runController) {
+    return new Response(
+      "This chat is still answering - wait for it to finish",
+      { status: 409 },
+    );
+  }
   try {
     const prepareResult = await prepareAgentRun({
       instanceId,

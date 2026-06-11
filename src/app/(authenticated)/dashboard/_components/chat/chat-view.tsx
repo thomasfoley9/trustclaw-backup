@@ -107,6 +107,17 @@ export function ChatView({
     }
   });
 
+  // Background runs persist their reply via getHistory, not the local stream.
+  // When refreshed history is ahead of the seeded chat state (run finished
+  // while viewing, or switched back mid-run), adopt it - but never while a
+  // local stream is writing.
+  useEffect(() => {
+    if (isStreaming) return;
+    if (initialMessages.length > messages.length) {
+      setMessages(initialMessages);
+    }
+  }, [initialMessages, isStreaming, messages.length, setMessages]);
+
   // Keep pinned to the bottom: once on first paint, then on every new message
   // / streaming chunk as long as the user is already near the bottom.
   const initialScrolledRef = useRef(false);

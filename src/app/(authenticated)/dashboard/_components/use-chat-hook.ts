@@ -5,6 +5,7 @@ import { useChat } from "@ai-sdk/react";
 import type { UIMessage } from "@ai-sdk/react";
 import { DefaultChatTransport } from "ai";
 import { trpc } from "~/clients/trpc";
+import { showErrorToast } from "~/components/core/toast-notifications";
 
 export type ChatFilePart = {
   type: "file";
@@ -43,7 +44,12 @@ export function useChatHook({ initialMessages, streamId, conversationId }: {
       // Refresh the sidebar so a new session's auto-title + ordering update.
       void utils.trustclaw.getConversations.invalidate();
     },
-    onError: () => {
+    onError: (error) => {
+      // Surface send failures (409 busy, 429 throttled, model errors) - the
+      // optimistic user bubble otherwise vanishes silently on reload.
+      showErrorToast(
+        error?.message?.slice(0, 200) ?? "Message failed - try again",
+      );
       void utils.trustclaw.getHistory.invalidate();
     },
   });

@@ -14,15 +14,27 @@ export const RUN_STALE_MS = 5 * 60 * 1000;
 
 const controllers = new Map<string, AbortController>();
 
-export async function markRunStarted(conversationId: string): Promise<AbortController> {
+// Atomically claim the session's run slot. Returns null when another run is
+// already in flight (fresh flag) - the conditional update makes concurrent
+// claims race-safe: exactly one wins.
+export async function tryClaimRun(
+  conversationId: string,
+): Promise<AbortController | null> {
+  const claimed = await db.conversation.updateMany({
+    where: {
+      id: conversationId,
+      OR: [
+        { activeRunStartedAt: null },
+        { activeRunStartedAt: { lt: new Date(Date.now() - RUN_STALE_MS) } },
+      ],
+    },
+    data: { activeRunStartedAt: new Date() },
+  });
+  if (claimed.count === 0) {
+    return null;
+  }
   const controller = new AbortController();
   controllers.set(conversationId, controller);
-  await db.conversation
-    .update({
-      where: { id: conversationId },
-      data: { activeRunStartedAt: new Date() },
-    })
-    .catch(() => undefined);
   return controller;
 }
 

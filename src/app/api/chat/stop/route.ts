@@ -38,19 +38,24 @@ export async function POST(request: Request) {
   }
 
   const aborted = abortRun(owned.id);
+  // Always unblock the UI by clearing the run flag. Only scrub the run's
+  // artifacts when the abort actually reached the run (same process) - if it
+  // lives on another instance it will finish and persist its reply, which
+  // beats silently discarding it.
   await markRunEnded(owned.id);
-  await clearStreamingMessage(instance.id).catch(() => undefined);
-  // Remove the empty assistant row the aborted run leaves behind.
-  await db.message
-    .deleteMany({
-      where: {
-        conversationId: owned.id,
-        role: "assistant",
-        source: "web",
-        content: { equals: [] },
-      },
-    })
-    .catch(() => undefined);
+  if (aborted) {
+    await clearStreamingMessage(instance.id).catch(() => undefined);
+    await db.message
+      .deleteMany({
+        where: {
+          conversationId: owned.id,
+          role: "assistant",
+          source: "web",
+          content: { equals: [] },
+        },
+      })
+      .catch(() => undefined);
+  }
 
   return Response.json({ stopped: true, aborted });
 }
