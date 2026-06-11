@@ -69,10 +69,19 @@ export function TrustClawChat() {
 
   const streamId = streamingQuery.data?.messageId ?? null;
 
+  const activeConversation = conversationsQuery.data?.conversations.find(
+    (c) => c.id === activeConversationId,
+  );
+  const backgroundRunActive =
+    !!activeConversation?.activeRunStartedAt &&
+    Date.now() - new Date(activeConversation.activeRunStartedAt).getTime() <
+      5 * 60 * 1000;
+
   return (
     <ChatView
       key={activeConversationId}
       conversationId={activeConversationId}
+      backgroundRunActive={backgroundRunActive}
       initialMessages={initialMessages}
       streamId={streamId}
       historyPageCount={pages.length}

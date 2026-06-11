@@ -77,8 +77,16 @@ export function useChatHook({ initialMessages, streamId, conversationId }: {
   stopRef.current = chat.stop;
 
   const stableStop = useCallback(() => {
+    // Stop the local stream view AND the server-side background run (runs
+    // keep executing after a disconnect by design, so stopping requires an
+    // explicit server call).
     void stopRef.current();
-  }, []);
+    void fetch("/api/chat/stop", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ conversationId }),
+    }).catch(() => undefined);
+  }, [conversationId]);
 
   return {
     sendMessage,

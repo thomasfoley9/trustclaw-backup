@@ -15,7 +15,12 @@ export const getConversations = protectedProcedure.query(async ({ ctx }) => {
 
   const conversations = await db.conversation.findMany({
     where: { instanceId: instance.id },
-    select: { id: true, title: true, lastMessageAt: true },
+    select: {
+      id: true,
+      title: true,
+      lastMessageAt: true,
+      activeRunStartedAt: true,
+    },
     orderBy: { lastMessageAt: "desc" },
   });
 

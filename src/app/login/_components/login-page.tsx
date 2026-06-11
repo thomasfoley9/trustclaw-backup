@@ -28,6 +28,7 @@ export function LoginPage({ firstTime = false }: LoginPageProps) {
   const [regUsername, setRegUsername] = useState("");
   const [regPassword, setRegPassword] = useState("");
   const [regName, setRegName] = useState("");
+  const [regInviteCode, setRegInviteCode] = useState("");
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -51,12 +52,21 @@ export function LoginPage({ firstTime = false }: LoginPageProps) {
     e.preventDefault();
     setPending(true);
     try {
-      const result = await authClient.signUp.email({
-        email: regEmail,
-        password: regPassword,
-        username: regUsername,
-        name: regName,
-      });
+      const result = await authClient.signUp.email(
+        {
+          email: regEmail,
+          password: regPassword,
+          username: regUsername,
+          name: regName,
+        },
+        {
+          // Cell invite gate: checked server-side only when the deployment
+          // has SIGNUP_INVITE_CODE configured; ignored otherwise.
+          headers: regInviteCode
+            ? { "x-invite-code": regInviteCode }
+            : undefined,
+        },
+      );
       if (result.error) {
         showErrorToast(result.error.message ?? "Failed to create account");
         return;
@@ -164,6 +174,21 @@ export function LoginPage({ firstTime = false }: LoginPageProps) {
                     minLength={8}
                     value={regPassword}
                     onChange={(e) => setRegPassword(e.target.value)}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="reg-invite">
+                    Invite code{" "}
+                    <span className="text-muted-foreground font-normal">
+                      (if your team requires one)
+                    </span>
+                  </Label>
+                  <Input
+                    id="reg-invite"
+                    type="text"
+                    autoComplete="off"
+                    value={regInviteCode}
+                    onChange={(e) => setRegInviteCode(e.target.value)}
                   />
                 </div>
                 <Button type="submit" className="w-full" disabled={pending}>

@@ -33,6 +33,9 @@ interface ChatViewProps {
   initialMessages: UIMessage[];
   streamId: string | null;
   conversationId: string;
+  // A run for this session is executing server-side (started before this view
+  // mounted - e.g. user switched away and back).
+  backgroundRunActive?: boolean;
   historyPageCount: number;
   fetchOlderMessages: () => void;
   hasOlderMessages: boolean;
@@ -43,6 +46,7 @@ export function ChatView({
   initialMessages,
   streamId,
   conversationId,
+  backgroundRunActive = false,
   historyPageCount,
   fetchOlderMessages,
   hasOlderMessages,
@@ -63,7 +67,11 @@ export function ChatView({
 
   const isStreaming = status === "streaming" || status === "submitted";
   const lastMessage = messages[messages.length - 1];
-  const isWaitingForAssistant = isStreaming && lastMessage?.role === "user";
+  // Show the thinking indicator both for a live local stream and for a
+  // background run still executing server-side (e.g. after switching back).
+  const backgroundBusy = backgroundRunActive && !isStreaming;
+  const isWaitingForAssistant =
+    (isStreaming && lastMessage?.role === "user") || backgroundBusy;
 
   const scrollToBottom = useCallback((behavior: ScrollBehavior = "smooth") => {
     const el = scrollRef.current;
@@ -218,7 +226,12 @@ export function ChatView({
           )}
         </div>
 
-        <ChatInput onSend={handleSend} onStop={stop} status={status} />
+        <ChatInput
+          onSend={handleSend}
+          onStop={stop}
+          status={status}
+          backgroundBusy={backgroundBusy}
+        />
       </div>
 
       {terminalOpen && (

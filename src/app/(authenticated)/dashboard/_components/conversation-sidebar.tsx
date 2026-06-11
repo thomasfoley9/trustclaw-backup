@@ -1,13 +1,51 @@
 "use client";
 
-import { Plus, Trash2, MessageSquare } from "lucide-react";
+import { useEffect, useRef } from "react";
+import { Plus, Trash2, MessageSquare, Loader2 } from "lucide-react";
 import { trpc } from "~/clients/trpc";
 import { Button } from "~/components/ui/button";
 import { trpcToastOnError } from "~/components/core/toast-notifications";
 
+// Mirror of the server's run-staleness window: runs older than this are
+// treated as dead even if the flag wasn't cleared (crashed function).
+const RUN_STALE_MS = 5 * 60 * 1000;
+
+export function runningNow(activeRunStartedAt: string | Date | null): boolean {
+  if (!activeRunStartedAt) return false;
+  return Date.now() - new Date(activeRunStartedAt).getTime() < RUN_STALE_MS;
+}
+
 export function ConversationSidebar() {
   const utils = trpc.useUtils();
-  const { data, error, refetch } = trpc.trustclaw.getConversations.useQuery();
+  const { data, error, refetch } = trpc.trustclaw.getConversations.useQuery(
+    undefined,
+    {
+      // Poll while any session has a background run so spinners and
+      // completions show up without a manual refresh.
+      refetchInterval: (query) =>
+        query.state.data?.conversations.some((c) =>
+          runningNow(c.activeRunStartedAt),
+        )
+          ? 4000
+          : false,
+    },
+  );
+
+  // When a background run finishes, pull its result into the chat history.
+  const prevRunningRef = useRef<Set<string>>(new Set());
+  useEffect(() => {
+    const running = new Set(
+      (data?.conversations ?? [])
+        .filter((c) => runningNow(c.activeRunStartedAt))
+        .map((c) => c.id),
+    );
+    for (const id of prevRunningRef.current) {
+      if (!running.has(id)) {
+        void utils.trustclaw.getHistory.invalidate();
+      }
+    }
+    prevRunningRef.current = running;
+  }, [data, utils]);
 
   const refresh = () => {
     void utils.trustclaw.getConversations.invalidate();
@@ -69,6 +107,7 @@ export function ConversationSidebar() {
           <ul className="space-y-0.5">
             {conversations.map((c) => {
               const isActive = c.id === activeId;
+              const isRunning = runningNow(c.activeRunStartedAt);
               return (
                 <li
                   key={c.id}
@@ -80,12 +119,15 @@ export function ConversationSidebar() {
                     type="button"
                     disabled={busy}
                     onClick={() => {
-                      if (!isActive)
-                        void setActive.mutateAsync({ id: c.id });
+                      if (!isActive) void setActive.mutateAsync({ id: c.id });
                     }}
                     className="flex min-w-0 flex-1 items-center gap-2 px-2 py-2 text-left text-sm"
                   >
-                    <MessageSquare className="text-muted-foreground h-4 w-4 shrink-0" />
+                    {isRunning ? (
+                      <Loader2 className="text-primary h-4 w-4 shrink-0 animate-spin" />
+                    ) : (
+                      <MessageSquare className="text-muted-foreground h-4 w-4 shrink-0" />
+                    )}
                     <span className="truncate">{c.title}</span>
                   </button>
                   <button

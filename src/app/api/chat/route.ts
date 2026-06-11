@@ -1,8 +1,15 @@
+import { after } from "next/server";
 import { smoothStream, UI_MESSAGE_STREAM_HEADERS } from "ai";
 import { z } from "zod";
 import { auth } from "~/server/auth";
 import { db } from "~/server/clients/db";
 import { prepareAgentRun } from "~/server/api/routers/trustclaw/agent/setup";
+import {
+  markRunStarted,
+  markRunEnded,
+  runIsFresh,
+  RUN_STALE_MS,
+} from "~/server/api/routers/trustclaw/agent/run-registry";
 import {
   setStreamingMessage,
   getStreamingMessage,
@@ -13,15 +20,14 @@ import { getStreamContext } from "./stream-store";
 const MAX_MESSAGE_CHARS = 32_000;
 const MAX_ATTACHMENTS = 8;
 const MAX_ATTACHMENT_BYTES = 25 * 1024 * 1024;
+// Max simultaneous background runs per account.
+const MAX_CONCURRENT_RUNS = 3;
 
-// Per-instance request rate limit (sliding window) + single-stream guard.
-// In-memory: correct for a single-node deployment; swap to Redis when
-// horizontally scaled.
+// Per-instance request rate limit (sliding window). In-memory: correct for a
+// single-node deployment; swap to Redis when horizontally scaled.
 const RATE_WINDOW_MS = 5 * 60 * 1000;
 const RATE_MAX_REQUESTS = 30;
-const STREAM_GUARD_STALE_MS = 90_000;
 const requestTimestamps = new Map<string, number[]>();
-const activeStreams = new Map<string, number>();
 
 function checkRateLimit(instanceId: string): boolean {
   const now = Date.now();
@@ -45,7 +51,7 @@ const chatRequestBody = z.object({
       parts: z.array(z.record(z.unknown())).optional(),
     }),
   ),
-  conversationId: z.string().optional(),
+  conversationId: z.string(),
 });
 
 async function getAuthenticatedInstance(request: Request) {
@@ -67,7 +73,9 @@ async function getAuthenticatedInstance(request: Request) {
   return { userId, instanceId: instance.id };
 }
 
-export const maxDuration = 60;
+// Long enough for tool-heavy agent runs to finish in the background after the
+// viewer navigates away (Vercel fluid compute honors this via after()).
+export const maxDuration = 300;
 
 export async function POST(request: Request) {
   const authResult = await getAuthenticatedInstance(request);
@@ -83,31 +91,40 @@ export async function POST(request: Request) {
     });
   }
 
-  const activeSince = activeStreams.get(instanceId);
-  if (activeSince && Date.now() - activeSince < STREAM_GUARD_STALE_MS) {
-    return new Response(
-      "A response is already streaming for this account - wait for it to finish",
-      { status: 409 },
-    );
-  }
-
   const body = chatRequestBody.safeParse(await request.json());
   if (!body.success) {
     return new Response("Invalid request body", { status: 400 });
   }
 
-  // Validate the pinned conversation belongs to this instance.
-  let conversationId: string | undefined;
-  if (body.data.conversationId) {
-    const owned = await db.conversation.findFirst({
-      where: { id: body.data.conversationId, instanceId },
-      select: { id: true },
-    });
-    if (!owned) {
-      return new Response("Conversation not found", { status: 404 });
-    }
-    conversationId = owned.id;
+  // Validate the pinned conversation belongs to this instance, and that it
+  // doesn't already have a run in flight (runs are per-session; one at a time
+  // per session, up to MAX_CONCURRENT_RUNS per account).
+  const owned = await db.conversation.findFirst({
+    where: { id: body.data.conversationId, instanceId },
+    select: { id: true, activeRunStartedAt: true },
+  });
+  if (!owned) {
+    return new Response("Conversation not found", { status: 404 });
   }
+  if (runIsFresh(owned.activeRunStartedAt)) {
+    return new Response(
+      "This chat is still answering - wait for it to finish",
+      { status: 409 },
+    );
+  }
+  const runningCount = await db.conversation.count({
+    where: {
+      instanceId,
+      activeRunStartedAt: { gt: new Date(Date.now() - RUN_STALE_MS) },
+    },
+  });
+  if (runningCount >= MAX_CONCURRENT_RUNS) {
+    return new Response(
+      `Too many chats running at once (max ${MAX_CONCURRENT_RUNS}) - wait for one to finish`,
+      { status: 429 },
+    );
+  }
+  const conversationId = owned.id;
 
   const lastUserMessage = [...body.data.messages]
     .reverse()
@@ -171,10 +188,13 @@ export async function POST(request: Request) {
     return new Response("Message too long", { status: 413 });
   }
 
-  activeStreams.set(instanceId, Date.now());
-
   const streamId = crypto.randomUUID();
   let result;
+  // The run is driven by a server-side controller, NOT request.signal: closing
+  // the tab or switching sessions detaches the viewer but the run continues in
+  // the background and persists its result via onFinish. Explicit stop comes
+  // through /api/chat/stop, which aborts this controller.
+  const runController = await markRunStarted(conversationId);
   try {
     const prepareResult = await prepareAgentRun({
       instanceId,
@@ -189,41 +209,52 @@ export async function POST(request: Request) {
     await setStreamingMessage(instanceId, streamId);
 
     // agent.stream() returns streamText() result - supports toUIMessageStreamResponse
-    // Pass request.signal so the agent stops when the client disconnects (stop button)
     result = await agent.stream({
       prompt: messages,
       experimental_transform: smoothStream(),
-      abortSignal: request.signal,
+      abortSignal: runController.signal,
     });
   } catch (error) {
-    activeStreams.delete(instanceId);
-    throw error;
-  }
-
-  // Release the single-stream guard when the run settles (finish, error, or
-  // abort all settle the text promise); the 90s stale window is the backstop.
-  void Promise.resolve(result.text)
-    .catch(() => undefined)
-    .finally(() => {
-      activeStreams.delete(instanceId);
-    });
-
-  // If the client aborted, onFinish may never run: the pre-created assistant
-  // row stays empty and the stream marker stays set. Clean both up so they
-  // never pollute history/context.
-  request.signal.addEventListener("abort", () => {
-    activeStreams.delete(instanceId);
-    void db.message
+    // Run died before streaming started (e.g. provider rejected the call):
+    // clean the pre-created empty assistant row so it can't pollute history.
+    await db.message
       .deleteMany({
         where: {
-          instanceId,
+          conversationId,
           role: "assistant",
           source: "web",
           content: { equals: [] },
         },
       })
       .catch(() => undefined);
-    void clearStreamingMessage(instanceId).catch(() => undefined);
+    await clearStreamingMessage(instanceId).catch(() => undefined);
+    await markRunEnded(conversationId);
+    throw error;
+  }
+
+  // Drive the run to completion independently of the client connection, then
+  // clean up: if the run errored/was stopped before onFinish filled the
+  // pre-created assistant row, remove the empty row + stream marker so they
+  // never pollute history/context.
+  after(async () => {
+    try {
+      await result.consumeStream({ onError: () => undefined });
+    } catch {
+      // consumeStream shouldn't throw with onError set; belt and suspenders.
+    } finally {
+      await db.message
+        .deleteMany({
+          where: {
+            conversationId,
+            role: "assistant",
+            source: "web",
+            content: { equals: [] },
+          },
+        })
+        .catch(() => undefined);
+      await clearStreamingMessage(instanceId).catch(() => undefined);
+      await markRunEnded(conversationId);
+    }
   });
 
   const streamContext = getStreamContext();

@@ -13,6 +13,9 @@ interface ChatInputProps {
   onSend: (message: string, files?: ChatFilePart[]) => void;
   onStop: () => void;
   status: ChatStatus;
+  // A server-side background run is executing for this session (no local
+  // stream). Input is blocked and the stop button targets the server run.
+  backgroundBusy?: boolean;
 }
 
 const MAX_MESSAGE_LENGTH = 50_000;
@@ -36,14 +39,20 @@ function readAsDataUrl(file: File): Promise<string> {
   });
 }
 
-export function ChatInput({ onSend, onStop, status }: ChatInputProps) {
+export function ChatInput({
+  onSend,
+  onStop,
+  status,
+  backgroundBusy = false,
+}: ChatInputProps) {
   const [input, setInput] = useState("");
   const [attachments, setAttachments] = useState<Attachment[]>([]);
   const [dragOver, setDragOver] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const isStreaming = status === "streaming" || status === "submitted";
+  const isStreaming =
+    status === "streaming" || status === "submitted" || backgroundBusy;
   const isTooLong = input.length > MAX_MESSAGE_LENGTH;
   const canSend =
     (input.trim().length > 0 || attachments.length > 0) &&
@@ -208,7 +217,11 @@ export function ChatInput({ onSend, onStop, status }: ChatInputProps) {
             onKeyDown={handleKeyDown}
             onPaste={handlePaste}
             placeholder={
-              isStreaming ? "Waiting for response..." : "Ask me anything..."
+              backgroundBusy
+                ? "Answering in the background..."
+                : isStreaming
+                  ? "Waiting for response..."
+                  : "Ask me anything..."
             }
             disabled={isStreaming}
             rows={1}

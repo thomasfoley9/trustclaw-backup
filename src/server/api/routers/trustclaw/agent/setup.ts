@@ -79,6 +79,8 @@ interface PrepareAgentRunParams {
 interface PrepareAgentRunResult {
   agent: ToolLoopAgent;
   messages: ReconstructedMessage[];
+  // The session this run resolved to (pinned, dedicated, or active).
+  conversationId: string;
 }
 
 type PrepareResult = { status: "ready"; result: PrepareAgentRunResult };
@@ -539,6 +541,7 @@ export async function prepareAgentRun(
     result: {
       agent,
       messages: prunedMessages,
+      conversationId,
     },
   };
 }

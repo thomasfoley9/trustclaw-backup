@@ -155,6 +155,12 @@ model Conversation {
   // detected and the new voice forced against the established tone.
   lastPersonalityId String?
 
+  // Set while an agent run is executing for this session (cleared on finish/
+  // error). DB-backed so background runs are visible across processes /
+  // serverless instances; treat stale values (older than max run duration)
+  // as dead.
+  activeRunStartedAt DateTime?
+
   // Per-session context/compaction state (each session has its own context
   // window, independent of other sessions).
   compactionCount       Int       @default(0)
