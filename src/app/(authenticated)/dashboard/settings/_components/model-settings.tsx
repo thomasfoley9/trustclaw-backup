@@ -1,13 +1,25 @@
 "use client";
 
 import { useState } from "react";
-import type { z } from "zod";
 import { Loader2 } from "lucide-react";
 import { trpc } from "~/clients/trpc";
-import { allowedAnthropicModelSchema } from "~/server/api/routers/trustclaw/createInstance.schema";
 import { Button } from "~/components/ui/button";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "~/components/ui/select";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "~/components/ui/card";
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectLabel,
+  SelectTrigger,
+  SelectValue,
+} from "~/components/ui/select";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "~/components/ui/card";
 import { Label } from "~/components/ui/label";
 import {
   showSuccessToast,
@@ -15,43 +27,22 @@ import {
 } from "~/components/core/toast-notifications";
 
 const MODELS = [
-  {
-    value: "claude-opus-4-8",
-    label: "Claude Opus 4.8",
-    description: "Most capable",
-  },
-  {
-    value: "claude-opus-4-7",
-    label: "Claude Opus 4.7",
-    description: "Highly capable",
-  },
-  {
-    value: "claude-opus-4-6",
-    label: "Claude Opus 4.6",
-    description: "Very capable",
-  },
-  {
-    value: "claude-sonnet-4-5-20250929",
-    label: "Claude Sonnet 4.5",
-    description: "Balanced",
-  },
-  {
-    value: "claude-haiku-4-5-20251001",
-    label: "Claude Haiku 4.5",
-    description: "Fast & affordable",
-  },
+  { value: "claude-opus-4-8", label: "Claude Opus 4.8", description: "Most capable" },
+  { value: "claude-opus-4-7", label: "Claude Opus 4.7", description: "Highly capable" },
+  { value: "claude-opus-4-6", label: "Claude Opus 4.6", description: "Very capable" },
+  { value: "claude-sonnet-4-5-20250929", label: "Claude Sonnet 4.5", description: "Balanced" },
+  { value: "claude-haiku-4-5-20251001", label: "Claude Haiku 4.5", description: "Fast & affordable" },
 ] as const;
-
-type AllowedModel = z.infer<typeof allowedAnthropicModelSchema>;
 
 interface ModelSettingsProps {
   currentModel: string;
 }
 
 export function ModelSettings({ currentModel }: ModelSettingsProps) {
-  const parsed = allowedAnthropicModelSchema.catch("claude-sonnet-4-5-20250929").parse(currentModel);
-  const [selectedModel, setSelectedModel] = useState<AllowedModel>(parsed);
+  const [selectedModel, setSelectedModel] = useState<string>(currentModel);
   const utils = trpc.useUtils();
+  const { data: customData } = trpc.trustclaw.getCustomModels.useQuery();
+  const customModels = customData?.models ?? [];
 
   const updateSettings = trpc.trustclaw.updateSettings.useMutation({
     onSuccess: () => {
@@ -68,31 +59,45 @@ export function ModelSettings({ currentModel }: ModelSettingsProps) {
       <CardHeader>
         <CardTitle>Model</CardTitle>
         <CardDescription>
-          Choose which Claude model powers your assistant
+          Choose which model powers your assistant. Add your own under Custom
+          models below.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="space-y-2">
-          <Label>Claude Model</Label>
+          <Label>Model</Label>
           <Select
             value={selectedModel}
-            onValueChange={(val) => {
-              const model = allowedAnthropicModelSchema.safeParse(val);
-              if (model.success) setSelectedModel(model.data);
-            }}
+            onValueChange={(val) => setSelectedModel(val)}
           >
             <SelectTrigger className="w-full sm:w-72">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              {MODELS.map((m) => (
-                <SelectItem key={m.value} value={m.value}>
-                  <span>{m.label}</span>
-                  <span className="ml-2 text-muted-foreground">
-                    - {m.description}
-                  </span>
-                </SelectItem>
-              ))}
+              <SelectGroup>
+                <SelectLabel>Claude</SelectLabel>
+                {MODELS.map((m) => (
+                  <SelectItem key={m.value} value={m.value}>
+                    <span>{m.label}</span>
+                    <span className="text-muted-foreground ml-2">
+                      - {m.description}
+                    </span>
+                  </SelectItem>
+                ))}
+              </SelectGroup>
+              {customModels.length > 0 && (
+                <SelectGroup>
+                  <SelectLabel>Custom</SelectLabel>
+                  {customModels.map((m) => (
+                    <SelectItem key={m.id} value={m.modelId}>
+                      <span>{m.label}</span>
+                      <span className="text-muted-foreground ml-2">
+                        - {m.modelId}
+                      </span>
+                    </SelectItem>
+                  ))}
+                </SelectGroup>
+              )}
             </SelectContent>
           </Select>
         </div>

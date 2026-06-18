@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { ALLOWED_ANTHROPIC_MODELS } from "./createInstance.schema";
+import { selectableModelSchema } from "./createInstance.schema";
 import { memoryBucketSchema } from "./memory-buckets";
 
 const ianaTimezone = z
@@ -17,7 +17,7 @@ const ianaTimezone = z
   );
 
 export const updateSettingsInput = z.object({
-  anthropicModel: z.enum(ALLOWED_ANTHROPIC_MODELS).optional(),
+  anthropicModel: selectableModelSchema.optional(),
   timezone: ianaTimezone.optional(),
   activeMemoryBucket: memoryBucketSchema.optional(),
   incognitoMode: z.boolean().optional(),

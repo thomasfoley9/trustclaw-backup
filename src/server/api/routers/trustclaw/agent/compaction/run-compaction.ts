@@ -1,8 +1,9 @@
 // Adapted from pi-mono: packages/coding-agent/src/core/compaction/compaction.ts:376-438 (cut point algorithm)
 // Adaptive chunking / staged summarization from openclaw: src/agents/compaction.ts:110-129, 244-305
 // Fallback chain from openclaw: src/agents/compaction.ts:176-242
-import { generateText } from "ai";
+import { generateText, type LanguageModel } from "ai";
 import { db } from "~/server/clients/db";
+import { resolveAgentModel } from "../resolve-model";
 import type { ReconstructedMessage } from "../types";
 import {
   COMPACTION_SYSTEM_PROMPT,
@@ -15,6 +16,7 @@ import {
 import { sanitizeString } from "../context/build-context";
 
 interface CompactionParams {
+  instanceId: string;
   conversationId: string;
   anthropicModel: string;
   // Messages BEFORE the cut point (already sliced by the caller, which
@@ -36,14 +38,10 @@ const ADAPTIVE_CHUNK_THRESHOLD = 100_000;
 const LARGE_TOOL_RESULT_THRESHOLD = 10_000;
 
 async function summarize(
-  anthropicModel: string,
+  model: LanguageModel,
   conversationText: string,
   previousSummary: string | null,
 ): Promise<string> {
-  const modelString = anthropicModel.startsWith("anthropic/")
-    ? anthropicModel
-    : `anthropic/${anthropicModel}`;
-
   const safeConversation = sanitizeString(conversationText);
   const safePreviousSummary = previousSummary ? sanitizeString(previousSummary) : null;
 
@@ -55,7 +53,7 @@ async function summarize(
   }
 
   const result = await generateText({
-    model: modelString,
+    model,
     system: COMPACTION_SYSTEM_PROMPT,
     messages: [{ role: "user", content: prompt }],
     maxOutputTokens: 4_000,
@@ -65,7 +63,7 @@ async function summarize(
 }
 
 async function stagedSummarize(
-  anthropicModel: string,
+  model: LanguageModel,
   messages: ReconstructedMessage[],
   previousSummary: string | null,
 ): Promise<string> {
@@ -76,23 +74,12 @@ async function stagedSummarize(
   const firstText = serializeMessages(firstHalf);
   const secondText = serializeMessages(secondHalf);
 
-  const firstSummary = await summarize(
-    anthropicModel,
-    firstText,
-    previousSummary,
-  );
+  const firstSummary = await summarize(model, firstText, previousSummary);
 
-  const secondSummary = await summarize(
-    anthropicModel,
-    secondText,
-    firstSummary,
-  );
+  const secondSummary = await summarize(model, secondText, firstSummary);
 
-  const mergeModelString = anthropicModel.startsWith("anthropic/")
-    ? anthropicModel
-    : `anthropic/${anthropicModel}`;
   const mergeResult = await generateText({
-    model: mergeModelString,
+    model,
     system: COMPACTION_SYSTEM_PROMPT,
     messages: [
       {
@@ -127,37 +114,26 @@ function stripLargeToolResults(
 export async function runCompaction(
   params: CompactionParams,
 ): Promise<CompactionResult | null> {
-  const { conversationId, anthropicModel, messagesToCompact, cutAt, previousSummary, compactionCount } = params;
+  const { instanceId, conversationId, anthropicModel, messagesToCompact, cutAt, previousSummary, compactionCount } = params;
 
   if (messagesToCompact.length === 0) return null;
 
+  const model = await resolveAgentModel(instanceId, anthropicModel);
   let summary: string;
 
   try {
     const conversationText = serializeMessages(messagesToCompact);
 
     if (conversationText.length > ADAPTIVE_CHUNK_THRESHOLD) {
-      summary = await stagedSummarize(
-        anthropicModel,
-        messagesToCompact,
-        previousSummary,
-      );
+      summary = await stagedSummarize(model, messagesToCompact, previousSummary);
     } else {
-      summary = await summarize(
-        anthropicModel,
-        conversationText,
-        previousSummary,
-      );
+      summary = await summarize(model, conversationText, previousSummary);
     }
   } catch {
     try {
       const stripped = stripLargeToolResults(messagesToCompact);
       const strippedText = serializeMessages(stripped);
-      summary = await summarize(
-        anthropicModel,
-        strippedText,
-        previousSummary,
-      );
+      summary = await summarize(model, strippedText, previousSummary);
     } catch {
       summary = `Conversation covered ${messagesToCompact.length} messages. Summary unavailable due to context limits.`;
     }

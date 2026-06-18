@@ -2,6 +2,7 @@ import { generateText, stepCountIs } from "ai";
 import { db } from "~/server/clients/db";
 import { createMemorySaveTool } from "../tools/memory-save";
 import { createMemorySearchTool } from "../tools/memory-search";
+import { resolveAgentModel } from "../resolve-model";
 import { serializeMessages } from "./prompts";
 import type { ReconstructedMessage } from "../types";
 
@@ -53,9 +54,7 @@ export async function runMemoryFlush(
       return { memoriesSaved: 0 };
     }
 
-    const modelString = anthropicModel.startsWith("anthropic/")
-      ? anthropicModel
-      : `anthropic/${anthropicModel}`;
+    const model = await resolveAgentModel(instanceId, anthropicModel);
 
     // Memory is shared across all sessions (instance-scoped), so the flush
     // writes to the instance's active bucket regardless of conversation.
@@ -74,7 +73,7 @@ export async function runMemoryFlush(
     const flushPrompt = `Here is the recent conversation context:\n\n${contextSummary}\n\n${FLUSH_USER_PROMPT}`;
 
     const result = await generateText({
-      model: modelString,
+      model,
       system: FLUSH_SYSTEM_PROMPT,
       messages: [{ role: "user" as const, content: flushPrompt }],
       tools: memoryTools,

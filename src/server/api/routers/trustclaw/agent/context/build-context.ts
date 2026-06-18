@@ -320,6 +320,7 @@ export async function runPostResponseTasks(params: {
       const cutAt = freshDbMessages[cutRowIndex]!.createdAt;
 
       await runCompaction({
+        instanceId,
         conversationId,
         anthropicModel: conversation.anthropicModel,
         messagesToCompact,

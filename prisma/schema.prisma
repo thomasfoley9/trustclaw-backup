@@ -146,9 +146,31 @@ model ComposioClawInstance {
   personalities Personality[]
   conversations Conversation[]
   memoryBuckets MemoryBucket[]
+  customModels  CustomModel[]
 
   @@index([userId])
   @@map("composio_claw_instance")
+}
+
+// User-added models beyond the Claude presets (e.g. "openai/gpt-4o"). Each
+// optionally carries a BYO provider API key, encrypted at rest via crypto.ts
+// (same enc:v1: envelope as composioApiKey). When a key is present the agent
+// calls the provider directly; otherwise the id routes through the gateway.
+model CustomModel {
+  id             String   @id @default(cuid())
+  instanceId     String
+  modelId        String
+  label          String
+  provider       String
+  providerApiKey String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  instance ComposioClawInstance @relation(fields: [instanceId], references: [id], onDelete: Cascade)
+
+  @@unique([instanceId, modelId])
+  @@index([instanceId])
+  @@map("composio_claw_custom_model")
 }
 
 // User-editable knowledge buckets. `slug` is the stable key stored in

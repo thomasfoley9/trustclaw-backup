@@ -31,6 +31,9 @@ import { getBuckets } from "./getBuckets";
 import { createBucket } from "./createBucket";
 import { updateBucket } from "./updateBucket";
 import { deleteBucket } from "./deleteBucket";
+import { getCustomModels } from "./getCustomModels";
+import { addCustomModel } from "./addCustomModel";
+import { deleteCustomModel } from "./deleteCustomModel";
 
 export const trustclawRouter = router({
   getInstance,
@@ -65,4 +68,7 @@ export const trustclawRouter = router({
   createBucket,
   updateBucket,
   deleteBucket,
+  getCustomModels,
+  addCustomModel,
+  deleteCustomModel,
 });
