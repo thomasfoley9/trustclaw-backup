@@ -26,9 +26,8 @@ export function TrustClawBrand({ size = "md", logoLink }: TrustClawBrandProps) {
         <span className={`${s.text} font-bold text-foreground`}>
           The Almost Epic AI Club
         </span>
-        <span className={`${s.by} ${s.tagline} text-muted-foreground`}>
-          Made By Sales People....it probably sucks and your data is now being
-          sold on Temu
+        <span className={`${s.by} ${s.tagline} text-muted-foreground font-medium`}>
+          Brought to you by Foley
         </span>
       </div>
     </div>
