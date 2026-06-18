@@ -24,6 +24,9 @@ import { deleteConversation } from "./deleteConversation";
 import { getIntegrationAuthLinks } from "./getIntegrationAuthLinks";
 import { saveOnboardingState } from "./saveOnboardingState";
 import { checkConnectionStatus } from "./checkConnectionStatus";
+import { getComposioKeyStatus } from "./getComposioKeyStatus";
+import { setComposioApiKey } from "./setComposioApiKey";
+import { clearComposioApiKey } from "./clearComposioApiKey";
 
 export const trustclawRouter = router({
   getInstance,
@@ -51,4 +54,7 @@ export const trustclawRouter = router({
   getIntegrationAuthLinks,
   saveOnboardingState,
   checkConnectionStatus,
+  getComposioKeyStatus,
+  setComposioApiKey,
+  clearComposioApiKey,
 });

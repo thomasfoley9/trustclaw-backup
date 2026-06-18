@@ -126,7 +126,7 @@ When real LLM usage is available (from `result.usage` after `streamText()`), tho
 - **schedule**: Create/list/delete cron jobs (see `../../../app/api/cron/trustclaw/CLAUDE.md`)
 
 ### Composio tools (dynamic)
-Created per-session via `createComposioClient(apiKey).create(orgId).tools()`. These provide integrations with external services (Gmail, Slack, GitHub, etc.) based on the user's connected accounts.
+Created per-session via `getComposioForInstance(instanceId)` → `{ client, composioUserId }`, then `client.create(composioUserId, {...}).tools()`. The per-user Composio API key lives on `ComposioClawInstance.composioApiKey`; if it isn't set, the helper throws `PRECONDITION_FAILED` and the agent run fails with a friendly "Set your Composio API key in Settings" error.
 
 ## System Prompt
 

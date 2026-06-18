@@ -1,7 +1,7 @@
 import { ToolLoopAgent, stepCountIs } from "ai";
 import type { ToolSet, SystemModelMessage } from "ai";
 import { db } from "~/server/clients/db";
-import { createComposioClient } from "~/server/clients/composio";
+import { getComposioForInstance } from "~/server/clients/composio";
 import { buildSystemPrompt } from "./system-prompt";
 import {
   createCustomTools,
@@ -393,8 +393,9 @@ export async function prepareAgentRun(
     });
   }
 
-  const composio = createComposioClient();
-  const session = await composio.create(instance.userId, {
+  const { client: composio, composioUserId } =
+    await getComposioForInstance(instanceId);
+  const session = await composio.create(composioUserId, {
     manageConnections: {
       waitForConnections: true,
     },

@@ -8,6 +8,7 @@ export default async function Page() {
   // (React #418). Settled-before-render is deterministic on both sides.
   await Promise.all([
     trpcServer.api.trustclaw.getInstance.prefetch(),
+    trpcServer.api.trustclaw.getComposioKeyStatus.prefetch(),
     trpcServer.api.trustclaw.getCronJobs.prefetchInfinite({ limit: 20 }),
     trpcServer.api.trustclaw.getMemories.prefetch({ limit: 50 }),
   ]);

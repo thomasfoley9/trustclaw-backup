@@ -10,9 +10,6 @@ export const env = createEnv({
     // Better Auth
     BETTER_AUTH_SECRET: z.string(),
 
-    // Composio API (global key)
-    COMPOSIO_API_KEY: z.string(),
-
     // Telegram bot (optional - Telegram features disabled when missing)
     TELEGRAM_BOT_TOKEN: z.string().optional(),
     TELEGRAM_BOT_USERNAME: z.string().optional(),
@@ -40,7 +37,6 @@ export const env = createEnv({
     // Server
     NODE_ENV: process.env.NODE_ENV,
     BETTER_AUTH_SECRET: process.env.BETTER_AUTH_SECRET,
-    COMPOSIO_API_KEY: process.env.COMPOSIO_API_KEY,
     TELEGRAM_BOT_TOKEN: process.env.TELEGRAM_BOT_TOKEN,
     TELEGRAM_BOT_USERNAME: process.env.TELEGRAM_BOT_USERNAME,
     TELEGRAM_WEBHOOK_SECRET: process.env.TELEGRAM_WEBHOOK_SECRET,

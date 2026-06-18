@@ -1,5 +1,5 @@
 import { protectedProcedure } from "~/server/api/trpc";
-import { createComposioClient } from "~/server/clients/composio";
+import { getComposioForUser } from "~/server/clients/composio";
 
 const ONBOARDING_TOOLKITS = [
   {
@@ -21,9 +21,10 @@ const ONBOARDING_TOOLKITS = [
 
 export const getIntegrationAuthLinks = protectedProcedure.query(
   async ({ ctx }) => {
-    const userId = ctx.session.user.id;
-    const composio = createComposioClient();
-    const session = await composio.create(userId, {});
+    const { client, composioUserId } = await getComposioForUser(
+      ctx.session.user.id,
+    );
+    const session = await client.create(composioUserId, {});
     const toolkitsInfo = await session.toolkits({
       toolkits: ONBOARDING_TOOLKITS.map((t) => t.slug),
     });

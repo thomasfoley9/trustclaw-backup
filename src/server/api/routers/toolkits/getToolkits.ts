@@ -1,13 +1,14 @@
 import { protectedProcedure } from "~/server/api/trpc";
-import { createComposioClient } from "~/server/clients/composio";
+import { getComposioForUser } from "~/server/clients/composio";
 import { getToolkitsInput } from "./getToolkits.schema";
 
 export const getToolkits = protectedProcedure
   .input(getToolkitsInput)
   .query(async ({ ctx, input }) => {
-    const userId = ctx.session.user.id;
-    const composio = createComposioClient();
-    const session = await composio.create(userId, {});
+    const { client, composioUserId } = await getComposioForUser(
+      ctx.session.user.id,
+    );
+    const session = await client.create(composioUserId, {});
 
     // 1. Fetch toolkit listing
     const toolkitsResult = await session.toolkits({

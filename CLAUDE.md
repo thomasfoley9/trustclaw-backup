@@ -16,14 +16,14 @@ When you need to look up documentation for any of these libraries, use the **Con
 
 ## Architecture
 
-This dashboard uses a **single tRPC backend** running within Next.js. Auth is handled by Better Auth with username/password. Composio functionality is accessed server-side using a global API key. All LLM and embedding calls route through **Vercel AI Gateway** via plain string model IDs (e.g., `'claude-sonnet-4-5-20250929'`). Auth uses `VERCEL_OIDC_TOKEN` on Vercel deployments, or `AI_GATEWAY_API_KEY` for local dev.
+This dashboard uses a **single tRPC backend** running within Next.js. Auth is handled by Better Auth with username/password. Composio is accessed **per-user** — each user supplies their own Composio API key, stored on their `ComposioClawInstance` (no shared key). All LLM and embedding calls route through **Vercel AI Gateway** via plain string model IDs (e.g., `'claude-sonnet-4-5-20250929'`). Auth uses `VERCEL_OIDC_TOKEN` on Vercel deployments, or `AI_GATEWAY_API_KEY` for local dev.
 
 ### tRPC (Backend)
 
 - Runs within the Next.js app (`src/server/api/`)
 - Handles all data fetching, mutations, and business logic
 - Access via `trpc.*` hooks from `~/clients/trpc/react`
-- Composio SDK calls happen inside tRPC procedures using the global `COMPOSIO_API_KEY`
+- Composio SDK calls happen inside tRPC procedures via `getComposioForUser(userId)` / `getComposioForInstance(instanceId)` from `~/server/clients/composio`, which loads the caller's per-user key and throws a clean `PRECONDITION_FAILED` if none is set
 
 ### Better Auth
 
@@ -381,7 +381,7 @@ await authClient.signOut();
 
 - All data fetching goes through tRPC: use `trpc` from `~/clients/trpc` (e.g., `trpc.*.useQuery()`)
 - NEVER use raw `fetch` for API calls
-- Composio SDK calls happen server-side inside tRPC procedures using the global `COMPOSIO_API_KEY` from env
+- Composio SDK calls happen server-side inside tRPC procedures via the per-user helpers in `~/server/clients/composio` (`getComposioForUser` / `getComposioForInstance`) — no shared/global key
 
 **tRPC queries:**
 
@@ -526,7 +526,7 @@ Some features use external SDKs directly. These clients live in `src/server/clie
 
 ```
 src/server/clients/
-├── composio.ts   # Composio SDK (@composio/core) - uses global COMPOSIO_API_KEY from env
+├── composio.ts   # Composio SDK (@composio/core) - per-user key loaded from ComposioClawInstance
 ├── telegram.ts   # Telegram Bot API helper
 ├── redis.ts      # Redis client (resumable streams, streaming state, abort flags)
 └── db.ts         # Prisma client
@@ -603,16 +603,16 @@ We rarely need to make custom components since we are maximally using shadcn pri
 
 - ALWAYS use the `env` helper from `~/env` instead of raw `process.env` - it provides type safety and validation via Zod
 - Only use `process.env` directly in root config files that run before the app bootstraps (e.g., `next.config.js`) where the `env` helper is unavailable
-- Key server-only env vars: `BETTER_AUTH_SECRET`, `COMPOSIO_API_KEY`, `DATABASE_URL`, and optionally `AI_GATEWAY_API_KEY` (for local dev - on Vercel, `VERCEL_OIDC_TOKEN` is used automatically)
+- Key server-only env vars: `BETTER_AUTH_SECRET`, `DATABASE_URL`, `CRON_SECRET`, and optionally `AI_GATEWAY_API_KEY` (for local dev - on Vercel, `VERCEL_OIDC_TOKEN` is used automatically). There is no shared `COMPOSIO_API_KEY` — each user supplies their own via Settings
 - There are no `NEXT_PUBLIC_BACKEND_URL` or similar public backend env vars - all API calls go through tRPC
 
   ```typescript
   // WRONG - no validation, no type safety
-  const key = process.env.COMPOSIO_API_KEY;
+  const secret = process.env.BETTER_AUTH_SECRET;
 
   // CORRECT - validated and typed
   import { env } from "~/env";
-  const key = env.COMPOSIO_API_KEY;
+  const secret = env.BETTER_AUTH_SECRET;
   ```
 
 ### Date & Time

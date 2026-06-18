@@ -1,13 +1,14 @@
 import { protectedProcedure } from "~/server/api/trpc";
-import { createComposioClient } from "~/server/clients/composio";
+import { getComposioForUser } from "~/server/clients/composio";
 import { checkConnectionStatusInput } from "./checkConnectionStatus.schema";
 
 export const checkConnectionStatus = protectedProcedure
   .input(checkConnectionStatusInput)
   .query(async ({ ctx, input }) => {
-    const userId = ctx.session.user.id;
-    const composio = createComposioClient();
-    const session = await composio.create(userId, {});
+    const { client, composioUserId } = await getComposioForUser(
+      ctx.session.user.id,
+    );
+    const session = await client.create(composioUserId, {});
 
     const toolkitsInfo = await session.toolkits({
       toolkits: input.toolkits,

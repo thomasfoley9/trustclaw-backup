@@ -1,15 +1,16 @@
 import { TRPCError } from "@trpc/server";
 import { protectedProcedure } from "~/server/api/trpc";
-import { createComposioClient } from "~/server/clients/composio";
+import { getComposioForUser } from "~/server/clients/composio";
 import { env } from "~/env";
 import { getAuthLinkInput } from "./getAuthLink.schema";
 
 export const getAuthLink = protectedProcedure
   .input(getAuthLinkInput)
   .mutation(async ({ ctx, input }) => {
-    const userId = ctx.session.user.id;
-    const composio = createComposioClient();
-    const session = await composio.create(userId, {});
+    const { client, composioUserId } = await getComposioForUser(
+      ctx.session.user.id,
+    );
+    const session = await client.create(composioUserId, {});
 
     try {
       const connectionRequest = await session.authorize(input.toolkit, {

@@ -6,6 +6,7 @@ import Link from "next/link";
 import { ErrorDisplay } from "~/components/core/error-display";
 import { ErrorBoundary } from "~/components/core/error-boundary";
 import { ModelSettings } from "./model-settings";
+import { ComposioApiKeySettings } from "./composio-api-key-settings";
 import { TelegramSettings } from "./telegram-settings";
 import { CronJobsSettings } from "./cron-jobs-settings";
 import { MemorySettings } from "./memory-settings";
@@ -53,6 +54,10 @@ export function SettingsPageClient() {
         <Settings className="text-muted-foreground h-5 w-5" />
         <h1 className="text-xl font-semibold md:text-2xl">Settings</h1>
       </div>
+
+      <ErrorBoundary>
+        <ComposioApiKeySettings />
+      </ErrorBoundary>
 
       <ErrorBoundary>
         <ModelSettings currentModel={instance.anthropicModel} />

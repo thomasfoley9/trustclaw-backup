@@ -1,0 +1,159 @@
+"use client";
+
+import { useState } from "react";
+import { CheckCircle2, KeyRound, Loader2 } from "lucide-react";
+import { trpc } from "~/clients/trpc";
+import { Button } from "~/components/ui/button";
+import { Input } from "~/components/ui/input";
+import { Label } from "~/components/ui/label";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "~/components/ui/card";
+import {
+  showSuccessToast,
+  trpcToastOnError,
+} from "~/components/core/toast-notifications";
+
+export function ComposioApiKeySettings() {
+  const utils = trpc.useUtils();
+  const { data, isLoading } = trpc.trustclaw.getComposioKeyStatus.useQuery();
+  const [apiKey, setApiKey] = useState("");
+  const [editing, setEditing] = useState(false);
+
+  const setKey = trpc.trustclaw.setComposioApiKey.useMutation({
+    onSuccess: () => {
+      showSuccessToast("Composio API key saved");
+      setApiKey("");
+      setEditing(false);
+      void utils.trustclaw.getComposioKeyStatus.invalidate();
+    },
+    onError: trpcToastOnError,
+  });
+
+  const clearKey = trpc.trustclaw.clearComposioApiKey.useMutation({
+    onSuccess: () => {
+      showSuccessToast("Composio API key removed");
+      void utils.trustclaw.getComposioKeyStatus.invalidate();
+    },
+    onError: trpcToastOnError,
+  });
+
+  const hasKey = !!data?.hasKey;
+  const isBusy = setKey.isPending || clearKey.isPending || isLoading;
+  const canSave = apiKey.trim().length >= 8 && !isBusy;
+
+  const showInput = !hasKey || editing;
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <KeyRound className="h-4 w-4" />
+          Composio API key
+        </CardTitle>
+        <CardDescription>
+          Bring your own key — every user authenticates against Composio with
+          their own. Grab one from your{" "}
+          <a
+            href="https://app.composio.dev/developers"
+            target="_blank"
+            rel="noreferrer noopener"
+            className="text-primary underline-offset-4 hover:underline"
+          >
+            Composio developer dashboard
+          </a>
+          .
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {hasKey && !editing && (
+          <div className="flex items-center justify-between gap-3 rounded-md border bg-muted/30 px-3 py-2">
+            <div className="flex items-center gap-2 text-sm">
+              <CheckCircle2 className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+              <span className="font-medium">Connected</span>
+              <span className="text-muted-foreground font-mono">
+                {data?.maskedKey}
+              </span>
+            </div>
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setEditing(true)}
+                disabled={isBusy}
+              >
+                Replace
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => void clearKey.mutateAsync()}
+                disabled={isBusy}
+              >
+                {clearKey.isPending ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  "Remove"
+                )}
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {showInput && (
+          <div className="space-y-3">
+            <div className="space-y-2">
+              <Label htmlFor="composio-api-key">API key</Label>
+              <Input
+                id="composio-api-key"
+                type="password"
+                autoComplete="off"
+                placeholder="ak_…"
+                value={apiKey}
+                onChange={(e) => setApiKey(e.target.value)}
+                disabled={isBusy}
+              />
+              <p className="text-muted-foreground text-xs">
+                We validate the key with Composio before saving it.
+              </p>
+            </div>
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                disabled={!canSave}
+                onClick={() =>
+                  void setKey.mutateAsync({ apiKey: apiKey.trim() })
+                }
+              >
+                {setKey.isPending ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Validating…
+                  </>
+                ) : (
+                  "Save"
+                )}
+              </Button>
+              {hasKey && (
+                <Button
+                  variant="ghost"
+                  onClick={() => {
+                    setEditing(false);
+                    setApiKey("");
+                  }}
+                  disabled={isBusy}
+                >
+                  Cancel
+                </Button>
+              )}
+            </div>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}

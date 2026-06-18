@@ -102,6 +102,10 @@ model ComposioClawInstance {
   // Anthropic config
   anthropicModel String @default("claude-sonnet-4-5-20250929")
 
+  // Per-user Composio API key. Each user brings their own — no shared key.
+  // Tool calls and toolkit listings require this to be set.
+  composioApiKey String?
+
   // Memory routing: which bucket new memories save to, and whether the
   // current chat runs incognito (no recall, no save, no history).
   activeMemoryBucket String  @default("general")
