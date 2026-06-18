@@ -19,6 +19,8 @@ import {
 import { ThemeToggle } from "~/components/core/theme-toggle";
 import { TrustClawBrand } from "~/app/_components/trustclaw-brand";
 import { authClient } from "~/clients/auth/react";
+import { trpc } from "~/clients/trpc";
+import { trpcToastOnError } from "~/components/core/toast-notifications";
 import { useTerminalStore } from "./terminal-store";
 import { MemoryBucketControl } from "./memory-bucket-control";
 import { PersonalityControl } from "./personality-control";
@@ -38,6 +40,22 @@ export function DashboardNavbar() {
   const handleLogout = async () => {
     await authClient.signOut();
     router.push("/login");
+  };
+
+  // Kick off Composio's Slack OAuth, then redirect to the consent screen —
+  // same flow as the Toolkits page's Connect button.
+  const connectSlack = trpc.toolkits.getAuthLink.useMutation({
+    onError: trpcToastOnError,
+  });
+  const handleConnectSlack = async () => {
+    try {
+      const { redirectUrl } = await connectSlack.mutateAsync({
+        toolkit: "slack",
+      });
+      router.push(redirectUrl);
+    } catch {
+      // trpcToastOnError already surfaced the toast
+    }
   };
 
   return (
@@ -117,26 +135,23 @@ export function DashboardNavbar() {
 
         <Tooltip>
           <TooltipTrigger asChild>
-            <Link
-              href="https://discord.gg/composio"
-              target="_blank"
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-9 w-9"
+              disabled={connectSlack.isPending}
+              onClick={() => void handleConnectSlack()}
             >
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-9 w-9"
-              >
-                <Image
-                  src="/images/icons/discord.webp"
-                  alt="Discord"
-                  width={16}
-                  height={16}
-                  className="h-4 w-4 dark:invert"
-                />
-              </Button>
-            </Link>
+              <Image
+                src="/images/icons/slack.png"
+                alt="Slack"
+                width={16}
+                height={16}
+                className="h-4 w-4"
+              />
+            </Button>
           </TooltipTrigger>
-          <TooltipContent>Discord</TooltipContent>
+          <TooltipContent>Connect Slack</TooltipContent>
         </Tooltip>
 
         <Tooltip>
