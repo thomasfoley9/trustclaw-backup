@@ -13,6 +13,7 @@ import { CronJobsSettings } from "./cron-jobs-settings";
 import { MemorySettings } from "./memory-settings";
 import { KnowledgeBucketsSettings } from "./knowledge-buckets-settings";
 import { PersonalitySettings } from "./personality-settings";
+import { SkillsSettings } from "./skills-settings";
 import { DangerZone } from "./danger-zone";
 import { SettingsPageSkeleton } from "./settings-page.skeleton";
 
@@ -71,6 +72,10 @@ export function SettingsPageClient() {
 
       <ErrorBoundary>
         <PersonalitySettings />
+      </ErrorBoundary>
+
+      <ErrorBoundary>
+        <SkillsSettings />
       </ErrorBoundary>
 
       {data?.telegramConfigured && (

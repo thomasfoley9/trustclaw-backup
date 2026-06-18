@@ -10,6 +10,7 @@ import {
   getBucketMemories,
 } from "./tools";
 import { getAlwaysInjectBucketSlugs } from "../bucket-service";
+import { getEnabledSkills } from "../skill-service";
 import { getContextWindow } from "./context/context-window";
 import { pruneContext } from "./context/context-pruning";
 import {
@@ -250,6 +251,9 @@ export async function prepareAgentRun(
         )
       ).flat();
 
+  // Enabled skills inject into the system prompt as named capabilities.
+  const skills = incognito ? [] : await getEnabledSkills(instanceId);
+
   const systemPrompt = sanitizeString(
     buildSystemPrompt({
       soulPrompt: effectiveSoulPrompt,
@@ -258,6 +262,7 @@ export async function prepareAgentRun(
       activePersonalityName,
       relevantMemories,
       productKnowledge,
+      skills,
       hasCompactionSummary: !!conversation.lastCompactionSummary,
       userTimezone,
     }),

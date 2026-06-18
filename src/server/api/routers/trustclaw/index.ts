@@ -35,6 +35,12 @@ import { getCustomModels } from "./getCustomModels";
 import { addCustomModel } from "./addCustomModel";
 import { deleteCustomModel } from "./deleteCustomModel";
 import { saveConversationToBucket } from "./saveConversationToBucket";
+import { getSkills } from "./getSkills";
+import { generateSkill } from "./generateSkill";
+import { createSkill } from "./createSkill";
+import { updateSkill } from "./updateSkill";
+import { deleteSkill } from "./deleteSkill";
+import { toggleSkill } from "./toggleSkill";
 
 export const trustclawRouter = router({
   getInstance,
@@ -73,4 +79,10 @@ export const trustclawRouter = router({
   addCustomModel,
   deleteCustomModel,
   saveConversationToBucket,
+  getSkills,
+  generateSkill,
+  createSkill,
+  updateSkill,
+  deleteSkill,
+  toggleSkill,
 });

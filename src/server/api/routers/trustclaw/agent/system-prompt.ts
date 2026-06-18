@@ -1,4 +1,5 @@
 import moment from "moment-timezone";
+import { renderSkillsSection, type SkillForPrompt } from "../skills";
 
 interface SystemPromptParams {
   soulPrompt: string | null;
@@ -6,6 +7,7 @@ interface SystemPromptParams {
   userPrompt: string | null;
   relevantMemories?: string[];
   productKnowledge?: string[];
+  skills?: SkillForPrompt[];
   activePersonalityName?: string | null;
   hasCompactionSummary?: boolean;
   userTimezone: string;
@@ -206,6 +208,11 @@ export function buildSystemPrompt(params: SystemPromptParams): string {
 
   sections.push(COMPOSIO_TOOLS_DESCRIPTION);
   sections.push(CUSTOM_TOOLS_DESCRIPTION);
+
+  if (params.skills && params.skills.length > 0) {
+    sections.push(renderSkillsSection(params.skills));
+  }
+
   sections.push(SCHEDULED_TASK_NOTE);
   sections.push(MESSAGING_GUIDELINES);
 
