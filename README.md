@@ -17,7 +17,7 @@ A 24/7 personal AI assistant with 1000+ tools via **OAuth** and **sandboxed exec
 
 Click here to use the Vercel Template:
 
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2FComposioHQ%2Ftrustclaw&project-name=trustclaw&repository-name=trustclaw&env=BETTER_AUTH_SECRET,COMPOSIO_API_KEY,CRON_SECRET&envDescription=Generate%20BETTER_AUTH_SECRET%20and%20CRON_SECRET%20with%3A%20openssl%20rand%20-base64%2032.%20Get%20a%20free%20COMPOSIO_API_KEY%20at%20https%3A%2F%2Fdashboard.composio.dev%2Flogin%3Fflow%3Ddeveloper&envLink=https%3A%2F%2Fgithub.com%2FComposioHQ%2Ftrustclaw%23environment-variables&products=%5B%7B%22type%22%3A%22integration%22%2C%22integrationSlug%22%3A%22neon%22%2C%22productSlug%22%3A%22neon%22%2C%22protocol%22%3A%22storage%22%7D%2C%7B%22type%22%3A%22integration%22%2C%22integrationSlug%22%3A%22upstash%22%2C%22productSlug%22%3A%22upstash-kv%22%2C%22protocol%22%3A%22storage%22%7D%5D&skippable-integrations=1)
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2FComposioHQ%2Ftrustclaw&project-name=trustclaw&repository-name=trustclaw&env=BETTER_AUTH_SECRET,CRON_SECRET,ENCRYPTION_KEY&envDescription=Generate%20each%20with%3A%20openssl%20rand%20-base64%2032&envLink=https%3A%2F%2Fgithub.com%2FComposioHQ%2Ftrustclaw%23environment-variables&products=%5B%7B%22type%22%3A%22integration%22%2C%22integrationSlug%22%3A%22neon%22%2C%22productSlug%22%3A%22neon%22%2C%22protocol%22%3A%22storage%22%7D%2C%7B%22type%22%3A%22integration%22%2C%22integrationSlug%22%3A%22upstash%22%2C%22productSlug%22%3A%22upstash-kv%22%2C%22protocol%22%3A%22storage%22%7D%5D&skippable-integrations=1)
 
 
 ### Or use the CLI
@@ -137,7 +137,7 @@ If you'd rather skip the deploy CLI and run TrustClaw locally:
 
 ```bash
 pnpm install
-cp .env.example .env       # fill in DATABASE_URL, BETTER_AUTH_SECRET, COMPOSIO_API_KEY
+cp .env.example .env       # fill in DATABASE_URL, BETTER_AUTH_SECRET (Composio keys are set per-user in Settings)
 pnpm prisma db push        # apply schema (Postgres + pgvector required)
 pnpm dev                   # http://localhost:3000
 ```
@@ -152,8 +152,8 @@ For Telegram, point your bot's webhook at `<NEXT_PUBLIC_APP_URL>/api/telegram-we
 |---|---|
 | `DATABASE_URL` | Postgres + pgvector connection string |
 | `BETTER_AUTH_SECRET` | Session signing key (32+ random bytes) |
-| `COMPOSIO_API_KEY` | Composio tool integrations |
 | `CRON_SECRET` | Auth for `/api/cron/*` routes (auto-injected on Vercel) |
+| `ENCRYPTION_KEY` _(optional)_ | Encrypts per-user Composio keys at rest (32 bytes, hex/base64). Plaintext when unset — set it in any shared deploy |
 | `REDIS_URL` _(optional)_ | Resumable streams + abort flags |
 | `TELEGRAM_BOT_TOKEN` _(optional)_ | Telegram bot |
 | `TELEGRAM_BOT_USERNAME` _(optional)_ | Telegram bot |

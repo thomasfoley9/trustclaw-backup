@@ -10,6 +10,12 @@ export const env = createEnv({
     // Better Auth
     BETTER_AUTH_SECRET: z.string(),
 
+    // Secret-at-rest encryption for per-user Composio keys (AES-256-GCM).
+    // 32 bytes, hex or base64. Optional: when unset, keys are stored as
+    // plaintext (fine for local dev); set it in any shared/cloud deploy.
+    // Generate with: openssl rand -base64 32
+    ENCRYPTION_KEY: z.string().optional(),
+
     // Telegram bot (optional - Telegram features disabled when missing)
     TELEGRAM_BOT_TOKEN: z.string().optional(),
     TELEGRAM_BOT_USERNAME: z.string().optional(),
@@ -37,6 +43,7 @@ export const env = createEnv({
     // Server
     NODE_ENV: process.env.NODE_ENV,
     BETTER_AUTH_SECRET: process.env.BETTER_AUTH_SECRET,
+    ENCRYPTION_KEY: process.env.ENCRYPTION_KEY,
     TELEGRAM_BOT_TOKEN: process.env.TELEGRAM_BOT_TOKEN,
     TELEGRAM_BOT_USERNAME: process.env.TELEGRAM_BOT_USERNAME,
     TELEGRAM_WEBHOOK_SECRET: process.env.TELEGRAM_WEBHOOK_SECRET,

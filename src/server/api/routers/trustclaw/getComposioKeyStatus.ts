@@ -1,5 +1,6 @@
 import { protectedProcedure } from "~/server/api/trpc";
 import { db } from "~/server/clients/db";
+import { decryptSecret } from "~/server/clients/crypto";
 
 function mask(key: string): string {
   if (key.length <= 10) return "•".repeat(key.length);
@@ -12,9 +13,16 @@ export const getComposioKeyStatus = protectedProcedure.query(async ({ ctx }) => 
     where: { userId },
     select: { composioApiKey: true },
   });
-  const key = instance?.composioApiKey ?? null;
-  return {
-    hasKey: !!key,
-    maskedKey: key ? mask(key) : null,
-  };
+  const stored = instance?.composioApiKey ?? null;
+  if (!stored) {
+    return { hasKey: false, maskedKey: null };
+  }
+
+  // Decrypt only to build the masked preview. If it can't be decrypted
+  // (missing/rotated key), still report a key exists but skip the preview.
+  try {
+    return { hasKey: true, maskedKey: mask(decryptSecret(stored)) };
+  } catch {
+    return { hasKey: true, maskedKey: null };
+  }
 });

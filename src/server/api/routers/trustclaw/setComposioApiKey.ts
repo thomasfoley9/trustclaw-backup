@@ -1,6 +1,7 @@
 import { TRPCError } from "@trpc/server";
 import { protectedProcedure } from "~/server/api/trpc";
 import { db } from "~/server/clients/db";
+import { encryptSecret } from "~/server/clients/crypto";
 import { setComposioApiKeyInput } from "./setComposioApiKey.schema";
 
 const COMPOSIO_BASE_URL = "https://backend.composio.dev";
@@ -51,7 +52,7 @@ export const setComposioApiKey = protectedProcedure
 
     await db.composioClawInstance.update({
       where: { userId },
-      data: { composioApiKey: input.apiKey },
+      data: { composioApiKey: encryptSecret(input.apiKey) },
     });
 
     return { ok: true as const };

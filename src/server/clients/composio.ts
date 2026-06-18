@@ -2,6 +2,7 @@ import { Composio } from "@composio/core";
 import { VercelProvider } from "@composio/vercel";
 import { TRPCError } from "@trpc/server";
 import { db } from "~/server/clients/db";
+import { decryptSecret } from "~/server/clients/crypto";
 
 export function createComposioClient(apiKey: string) {
   return new Composio({
@@ -17,17 +18,29 @@ type ComposioContext = {
 };
 
 function buildContext(
-  apiKey: string | null,
+  storedApiKey: string | null,
   composioUserId: string,
   instanceId: string,
 ): ComposioContext {
-  if (!apiKey) {
+  if (!storedApiKey) {
     throw new TRPCError({
       code: "PRECONDITION_FAILED",
       message:
         "Set your Composio API key in Settings to use tools and integrations.",
     });
   }
+
+  let apiKey: string;
+  try {
+    apiKey = decryptSecret(storedApiKey);
+  } catch {
+    throw new TRPCError({
+      code: "PRECONDITION_FAILED",
+      message:
+        "Your stored Composio API key couldn't be decrypted. Re-enter it in Settings.",
+    });
+  }
+
   return {
     client: createComposioClient(apiKey),
     composioUserId,
