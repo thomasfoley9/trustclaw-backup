@@ -50,6 +50,7 @@ import {
   PersonalityAvatar,
   PERSONALITY_AVATARS,
 } from "~/app/_components/personality-avatar";
+import { EmojiPicker } from "./emoji-picker";
 import type { RouterOutputs } from "~/clients/trpc";
 
 const NO_AVATAR = "__none__";
@@ -270,20 +271,16 @@ export function PersonalitySettings() {
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-3">
-            <div className="flex gap-2">
-              <Input
-                placeholder="Emoji"
-                value={emoji}
-                onChange={(e) => setEmoji(e.target.value)}
-                className="w-20 text-center"
-                maxLength={16}
-              />
-              <Input
-                placeholder="Name (e.g. Acme Corp, Unhinged)"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                className="flex-1"
-              />
+            <Input
+              placeholder="Name (e.g. Acme Corp, Unhinged)"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+            />
+            <div className="space-y-1.5">
+              <p className="text-muted-foreground text-xs font-medium">
+                Emoji
+              </p>
+              <EmojiPicker value={emoji} onChange={setEmoji} />
             </div>
             <div className="flex items-center gap-3">
               <Select value={avatarKey} onValueChange={setAvatarKey}>
