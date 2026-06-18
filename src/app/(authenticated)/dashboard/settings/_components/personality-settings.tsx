@@ -34,13 +34,7 @@ import {
   AlertDialogTrigger,
 } from "~/components/ui/alert-dialog";
 import { Skeleton } from "~/components/ui/skeleton";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "~/components/ui/select";
+import { cn } from "~/lib/utils";
 import {
   showSuccessToast,
   showTrpcErrorToast,
@@ -50,13 +44,16 @@ import {
   PersonalityAvatar,
   PERSONALITY_AVATARS,
 } from "~/app/_components/personality-avatar";
-import { EmojiPicker } from "./emoji-picker";
+import { DEFAULT_AVATAR_KEY } from "~/app/_components/personality-avatars-data";
 import type { RouterOutputs } from "~/clients/trpc";
-
-const NO_AVATAR = "__none__";
 
 type Personality =
   RouterOutputs["trustclaw"]["getPersonalities"]["personalities"][number];
+
+function randomAvatarKey(): string {
+  const i = Math.floor(Math.random() * PERSONALITY_AVATARS.length);
+  return PERSONALITY_AVATARS[i]?.key ?? DEFAULT_AVATAR_KEY;
+}
 
 export function PersonalitySettings() {
   const utils = trpc.useUtils();
@@ -65,8 +62,7 @@ export function PersonalitySettings() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<Personality | null>(null);
   const [name, setName] = useState("");
-  const [emoji, setEmoji] = useState("");
-  const [avatarKey, setAvatarKey] = useState<string>(NO_AVATAR);
+  const [avatarKey, setAvatarKey] = useState<string>(DEFAULT_AVATAR_KEY);
   const [prompt, setPrompt] = useState("");
 
   const invalidate = () => void utils.trustclaw.getPersonalities.invalidate();
@@ -89,8 +85,7 @@ export function PersonalitySettings() {
   const openCreate = () => {
     setEditing(null);
     setName("");
-    setEmoji("");
-    setAvatarKey(NO_AVATAR);
+    setAvatarKey(randomAvatarKey());
     setPrompt("");
     setDialogOpen(true);
   };
@@ -98,30 +93,27 @@ export function PersonalitySettings() {
   const openEdit = (personality: Personality) => {
     setEditing(personality);
     setName(personality.name);
-    setEmoji(personality.emoji ?? "");
-    setAvatarKey(personality.avatarKey ?? NO_AVATAR);
+    setAvatarKey(personality.avatarKey ?? DEFAULT_AVATAR_KEY);
     setPrompt(personality.prompt);
     setDialogOpen(true);
   };
 
   const handleSave = async () => {
-    const resolvedAvatar = avatarKey === NO_AVATAR ? null : avatarKey;
     try {
       if (editing) {
         await updateMutation.mutateAsync({
           id: editing.id,
           name,
           prompt,
-          emoji: emoji.trim() || null,
-          avatarKey: resolvedAvatar,
+          avatarKey,
+          emoji: null,
         });
         showSuccessToast("Personality updated");
       } else {
         await createMutation.mutateAsync({
           name,
           prompt,
-          emoji: emoji.trim() || undefined,
-          avatarKey: resolvedAvatar ?? undefined,
+          avatarKey,
         });
         showSuccessToast("Personality created");
       }
@@ -171,16 +163,10 @@ export function PersonalitySettings() {
                 >
                   <div className="min-w-0">
                     <div className="flex items-center gap-2">
-                      {personality.avatarKey ? (
-                        <PersonalityAvatar
-                          avatarKey={personality.avatarKey}
-                          size={28}
-                        />
-                      ) : personality.emoji ? (
-                        <span className="text-base leading-none">
-                          {personality.emoji}
-                        </span>
-                      ) : null}
+                      <PersonalityAvatar
+                        avatarKey={personality.avatarKey}
+                        size={28}
+                      />
                       <span className="text-foreground truncate text-sm font-medium">
                         {personality.name}
                       </span>
@@ -271,43 +257,40 @@ export function PersonalitySettings() {
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-3">
-            <Input
-              placeholder="Name (e.g. Acme Corp, Unhinged)"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-            />
-            <div className="space-y-1.5">
-              <p className="text-muted-foreground text-xs font-medium">
-                Emoji
-              </p>
-              <EmojiPicker value={emoji} onChange={setEmoji} />
-            </div>
             <div className="flex items-center gap-3">
-              <Select value={avatarKey} onValueChange={setAvatarKey}>
-                <SelectTrigger className="flex-1">
-                  <SelectValue placeholder="Avatar" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value={NO_AVATAR}>No avatar</SelectItem>
-                  {PERSONALITY_AVATARS.map((a) => (
-                    <SelectItem key={a.key} value={a.key}>
-                      <span className="flex items-center gap-2">
-                        <PersonalityAvatar avatarKey={a.key} size={20} />
-                        {a.label}
-                      </span>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {avatarKey !== NO_AVATAR && (
-                <PersonalityAvatar avatarKey={avatarKey} size={40} />
-              )}
+              <PersonalityAvatar avatarKey={avatarKey} size={44} />
+              <Input
+                placeholder="Name (e.g. Acme Corp, Unhinged)"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                className="flex-1"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <p className="text-muted-foreground text-xs font-medium">Avatar</p>
+              <div className="grid max-h-44 grid-cols-8 gap-1 overflow-y-auto rounded-md border p-2">
+                {PERSONALITY_AVATARS.map((a) => (
+                  <button
+                    key={a.key}
+                    type="button"
+                    title={a.label}
+                    aria-label={a.label}
+                    onClick={() => setAvatarKey(a.key)}
+                    className={cn(
+                      "flex items-center justify-center rounded-md p-1 transition-colors hover:bg-accent",
+                      avatarKey === a.key && "bg-accent ring-ring ring-2",
+                    )}
+                  >
+                    <PersonalityAvatar avatarKey={a.key} size={30} fallback={false} />
+                  </button>
+                ))}
+              </div>
             </div>
             <Textarea
               placeholder="Describe how the agent should talk and behave..."
               value={prompt}
               onChange={(e) => setPrompt(e.target.value)}
-              rows={10}
+              rows={9}
             />
           </div>
           <DialogFooter>

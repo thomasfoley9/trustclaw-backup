@@ -39,11 +39,7 @@ export function PersonalityControl() {
         {data.personalities.map((personality) => (
           <SelectItem key={personality.id} value={personality.id}>
             <span className="flex items-center gap-2">
-              {personality.avatarKey ? (
-                <PersonalityAvatar avatarKey={personality.avatarKey} size={20} />
-              ) : personality.emoji ? (
-                <span>{personality.emoji}</span>
-              ) : null}
+              <PersonalityAvatar avatarKey={personality.avatarKey} size={20} />
               {personality.name}
             </span>
           </SelectItem>
