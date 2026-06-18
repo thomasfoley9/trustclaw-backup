@@ -1,9 +1,21 @@
 "use client";
 
-import { useEffect, useRef } from "react";
-import { Plus, Trash2, MessageSquare, Loader2 } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import {
+  Plus,
+  Trash2,
+  MessageSquare,
+  Loader2,
+  Pencil,
+  Check,
+  X,
+  Clock,
+} from "lucide-react";
 import { trpc } from "~/clients/trpc";
 import { Button } from "~/components/ui/button";
+import { Switch } from "~/components/ui/switch";
+import { cn } from "~/lib/utils";
+import { formatCronExpression, formatCronDate } from "~/lib/cron-format";
 import { trpcToastOnError } from "~/components/core/toast-notifications";
 
 // Mirror of the server's run-staleness window: runs older than this are
@@ -15,8 +27,12 @@ export function runningNow(activeRunStartedAt: string | Date | null): boolean {
   return Date.now() - new Date(activeRunStartedAt).getTime() < RUN_STALE_MS;
 }
 
+type View = "chats" | "cron";
+
 export function ConversationSidebar() {
   const utils = trpc.useUtils();
+  const [view, setView] = useState<View>("chats");
+
   const { data, error, refetch } = trpc.trustclaw.getConversations.useQuery(
     undefined,
     {
@@ -64,6 +80,30 @@ export function ConversationSidebar() {
     onError: trpcToastOnError,
     onSuccess: refresh,
   });
+  const renameConversation = trpc.trustclaw.renameConversation.useMutation({
+    onError: trpcToastOnError,
+    onSuccess: refresh,
+  });
+
+  // Inline rename state
+  const [renamingId, setRenamingId] = useState<string | null>(null);
+  const [renameValue, setRenameValue] = useState("");
+
+  const beginRename = (id: string, title: string) => {
+    setRenamingId(id);
+    setRenameValue(title);
+  };
+  const cancelRename = () => {
+    setRenamingId(null);
+    setRenameValue("");
+  };
+  const commitRename = async (id: string, original: string) => {
+    const next = renameValue.trim();
+    cancelRename();
+    if (next && next !== original) {
+      await renameConversation.mutateAsync({ id, title: next });
+    }
+  };
 
   const conversations = data?.conversations ?? [];
   const activeId = data?.activeConversationId;
@@ -74,79 +114,251 @@ export function ConversationSidebar() {
 
   return (
     <aside className="border-border hidden w-64 shrink-0 flex-col border-r md:flex">
-      <div className="p-2">
-        <Button
-          variant="outline"
-          className="w-full justify-start gap-2"
-          onClick={() => void createConversation.mutateAsync()}
-          disabled={createConversation.isPending}
+      {/* Chats | Cron toggle */}
+      <div className="flex gap-1 p-2">
+        <button
+          type="button"
+          onClick={() => setView("chats")}
+          className={cn(
+            "flex-1 rounded-md px-2 py-1.5 text-xs font-medium transition-colors",
+            view === "chats"
+              ? "bg-accent text-foreground"
+              : "text-muted-foreground hover:bg-accent/50",
+          )}
         >
-          <Plus className="h-4 w-4" /> New chat
-        </Button>
+          Chats
+        </button>
+        <button
+          type="button"
+          onClick={() => setView("cron")}
+          className={cn(
+            "flex-1 rounded-md px-2 py-1.5 text-xs font-medium transition-colors",
+            view === "cron"
+              ? "bg-accent text-foreground"
+              : "text-muted-foreground hover:bg-accent/50",
+          )}
+        >
+          Cron
+        </button>
       </div>
 
-      <div className="min-h-0 flex-1 overflow-y-auto px-2 pb-2">
-        {error ? (
-          <div className="px-2 py-4">
-            <p className="text-muted-foreground text-xs">
-              Couldn&apos;t load chats.
-            </p>
+      {view === "chats" ? (
+        <>
+          <div className="px-2 pb-2">
+            <Button
+              variant="outline"
+              className="w-full justify-start gap-2"
+              onClick={() => void createConversation.mutateAsync()}
+              disabled={createConversation.isPending}
+            >
+              <Plus className="h-4 w-4" /> New chat
+            </Button>
+          </div>
+
+          <div className="min-h-0 flex-1 overflow-y-auto px-2 pb-2">
+            {error ? (
+              <div className="px-2 py-4">
+                <p className="text-muted-foreground text-xs">
+                  Couldn&apos;t load chats.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => void refetch()}
+                  className="text-primary mt-1 text-xs hover:underline"
+                >
+                  Try again
+                </button>
+              </div>
+            ) : conversations.length === 0 ? (
+              <p className="text-muted-foreground px-2 py-4 text-xs">
+                No chats yet.
+              </p>
+            ) : (
+              <ul className="space-y-0.5">
+                {conversations.map((c) => {
+                  const isActive = c.id === activeId;
+                  const isRunning = runningNow(c.activeRunStartedAt);
+                  const isRenaming = renamingId === c.id;
+
+                  if (isRenaming) {
+                    return (
+                      <li
+                        key={c.id}
+                        className="flex items-center gap-1 rounded-md px-1 py-1"
+                      >
+                        <input
+                          autoFocus
+                          value={renameValue}
+                          onChange={(e) => setRenameValue(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter")
+                              void commitRename(c.id, c.title);
+                            if (e.key === "Escape") cancelRename();
+                          }}
+                          maxLength={100}
+                          className="border-input bg-background min-w-0 flex-1 rounded border px-2 py-1 text-sm outline-none"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => void commitRename(c.id, c.title)}
+                          className="text-muted-foreground hover:text-foreground shrink-0 p-1"
+                          aria-label="Save title"
+                        >
+                          <Check className="h-4 w-4" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={cancelRename}
+                          className="text-muted-foreground hover:text-foreground shrink-0 p-1"
+                          aria-label="Cancel rename"
+                        >
+                          <X className="h-4 w-4" />
+                        </button>
+                      </li>
+                    );
+                  }
+
+                  return (
+                    <li
+                      key={c.id}
+                      className={cn(
+                        "group flex items-center rounded-md",
+                        isActive ? "bg-accent" : "hover:bg-accent/50",
+                      )}
+                    >
+                      <button
+                        type="button"
+                        disabled={busy}
+                        onClick={() => {
+                          if (!isActive)
+                            void setActive.mutateAsync({ id: c.id });
+                        }}
+                        className="flex min-w-0 flex-1 items-center gap-2 px-2 py-2 text-left text-sm"
+                      >
+                        {isRunning ? (
+                          <Loader2 className="text-primary h-4 w-4 shrink-0 animate-spin" />
+                        ) : (
+                          <MessageSquare className="text-muted-foreground h-4 w-4 shrink-0" />
+                        )}
+                        <span className="truncate">{c.title}</span>
+                      </button>
+                      <button
+                        type="button"
+                        disabled={busy}
+                        onClick={() => beginRename(c.id, c.title)}
+                        className="text-muted-foreground hover:text-foreground shrink-0 px-1.5 py-2 opacity-0 transition-opacity group-hover:opacity-100"
+                        aria-label="Rename chat"
+                      >
+                        <Pencil className="h-3.5 w-3.5" />
+                      </button>
+                      <button
+                        type="button"
+                        disabled={busy}
+                        onClick={() =>
+                          void deleteConversation.mutateAsync({ id: c.id })
+                        }
+                        className="text-muted-foreground hover:text-destructive shrink-0 px-1.5 py-2 opacity-0 transition-opacity group-hover:opacity-100"
+                        aria-label="Delete chat"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </button>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+          </div>
+        </>
+      ) : (
+        <CronList />
+      )}
+    </aside>
+  );
+}
+
+function CronList() {
+  const utils = trpc.useUtils();
+  const { data, isLoading, error, refetch, hasNextPage, fetchNextPage } =
+    trpc.trustclaw.getCronJobs.useInfiniteQuery(
+      { limit: 20 },
+      { getNextPageParam: (lastPage) => lastPage.nextCursor },
+    );
+  const toggle = trpc.trustclaw.toggleCronJob.useMutation({
+    onError: trpcToastOnError,
+    onSuccess: () => void utils.trustclaw.getCronJobs.invalidate(),
+  });
+
+  const jobs = data?.pages.flatMap((p) => p.items) ?? [];
+
+  return (
+    <div className="min-h-0 flex-1 overflow-y-auto px-2 pb-2">
+      {isLoading ? (
+        <div className="text-muted-foreground flex items-center gap-2 px-2 py-4 text-xs">
+          <Loader2 className="h-3.5 w-3.5 animate-spin" /> Loading…
+        </div>
+      ) : error ? (
+        <div className="px-2 py-4">
+          <p className="text-muted-foreground text-xs">
+            Couldn&apos;t load scheduled jobs.
+          </p>
+          <button
+            type="button"
+            onClick={() => void refetch()}
+            className="text-primary mt-1 text-xs hover:underline"
+          >
+            Try again
+          </button>
+        </div>
+      ) : jobs.length === 0 ? (
+        <p className="text-muted-foreground px-2 py-4 text-xs">
+          No scheduled jobs. Ask the agent to schedule something, or add one in
+          Settings.
+        </p>
+      ) : (
+        <ul className="space-y-1">
+          {jobs.map((job) => (
+            <li
+              key={job.id}
+              className="border-border rounded-md border p-2 text-xs"
+            >
+              <p className="text-foreground line-clamp-2">{job.prompt}</p>
+              <div className="text-muted-foreground mt-1 flex items-center gap-1">
+                <Clock className="h-3 w-3 shrink-0" />
+                <span className="truncate">
+                  {formatCronExpression(job.expression)}
+                </span>
+              </div>
+              <div className="mt-1.5 flex items-center justify-between gap-2">
+                <span className="text-muted-foreground truncate">
+                  Next: {formatCronDate(job.nextRunAt)}
+                </span>
+                <Switch
+                  checked={job.enabled}
+                  disabled={toggle.isPending}
+                  onCheckedChange={(enabled) =>
+                    void toggle.mutateAsync({ jobId: job.id, enabled })
+                  }
+                  aria-label={job.enabled ? "Disable job" : "Enable job"}
+                />
+              </div>
+              {job.lastError && (
+                <p className="text-destructive mt-1 line-clamp-2">
+                  {job.lastError}
+                </p>
+              )}
+            </li>
+          ))}
+          {hasNextPage && (
             <button
               type="button"
-              onClick={() => void refetch()}
-              className="text-primary mt-1 text-xs hover:underline"
+              onClick={() => void fetchNextPage()}
+              className="text-primary w-full py-2 text-xs hover:underline"
             >
-              Try again
+              Load more
             </button>
-          </div>
-        ) : conversations.length === 0 ? (
-          <p className="text-muted-foreground px-2 py-4 text-xs">
-            No chats yet.
-          </p>
-        ) : (
-          <ul className="space-y-0.5">
-            {conversations.map((c) => {
-              const isActive = c.id === activeId;
-              const isRunning = runningNow(c.activeRunStartedAt);
-              return (
-                <li
-                  key={c.id}
-                  className={`group flex items-center rounded-md ${
-                    isActive ? "bg-accent" : "hover:bg-accent/50"
-                  }`}
-                >
-                  <button
-                    type="button"
-                    disabled={busy}
-                    onClick={() => {
-                      if (!isActive) void setActive.mutateAsync({ id: c.id });
-                    }}
-                    className="flex min-w-0 flex-1 items-center gap-2 px-2 py-2 text-left text-sm"
-                  >
-                    {isRunning ? (
-                      <Loader2 className="text-primary h-4 w-4 shrink-0 animate-spin" />
-                    ) : (
-                      <MessageSquare className="text-muted-foreground h-4 w-4 shrink-0" />
-                    )}
-                    <span className="truncate">{c.title}</span>
-                  </button>
-                  <button
-                    type="button"
-                    disabled={busy}
-                    onClick={() =>
-                      void deleteConversation.mutateAsync({ id: c.id })
-                    }
-                    className="text-muted-foreground hover:text-destructive shrink-0 px-2 py-2 opacity-0 transition-opacity group-hover:opacity-100"
-                    aria-label="Delete chat"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </button>
-                </li>
-              );
-            })}
-          </ul>
-        )}
-      </div>
-    </aside>
+          )}
+        </ul>
+      )}
+    </div>
   );
 }
