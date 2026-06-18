@@ -10,6 +10,7 @@ import {
   Check,
   X,
   Clock,
+  BookmarkPlus,
 } from "lucide-react";
 import { trpc } from "~/clients/trpc";
 import { Button } from "~/components/ui/button";
@@ -17,6 +18,7 @@ import { Switch } from "~/components/ui/switch";
 import { cn } from "~/lib/utils";
 import { formatCronExpression, formatCronDate } from "~/lib/cron-format";
 import { trpcToastOnError } from "~/components/core/toast-notifications";
+import { SaveToKnowledgeDialog } from "./save-to-knowledge-dialog";
 
 // Mirror of the server's run-staleness window: runs older than this are
 // treated as dead even if the flag wasn't cleared (crashed function).
@@ -88,6 +90,9 @@ export function ConversationSidebar() {
   // Inline rename state
   const [renamingId, setRenamingId] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState("");
+
+  // Which conversation's "save to knowledge" dialog is open
+  const [savingConvId, setSavingConvId] = useState<string | null>(null);
 
   const beginRename = (id: string, title: string) => {
     setRenamingId(id);
@@ -245,6 +250,15 @@ export function ConversationSidebar() {
                       <button
                         type="button"
                         disabled={busy}
+                        onClick={() => setSavingConvId(c.id)}
+                        className="text-muted-foreground hover:text-foreground shrink-0 px-1.5 py-2 opacity-0 transition-opacity group-hover:opacity-100"
+                        aria-label="Save chat to knowledge"
+                      >
+                        <BookmarkPlus className="h-3.5 w-3.5" />
+                      </button>
+                      <button
+                        type="button"
+                        disabled={busy}
                         onClick={() => beginRename(c.id, c.title)}
                         className="text-muted-foreground hover:text-foreground shrink-0 px-1.5 py-2 opacity-0 transition-opacity group-hover:opacity-100"
                         aria-label="Rename chat"
@@ -271,6 +285,16 @@ export function ConversationSidebar() {
         </>
       ) : (
         <CronList />
+      )}
+
+      {savingConvId && (
+        <SaveToKnowledgeDialog
+          conversationId={savingConvId}
+          open={!!savingConvId}
+          onOpenChange={(o) => {
+            if (!o) setSavingConvId(null);
+          }}
+        />
       )}
     </aside>
   );
