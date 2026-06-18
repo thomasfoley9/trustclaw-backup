@@ -10,6 +10,12 @@ import { Label } from "~/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
 import { authClient } from "~/clients/auth/react";
 import { showErrorToast } from "~/components/core/toast-notifications";
+import {
+  USERNAME_HINT,
+  USERNAME_MIN_LENGTH,
+  USERNAME_MAX_LENGTH,
+  validateUsername,
+} from "~/lib/username";
 
 interface LoginPageProps {
   firstTime?: boolean;
@@ -50,6 +56,15 @@ export function LoginPage({ firstTime = false }: LoginPageProps) {
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // Validate the username up front so the user gets a specific message
+    // instead of a round-trip "Username is invalid" from the server.
+    const usernameError = validateUsername(regUsername);
+    if (usernameError) {
+      showErrorToast(usernameError);
+      return;
+    }
+
     setPending(true);
     try {
       const result = await authClient.signUp.email(
@@ -158,11 +173,14 @@ export function LoginPage({ firstTime = false }: LoginPageProps) {
                     type="text"
                     autoComplete="username"
                     required
-                    minLength={3}
-                    maxLength={30}
+                    minLength={USERNAME_MIN_LENGTH}
+                    maxLength={USERNAME_MAX_LENGTH}
                     value={regUsername}
                     onChange={(e) => setRegUsername(e.target.value)}
                   />
+                  <p className="text-muted-foreground text-xs">
+                    {USERNAME_HINT}
+                  </p>
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="reg-password">Password</Label>

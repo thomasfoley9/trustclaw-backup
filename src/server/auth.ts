@@ -4,6 +4,11 @@ import { nextCookies } from "better-auth/next-js";
 import { username } from "better-auth/plugins";
 import { db } from "~/server/clients/db";
 import { env } from "~/env";
+import {
+  USERNAME_MIN_LENGTH,
+  USERNAME_MAX_LENGTH,
+  isValidUsernameChars,
+} from "~/lib/username";
 import { getRedis, isRedisConfigured } from "./clients/redis";
 import { z } from "zod";
 
@@ -70,7 +75,19 @@ export const auth = betterAuth({
   emailVerification: {
     sendOnSignUp: false,
   },
-  plugins: [username(), nextCookies()],
+  plugins: [
+    username({
+      minUsernameLength: USERNAME_MIN_LENGTH,
+      maxUsernameLength: USERNAME_MAX_LENGTH,
+      // Override BOTH validators: the plugin's default (/^[a-zA-Z0-9_.]+$/)
+      // rejects hyphens, and it validates the normalized username AND the
+      // display username separately — so without both, a handle like
+      // "thomas-5672" fails on the display-name check even if the first passes.
+      usernameValidator: isValidUsernameChars,
+      displayUsernameValidator: isValidUsernameChars,
+    }),
+    nextCookies(),
+  ],
   session: {
     expiresIn: 30 * 24 * 60 * 60,
     updateAge: 24 * 60 * 60,
