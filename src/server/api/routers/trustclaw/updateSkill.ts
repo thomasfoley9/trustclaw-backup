@@ -1,6 +1,7 @@
 import { TRPCError } from "@trpc/server";
 import { protectedProcedure } from "~/server/api/trpc";
 import { db } from "~/server/clients/db";
+import { requiredInputsSchema } from "./skills";
 import { updateSkillInput } from "./updateSkill.schema";
 
 export const updateSkill = protectedProcedure
@@ -39,7 +40,7 @@ export const updateSkill = protectedProcedure
       }
     }
 
-    return db.skill.update({
+    const updated = await db.skill.update({
       where: { id: skill.id },
       data: {
         ...(input.name !== undefined && { name: input.name }),
@@ -62,4 +63,8 @@ export const updateSkill = protectedProcedure
         isPreset: true,
       },
     });
+    return {
+      ...updated,
+      requiredInputs: requiredInputsSchema.catch([]).parse(updated.requiredInputs),
+    };
   });

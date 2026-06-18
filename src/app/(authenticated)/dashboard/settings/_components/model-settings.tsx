@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Loader2 } from "lucide-react";
 import { trpc } from "~/clients/trpc";
 import { Button } from "~/components/ui/button";
@@ -40,6 +40,9 @@ interface ModelSettingsProps {
 
 export function ModelSettings({ currentModel }: ModelSettingsProps) {
   const [selectedModel, setSelectedModel] = useState<string>(currentModel);
+  // Re-sync when the live model changes under us (e.g. deleting the active
+  // custom model resets it to the default server-side).
+  useEffect(() => setSelectedModel(currentModel), [currentModel]);
   const utils = trpc.useUtils();
   const { data: customData } = trpc.trustclaw.getCustomModels.useQuery();
   const customModels = customData?.models ?? [];

@@ -15,18 +15,42 @@ export const addCustomModel = protectedProcedure
       throw new TRPCError({ code: "NOT_FOUND", message: "Instance not found" });
     }
 
-    const provider = input.modelId.slice(0, input.modelId.indexOf("/")).toLowerCase();
+    // Normalize the provider segment to lowercase so the stored id, the
+    // gateway string, and the provider switch all agree on casing.
+    const slash = input.modelId.indexOf("/");
+    const provider = input.modelId.slice(0, slash).toLowerCase();
+    const modelId = `${provider}/${input.modelId.slice(slash + 1)}`;
+
+    // Catch obvious paste-into-wrong-field mistakes so a key isn't sent to a
+    // provider it doesn't belong to. Lenient: only the clearest cross-provider
+    // cases are rejected.
+    if (input.providerApiKey) {
+      const k = input.providerApiKey;
+      const looksAnthropic = k.startsWith("sk-ant-");
+      const looksOpenAi = k.startsWith("sk-") && !looksAnthropic;
+      const mismatched =
+        (provider === "openai" && looksAnthropic) ||
+        (provider === "anthropic" && looksOpenAi) ||
+        (provider === "google" && k.startsWith("sk-"));
+      if (mismatched) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: `That key doesn't look like a ${provider} key — double-check which provider you're configuring.`,
+        });
+      }
+    }
+
     const encryptedKey = input.providerApiKey
       ? encryptSecret(input.providerApiKey)
       : null;
 
     return db.customModel.upsert({
       where: {
-        instanceId_modelId: { instanceId: instance.id, modelId: input.modelId },
+        instanceId_modelId: { instanceId: instance.id, modelId },
       },
       create: {
         instanceId: instance.id,
-        modelId: input.modelId,
+        modelId,
         label: input.label,
         provider,
         providerApiKey: encryptedKey,

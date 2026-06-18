@@ -59,11 +59,14 @@ export const saveConversationToBucket = protectedProcedure
       messages,
     );
 
-    let savedCount = 0;
-    for (const statement of statements) {
-      await saveMemory(instance.id, statement, bucket.slug);
-      savedCount++;
-    }
+    // Persist each independently so one embedding failure doesn't discard the
+    // rest; report what actually landed rather than throwing after partial work.
+    const results = await Promise.allSettled(
+      statements.map((statement) =>
+        saveMemory(instance.id, statement, bucket.slug),
+      ),
+    );
+    const savedCount = results.filter((r) => r.status === "fulfilled").length;
 
     return { savedCount };
   });

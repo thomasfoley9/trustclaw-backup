@@ -40,19 +40,20 @@ export async function resolveAgentModel(
   modelId: string,
 ): Promise<LanguageModel> {
   if (modelId.includes("/")) {
-    const row = await db.customModel.findUnique({
-      where: { instanceId_modelId: { instanceId, modelId } },
-      select: { provider: true, providerApiKey: true },
-    });
-    if (row?.providerApiKey) {
-      try {
+    try {
+      const row = await db.customModel.findUnique({
+        where: { instanceId_modelId: { instanceId, modelId } },
+        select: { provider: true, providerApiKey: true },
+      });
+      if (row?.providerApiKey) {
         const apiKey = decryptSecret(row.providerApiKey);
         const bareModel = modelId.slice(modelId.indexOf("/") + 1);
         const direct = directModel(row.provider, bareModel, apiKey);
         if (direct) return direct;
-      } catch {
-        // Rotated/missing ENCRYPTION_KEY — fall through to the gateway string.
       }
+    } catch {
+      // DB error or rotated/missing ENCRYPTION_KEY — never kill the run; fall
+      // through to the gateway string.
     }
   }
   return gatewayString(modelId);

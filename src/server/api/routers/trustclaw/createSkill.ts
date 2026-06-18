@@ -1,6 +1,7 @@
 import { TRPCError } from "@trpc/server";
 import { protectedProcedure } from "~/server/api/trpc";
 import { db } from "~/server/clients/db";
+import { requiredInputsSchema } from "./skills";
 import { createSkillInput } from "./createSkill.schema";
 
 export const createSkill = protectedProcedure
@@ -25,7 +26,7 @@ export const createSkill = protectedProcedure
       });
     }
 
-    return db.skill.create({
+    const created = await db.skill.create({
       data: {
         instanceId: instance.id,
         name: input.name,
@@ -44,4 +45,8 @@ export const createSkill = protectedProcedure
         isPreset: true,
       },
     });
+    return {
+      ...created,
+      requiredInputs: requiredInputsSchema.catch([]).parse(created.requiredInputs),
+    };
   });
