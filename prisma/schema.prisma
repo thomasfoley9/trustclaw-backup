@@ -145,9 +145,31 @@ model ComposioClawInstance {
   cronJobs      CronJob[]
   personalities Personality[]
   conversations Conversation[]
+  memoryBuckets MemoryBucket[]
 
   @@index([userId])
   @@map("composio_claw_instance")
+}
+
+// User-editable knowledge buckets. `slug` is the stable key stored in
+// Memory.category; label/description/alwaysInject are editable. The four
+// seeded masters are marked isSystem. "general" is the protected default.
+model MemoryBucket {
+  id           String   @id @default(cuid())
+  instanceId   String
+  slug         String
+  label        String
+  description  String?
+  alwaysInject Boolean  @default(false)
+  isSystem     Boolean  @default(false)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  instance ComposioClawInstance @relation(fields: [instanceId], references: [id], onDelete: Cascade)
+
+  @@unique([instanceId, slug])
+  @@index([instanceId])
+  @@map("composio_claw_memory_bucket")
 }
 
 model Conversation {

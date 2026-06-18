@@ -8,7 +8,7 @@ import {
   searchMemoriesForContext,
   getBucketMemories,
 } from "./tools";
-import { ALWAYS_INJECT_BUCKETS } from "../memory-buckets";
+import { getAlwaysInjectBucketSlugs } from "../bucket-service";
 import { getContextWindow } from "./context/context-window";
 import { pruneContext } from "./context/context-pruning";
 import {
@@ -243,7 +243,7 @@ export async function prepareAgentRun(
     ? []
     : (
         await Promise.all(
-          ALWAYS_INJECT_BUCKETS.map((bucket) =>
+          (await getAlwaysInjectBucketSlugs(instanceId)).map((bucket) =>
             getBucketMemories(instanceId, bucket),
           ),
         )

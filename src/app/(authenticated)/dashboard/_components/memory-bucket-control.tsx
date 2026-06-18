@@ -16,12 +16,13 @@ import {
   TooltipTrigger,
 } from "~/components/ui/tooltip";
 import { trpcToastOnError } from "~/components/core/toast-notifications";
-import { MEMORY_BUCKET_OPTIONS } from "~/server/api/routers/trustclaw/memory-buckets";
 
 export function MemoryBucketControl() {
   const utils = trpc.useUtils();
   const { data } = trpc.trustclaw.getInstance.useQuery();
+  const { data: bucketData } = trpc.trustclaw.getBuckets.useQuery();
   const instance = data?.instance;
+  const buckets = bucketData?.buckets ?? [];
 
   const updateSettings = trpc.trustclaw.updateSettings.useMutation({
     onError: trpcToastOnError,
@@ -51,8 +52,8 @@ export function MemoryBucketControl() {
           <SelectValue />
         </SelectTrigger>
         <SelectContent>
-          {MEMORY_BUCKET_OPTIONS.map((option) => (
-            <SelectItem key={option.value} value={option.value}>
+          {buckets.map((option) => (
+            <SelectItem key={option.slug} value={option.slug}>
               {option.label}
             </SelectItem>
           ))}

@@ -10,6 +10,7 @@ import { ComposioApiKeySettings } from "./composio-api-key-settings";
 import { TelegramSettings } from "./telegram-settings";
 import { CronJobsSettings } from "./cron-jobs-settings";
 import { MemorySettings } from "./memory-settings";
+import { KnowledgeBucketsSettings } from "./knowledge-buckets-settings";
 import { PersonalitySettings } from "./personality-settings";
 import { DangerZone } from "./danger-zone";
 import { SettingsPageSkeleton } from "./settings-page.skeleton";
@@ -75,6 +76,10 @@ export function SettingsPageClient() {
 
       <ErrorBoundary>
         <CronJobsSettings />
+      </ErrorBoundary>
+
+      <ErrorBoundary>
+        <KnowledgeBucketsSettings />
       </ErrorBoundary>
 
       <ErrorBoundary>

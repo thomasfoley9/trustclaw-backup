@@ -9,6 +9,7 @@ export default async function Page() {
   await Promise.all([
     trpcServer.api.trustclaw.getInstance.prefetch(),
     trpcServer.api.trustclaw.getComposioKeyStatus.prefetch(),
+    trpcServer.api.trustclaw.getBuckets.prefetch(),
     trpcServer.api.trustclaw.getCronJobs.prefetchInfinite({ limit: 20 }),
     trpcServer.api.trustclaw.getMemories.prefetch({ limit: 50 }),
   ]);

@@ -27,6 +27,10 @@ import { checkConnectionStatus } from "./checkConnectionStatus";
 import { getComposioKeyStatus } from "./getComposioKeyStatus";
 import { setComposioApiKey } from "./setComposioApiKey";
 import { clearComposioApiKey } from "./clearComposioApiKey";
+import { getBuckets } from "./getBuckets";
+import { createBucket } from "./createBucket";
+import { updateBucket } from "./updateBucket";
+import { deleteBucket } from "./deleteBucket";
 
 export const trustclawRouter = router({
   getInstance,
@@ -57,4 +61,8 @@ export const trustclawRouter = router({
   getComposioKeyStatus,
   setComposioApiKey,
   clearComposioApiKey,
+  getBuckets,
+  createBucket,
+  updateBucket,
+  deleteBucket,
 });
