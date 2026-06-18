@@ -16,18 +16,20 @@ The CLI handles the entire deploy:
 - Creates a Vercel project linked to it
 - Provisions Postgres + pgvector via Vercel Marketplace (and optionally Upstash Redis)
 - Auto-generates `BETTER_AUTH_SECRET` and `CRON_SECRET`
-- Prompts you for a free [Composio API key](https://dashboard.composio.dev/login?flow=developer)
 - Runs the Prisma schema sync
 - Triggers the production deploy and opens the URL in your browser
 - Optionally walks you through Telegram bot setup
 - Tunes config (cron schedule, function timeouts) for your Vercel plan
 - Re-running picks up where it left off
 
+Composio is configured per-user, not at deploy time. After the deploy
+finishes, each user adds their own [Composio API key](https://dashboard.composio.dev/login?flow=developer)
+from the app's Settings page.
+
 ## Prerequisites
 
 - A [Vercel account](https://vercel.com) (`npx vercel login` once)
 - A [GitHub account](https://github.com) with `gh` CLI installed (`gh auth login` once)
-- A free [Composio API key](https://dashboard.composio.dev/login?flow=developer)
 
 ## License
 

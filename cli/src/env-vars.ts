@@ -5,8 +5,6 @@ interface SetEnvArgs {
   token: string;
   teamId: string | null;
   projectId: string;
-  // null when the project already has COMPOSIO_API_KEY set and we're reusing it.
-  composioApiKey: string | null;
   // true when BETTER_AUTH_SECRET is already on the project - skip generating a new one.
   hasBetterAuthSecret: boolean;
   // true when CRON_SECRET is already on the project - skip generating a new one.
@@ -36,15 +34,6 @@ export async function setEnvVars(args: SetEnvArgs): Promise<void> {
     vars.push({
       key: "CRON_SECRET",
       value: crypto.randomBytes(32).toString("base64url"),
-      target: ["production", "preview", "development"],
-      type: "encrypted",
-    });
-  }
-
-  if (args.composioApiKey !== null) {
-    vars.push({
-      key: "COMPOSIO_API_KEY",
-      value: args.composioApiKey,
       target: ["production", "preview", "development"],
       type: "encrypted",
     });

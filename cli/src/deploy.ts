@@ -3,7 +3,6 @@ import open from "open";
 import { detectAuth } from "./auth.js";
 import { warnIfOutdated } from "./version-check.js";
 import { askProjectName, gatherRemainingInputs } from "./inputs.js";
-import { resolveComposioApiKey, isValidComposioKey } from "./composio-auth.js";
 import { forkRepo } from "./github.js";
 import {
   detectLocalRepo,
@@ -19,7 +18,6 @@ import { runMigration } from "./migrate.js";
 import { triggerProductionDeploy } from "./trigger-deploy.js";
 import { maybeSetupTelegram } from "./telegram-setup.js";
 import {
-  fetchProjectEnvValue,
   getProductionAlias,
   listProjectEnvKeys,
   lookupExistingProject,
@@ -42,8 +40,8 @@ export async function deploy(): Promise<void> {
     const projectName = await askProjectName(cachedConfig.vercelProjectName);
 
     // Pre-flight: if the project already exists, fetch its env keys so we can
-    // skip prompts (Composio key, Redis question, Telegram setup) for anything
-    // that's already been configured on a prior run.
+    // skip prompts (Redis question, Telegram setup) for anything that's already
+    // been configured on a prior run.
     const existingProject = await lookupExistingProject({
       token: auth.vercelToken,
       teamId: auth.vercelTeamId,
@@ -57,25 +55,9 @@ export async function deploy(): Promise<void> {
         })
       : new Set<string>();
 
-    // Resolve the Composio API key. If a valid one is already on the project,
-    // reuse it; otherwise pull from the local Composio CLI (running
-    // `composio login` interactively if not authenticated).
-    let composioApiKey: string | null = null;
-    if (existingProject && existingEnvKeys.has("COMPOSIO_API_KEY")) {
-      const existing = await fetchProjectEnvValue(
-        {
-          token: auth.vercelToken,
-          teamId: auth.vercelTeamId,
-          projectId: existingProject.id,
-        },
-        "COMPOSIO_API_KEY",
-      );
-      if (!isValidComposioKey(existing)) {
-        composioApiKey = await resolveComposioApiKey();
-      }
-    } else {
-      composioApiKey = await resolveComposioApiKey();
-    }
+    // Composio keys are no longer set at deploy time. TrustClaw is now
+    // per-user: each user adds their own Composio API key from the app's
+    // Settings UI after the deploy completes.
 
     const remaining = await gatherRemainingInputs({ existingEnvKeys });
 
@@ -147,7 +129,6 @@ export async function deploy(): Promise<void> {
       token: auth.vercelToken,
       teamId: auth.vercelTeamId,
       projectId: project.id,
-      composioApiKey,
       hasBetterAuthSecret: existingEnvKeys.has("BETTER_AUTH_SECRET"),
       hasCronSecret: existingEnvKeys.has("CRON_SECRET"),
     });
