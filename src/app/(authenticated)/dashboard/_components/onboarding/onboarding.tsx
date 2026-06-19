@@ -236,7 +236,7 @@ export function Onboarding({
   }
 
   return (
-    <div className="relative flex h-full items-start justify-center overflow-hidden p-4 pt-12 md:pt-20">
+    <div className="relative flex min-h-full items-start justify-center p-4 pt-12 md:pt-20">
       <div
         className="ambient-glow pointer-events-none absolute inset-0"
         aria-hidden
