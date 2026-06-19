@@ -30,7 +30,7 @@ export function TrustClawBrand({ size = "md", logoLink }: TrustClawBrandProps) {
       )}
       <div className="flex flex-col leading-tight">
         <span className={`${s.text} text-gradient font-heading font-bold`}>
-          The Almost Epic AI Club
+          Thomas Claw
         </span>
         <span className={`${s.by} ${s.tagline} text-muted-foreground font-medium`}>
           Brought to you by Foley

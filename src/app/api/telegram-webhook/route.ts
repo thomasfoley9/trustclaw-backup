@@ -113,7 +113,7 @@ async function handleStartCommand(chatId: string, text: string): Promise<void> {
   if (!token) {
     await sendTelegramMessage(
       chatId,
-      `Welcome! To link your TrustClaw agent, use the link from ${env.NEXT_PUBLIC_APP_URL}/dashboard/settings.`,
+      `Welcome! To link your Thomas Claw agent, use the link from ${env.NEXT_PUBLIC_APP_URL}/dashboard/settings.`,
     );
     return;
   }
@@ -141,7 +141,7 @@ async function handleStartCommand(chatId: string, text: string): Promise<void> {
 
   await sendTelegramMessage(
     chatId,
-    "Linked! I'm your TrustClaw by Composio agent. Send me a message anytime.",
+    "Linked! I'm your Thomas Claw by Composio agent. Send me a message anytime.",
   );
 }
 

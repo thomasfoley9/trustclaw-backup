@@ -3,7 +3,7 @@ import { LandingPage } from "./_components/landing-page";
 const jsonLd = {
   "@context": "https://schema.org",
   "@type": "SoftwareApplication",
-  name: "The Almost Epic AI Club",
+  name: "Thomas Claw",
   description:
     "Made By Sales People....it probably sucks and your data is now being sold on Temu.",
   applicationCategory: "Productivity",

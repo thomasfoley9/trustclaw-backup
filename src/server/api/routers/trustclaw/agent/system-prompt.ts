@@ -179,7 +179,7 @@ The user can attach files to a message. You can SEE images and READ PDFs directl
 export function buildSystemPrompt(params: SystemPromptParams): string {
   const sections: string[] = [];
 
-  sections.push("# TrustClaw by Composio Agent");
+  sections.push("# Thomas Claw by Composio Agent");
 
   if (params.soulPrompt) {
     sections.push(params.soulPrompt);

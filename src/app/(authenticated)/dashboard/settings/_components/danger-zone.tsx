@@ -23,7 +23,7 @@ export function DangerZone() {
 
   const deleteInstance = trpc.trustclaw.deleteInstance.useMutation({
     onSuccess: () => {
-      showSuccessToast("TrustClaw instance deleted");
+      showSuccessToast("Thomas Claw instance deleted");
       router.push("/dashboard");
     },
     onError: trpcToastOnError,
@@ -42,7 +42,7 @@ export function DangerZone() {
       <CardContent>
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <p className="text-sm font-medium">Delete TrustClaw Instance</p>
+            <p className="text-sm font-medium">Delete Thomas Claw Instance</p>
             <p className="text-muted-foreground text-sm">
               Permanently deletes your instance, all messages, memories, and
               cron jobs.
@@ -64,7 +64,7 @@ export function DangerZone() {
             </Button>
             <DialogContent>
               <DialogHeader>
-                <DialogTitle>Delete TrustClaw Instance</DialogTitle>
+                <DialogTitle>Delete Thomas Claw Instance</DialogTitle>
                 <DialogDescription>
                   This action cannot be undone. All messages, memories, cron
                   jobs, and settings will be permanently deleted.

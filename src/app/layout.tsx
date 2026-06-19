@@ -23,7 +23,7 @@ const heading = Bricolage_Grotesque({
 });
 
 export const metadata: Metadata = {
-  title: "The Almost Epic AI Club",
+  title: "Thomas Claw",
   icons: [{ rel: "icon", url: "/favicon.ico" }],
 };
 

@@ -64,7 +64,7 @@ function assembleIdentityPrompt(data: OnboardingData): string {
   const sections = [
     `## Identity`,
     ``,
-    `**Name:** ${data.name ?? "TrustClaw"}`,
+    `**Name:** ${data.name ?? "Thomas Claw"}`,
     `**Emoji:** ${data.emoji ?? ""}`,
     `**Personality:** ${personalityLabel}`,
     `**Professional voice:** ${styleLabel(data.writingStyle)}`,
@@ -99,7 +99,7 @@ Read the room and switch on your own. When in doubt — especially for anything 
 
   return `## Who You Are
 
-You are ${data.name ?? "TrustClaw"} ${data.emoji ?? ""}, a ${personalityLabel.toLowerCase()} AI assistant.
+You are ${data.name ?? "Thomas Claw"} ${data.emoji ?? ""}, a ${personalityLabel.toLowerCase()} AI assistant.
 
 ### Communication Style
 

@@ -76,7 +76,7 @@ export function ComparisonSection() {
           as="h2"
           className="text-foreground mb-10 text-center text-2xl font-bold tracking-tight md:mb-16 md:text-3xl lg:text-4xl"
         >
-          Why is TrustClaw better?
+          Why is Thomas Claw better?
         </AnimateOnView>
 
         <AnimateOnView
@@ -89,7 +89,7 @@ export function ComparisonSection() {
               <tr className="border-border border-b">
                 <th className="py-4 pr-4 text-left" />
                 <th className="text-foreground px-4 py-4 text-center text-sm font-semibold md:text-base">
-                  TrustClaw
+                  Thomas Claw
                 </th>
                 <th className="text-muted-foreground px-4 py-4 text-center text-sm font-semibold md:text-base">
                   Vanilla OpenClaw

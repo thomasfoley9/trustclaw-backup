@@ -24,7 +24,7 @@ export function LandingPage() {
       <main className="relative flex-1">
         <section className="mx-auto flex max-w-3xl flex-col items-center px-4 pt-20 pb-24 text-center md:pt-28">
           <span className="border-border bg-card/60 text-muted-foreground mb-8 inline-flex items-center gap-2 rounded-full border px-4 py-1.5 text-xs font-medium backdrop-blur">
-            🚂 Now boarding · The Almost Epic AI Club
+            🚂 Now boarding · Thomas Claw
           </span>
 
           <div className="animate-[float-y_6s_ease-in-out_infinite]">
@@ -36,7 +36,7 @@ export function LandingPage() {
           </h1>
 
           <p className="text-muted-foreground mt-5 max-w-xl text-lg text-pretty">
-            The almost-epic AI founder that runs on rails — building, emailing,
+            Your always-on AI founder that runs on rails — building, emailing,
             scheduling, and closing loops around the clock. All aboard.
           </p>
 
