@@ -16,8 +16,9 @@ export const getInstance = protectedProcedure.query(async ({ ctx }) => {
         incognitoMode: true,
         activeConversationId: true,
         telegramChatId: true,
-        telegramLinkToken: true,
-        telegramLinkTokenExpiresAt: true,
+        // telegramLinkToken/ExpiresAt are intentionally NOT selected here — the
+        // live link token is surfaced only from the linkTelegram mutation
+        // result, so this broadly-consumed query never ships it to the client.
         soulPrompt: true,
         identityPrompt: true,
         userPrompt: true,
@@ -31,6 +32,7 @@ export const getInstance = protectedProcedure.query(async ({ ctx }) => {
         currentStep: true,
         name: true,
         writingStyle: true,
+        funWritingStyle: true,
         personality: true,
         emoji: true,
         lore: true,

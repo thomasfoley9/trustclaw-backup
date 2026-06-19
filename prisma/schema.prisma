@@ -330,11 +330,12 @@ model CronJob {
 model OnboardingState {
   id             String   @id @default(cuid())
   userId         String   @unique
-  currentStep    String
-  name           String   @default("")
-  writingStyle   String?
-  personality    String?
-  emoji          String?
+  currentStep     String
+  name            String   @default("")
+  writingStyle    String? // the professional/primary voice
+  funWritingStyle String? // the second, fun voice
+  personality     String?
+  emoji           String?
   lore           String   @default("") @db.Text
   anthropicModel String   @default("claude-sonnet-4-5-20250929")
   createdAt      DateTime @default(now())

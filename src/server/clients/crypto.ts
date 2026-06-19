@@ -6,9 +6,10 @@
 // and never collide with it. This lets us detect encrypted vs legacy-plaintext
 // values and migrate the latter in place.
 //
-// Key source: env.ENCRYPTION_KEY (32 bytes, hex or base64). When it is NOT set,
-// encryptSecret is a passthrough (stores plaintext) so local dev without the
-// var keeps working; production sets ENCRYPTION_KEY so values are encrypted.
+// Key source: env.ENCRYPTION_KEY (32 bytes, hex or canonical base64). When it
+// is NOT set in local dev, encryptSecret is a passthrough (stores plaintext) so
+// keyless dev keeps working. In production a missing key is a hard error — we
+// fail closed rather than silently persist secrets in cleartext.
 import {
   createCipheriv,
   createDecipheriv,
@@ -27,14 +28,30 @@ function getKey(): Buffer | null {
 
   const raw = env.ENCRYPTION_KEY;
   if (!raw) {
+    // Fail closed in production: never silently downgrade secrets to plaintext
+    // because someone forgot/typo'd the env var. Local dev may run keyless.
+    if (env.NODE_ENV === "production") {
+      throw new Error(
+        "ENCRYPTION_KEY is required in production to encrypt secrets at rest. " +
+          "Generate one with: openssl rand -base64 32",
+      );
+    }
     cachedKey = null;
     return cachedKey;
   }
 
-  const buf = /^[0-9a-fA-F]{64}$/.test(raw)
-    ? Buffer.from(raw, "hex")
-    : Buffer.from(raw, "base64");
+  // Strict format check so a malformed/wrong-length key fails loudly instead of
+  // base64-decoding to a silently-different 32 bytes (Buffer.from is lenient).
+  const isHex = /^[0-9a-fA-F]{64}$/.test(raw);
+  const isB64 = /^[A-Za-z0-9+/]{43}=$/.test(raw); // canonical base64 of 32 bytes
+  if (!isHex && !isB64) {
+    throw new Error(
+      "ENCRYPTION_KEY must be 32 bytes as 64 hex chars or canonical base64 " +
+        "(44 chars ending in '='). Generate one with: openssl rand -base64 32",
+    );
+  }
 
+  const buf = isHex ? Buffer.from(raw, "hex") : Buffer.from(raw, "base64");
   if (buf.length !== KEY_BYTES) {
     throw new Error(
       `ENCRYPTION_KEY must decode to ${KEY_BYTES} bytes (got ${buf.length}). ` +
@@ -49,8 +66,9 @@ export function isEncrypted(value: string): boolean {
   return value.startsWith(PREFIX);
 }
 
-// Encrypts plaintext when ENCRYPTION_KEY is configured; otherwise returns it
-// unchanged (plaintext passthrough for keyless local dev).
+// Encrypts plaintext when ENCRYPTION_KEY is configured. In keyless local dev it
+// returns the value unchanged (passthrough); in production getKey() throws, so a
+// secret is never written in cleartext by accident.
 export function encryptSecret(plaintext: string): string {
   const key = getKey();
   if (!key) return plaintext;

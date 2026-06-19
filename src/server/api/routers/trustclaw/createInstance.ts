@@ -40,15 +40,23 @@ const PERSONALITY_INSTRUCTIONS: Record<string, string> = {
 interface OnboardingData {
   name: string | null;
   writingStyle: string | null;
+  funWritingStyle: string | null;
   personality: string | null;
   emoji: string | null;
   lore: string | null;
 }
 
+function styleLabel(key: string | null): string {
+  return key ? (WRITING_STYLE_PROMPT_LABELS[key] ?? key) : "Default";
+}
+
+function styleInstruction(key: string | null): string {
+  return key
+    ? (WRITING_STYLE_INSTRUCTIONS[key] ?? "Write clearly and helpfully.")
+    : "Write clearly and helpfully.";
+}
+
 function assembleIdentityPrompt(data: OnboardingData): string {
-  const writingStyleLabel = data.writingStyle
-    ? (WRITING_STYLE_PROMPT_LABELS[data.writingStyle] ?? data.writingStyle)
-    : "Default";
   const personalityLabel = data.personality
     ? (PERSONALITY_PROMPT_LABELS[data.personality] ?? data.personality)
     : "Default";
@@ -59,7 +67,8 @@ function assembleIdentityPrompt(data: OnboardingData): string {
     `**Name:** ${data.name ?? "TrustClaw"}`,
     `**Emoji:** ${data.emoji ?? ""}`,
     `**Personality:** ${personalityLabel}`,
-    `**Writing Style:** ${writingStyleLabel}`,
+    `**Professional voice:** ${styleLabel(data.writingStyle)}`,
+    `**Fun voice:** ${styleLabel(data.funWritingStyle)}`,
   ];
 
   if (data.lore?.trim()) {
@@ -73,14 +82,20 @@ function assembleSoulPrompt(data: OnboardingData): string {
   const personalityLabel = data.personality
     ? (PERSONALITY_PROMPT_LABELS[data.personality] ?? data.personality)
     : "kind & supportive";
-  const styleInstruction = data.writingStyle
-    ? (WRITING_STYLE_INSTRUCTIONS[data.writingStyle] ??
-      "Write clearly and helpfully.")
-    : "Write clearly and helpfully.";
   const personalityInstruction = data.personality
     ? (PERSONALITY_INSTRUCTIONS[data.personality] ??
       "Be genuinely helpful and supportive.")
     : "Be genuinely helpful and supportive.";
+
+  const communicationStyle = data.funWritingStyle
+    ? `You have two distinct voices and switch between them naturally:
+
+**Professional voice** — your default for work, external messages (emails, anything public-facing), and anything serious or high-stakes. ${styleInstruction(data.writingStyle)}
+
+**Fun voice** — for casual chat, brainstorming, celebrating wins, and whenever your human is being playful. ${styleInstruction(data.funWritingStyle)}
+
+Read the room and switch on your own. When in doubt — especially for anything external or work-related — default to your professional voice.`
+    : styleInstruction(data.writingStyle);
 
   return `## Who You Are
 
@@ -88,7 +103,7 @@ You are ${data.name ?? "TrustClaw"} ${data.emoji ?? ""}, a ${personalityLabel.to
 
 ### Communication Style
 
-${styleInstruction}
+${communicationStyle}
 
 ### Personality
 
@@ -143,6 +158,7 @@ export const createInstance = protectedProcedure
       select: {
         name: true,
         writingStyle: true,
+        funWritingStyle: true,
         personality: true,
         emoji: true,
         lore: true,

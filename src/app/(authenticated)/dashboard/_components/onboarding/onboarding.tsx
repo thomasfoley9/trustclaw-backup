@@ -41,6 +41,7 @@ type AnimationState =
 interface OnboardingWizardState {
   name: string;
   writingStyle: WritingStyleKey | null;
+  funWritingStyle: WritingStyleKey | null;
   personality: PersonalityKey | null;
   emoji: string | null;
   lore: string;
@@ -72,6 +73,7 @@ interface SavedOnboardingState {
   currentStep: string;
   name: string;
   writingStyle: string | null;
+  funWritingStyle: string | null;
   personality: string | null;
   emoji: string | null;
   lore: string;
@@ -108,6 +110,9 @@ export function Onboarding({
       writingStyle:
         WRITING_STYLES.find((s) => s.key === savedState?.writingStyle)?.key ??
         null,
+      funWritingStyle:
+        WRITING_STYLES.find((s) => s.key === savedState?.funWritingStyle)
+          ?.key ?? null,
       personality:
         PERSONALITIES.find((p) => p.key === savedState?.personality)?.key ??
         null,
@@ -149,6 +154,7 @@ export function Onboarding({
       currentStep: nextStep,
       name: currentWizardState.name,
       writingStyle: currentWizardState.writingStyle,
+      funWritingStyle: currentWizardState.funWritingStyle,
       personality: currentWizardState.personality,
       emoji: currentWizardState.emoji,
       lore: currentWizardState.lore,
@@ -267,9 +273,13 @@ export function Onboarding({
           {step === "writing-style" && (
             <WritingStyleStep
               key="writing-style"
-              value={wizardState.writingStyle}
-              onChange={(writingStyle) =>
+              professional={wizardState.writingStyle}
+              fun={wizardState.funWritingStyle}
+              onChangeProfessional={(writingStyle) =>
                 setWizardState((prev) => ({ ...prev, writingStyle }))
+              }
+              onChangeFun={(funWritingStyle) =>
+                setWizardState((prev) => ({ ...prev, funWritingStyle }))
               }
               onNext={() => goToStep("personality")}
               onBack={goBack}

@@ -18,6 +18,7 @@ export const saveOnboardingStateInput = z.object({
   currentStep: onboardingStepSchema,
   name: z.string().default(""),
   writingStyle: z.string().nullable().default(null),
+  funWritingStyle: z.string().nullable().default(null),
   personality: z.string().nullable().default(null),
   emoji: z.string().nullable().default(null),
   lore: z.string().default(""),
