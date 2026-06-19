@@ -33,7 +33,7 @@ export function parseAgentError(error: unknown): string {
   }
 
   if (raw.includes("invalid x-api-key") || raw.includes("invalid_api_key")) {
-    return "Invalid Anthropic API key. Please check the server configuration.";
+    return "Your Anthropic API key was rejected — double-check it in Settings → Anthropic API key.";
   }
 
   if (raw.includes("rate_limit") || raw.includes("429")) {
@@ -41,7 +41,11 @@ export function parseAgentError(error: unknown): string {
   }
 
   if (raw.includes("credit balance") || raw.includes("insufficient_funds")) {
-    return "The AI Gateway is out of credits. Add credits in the Vercel dashboard (AI → top up), then try again.";
+    return "Your Anthropic account is out of API credits. Add billing/credits at console.anthropic.com (this is separate from a Claude.ai subscription), then try again.";
+  }
+
+  if (raw.includes("not_found_error") || raw.includes("model_not_found")) {
+    return "That model isn't available on your Anthropic account — pick a different one in Settings.";
   }
 
   return "Something went wrong. Please try again.";

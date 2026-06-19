@@ -26,7 +26,7 @@ let cachedKey: Buffer | null | undefined;
 function getKey(): Buffer | null {
   if (cachedKey !== undefined) return cachedKey;
 
-  const raw = env.ENCRYPTION_KEY;
+  const raw = env.ENCRYPTION_KEY?.trim();
   if (!raw) {
     // Fail closed in production: never silently downgrade secrets to plaintext
     // because someone forgot/typo'd the env var. Local dev may run keyless.
@@ -40,18 +40,13 @@ function getKey(): Buffer | null {
     return cachedKey;
   }
 
-  // Strict format check so a malformed/wrong-length key fails loudly instead of
-  // base64-decoding to a silently-different 32 bytes (Buffer.from is lenient).
-  const isHex = /^[0-9a-fA-F]{64}$/.test(raw);
-  const isB64 = /^[A-Za-z0-9+/]{43}=$/.test(raw); // canonical base64 of 32 bytes
-  if (!isHex && !isB64) {
-    throw new Error(
-      "ENCRYPTION_KEY must be 32 bytes as 64 hex chars or canonical base64 " +
-        "(44 chars ending in '='). Generate one with: openssl rand -base64 32",
-    );
-  }
-
-  const buf = isHex ? Buffer.from(raw, "hex") : Buffer.from(raw, "base64");
+  // Accept 64 hex chars or base64 (whitespace already trimmed). The decoded
+  // length must be exactly 32 bytes — that catches a malformed key without
+  // rejecting a valid-but-non-canonical one (e.g. a trailing newline on the env
+  // var, which Buffer.from tolerates).
+  const buf = /^[0-9a-fA-F]{64}$/.test(raw)
+    ? Buffer.from(raw, "hex")
+    : Buffer.from(raw, "base64");
   if (buf.length !== KEY_BYTES) {
     throw new Error(
       `ENCRYPTION_KEY must decode to ${KEY_BYTES} bytes (got ${buf.length}). ` +
