@@ -7,13 +7,18 @@ import { TrustClawBrand } from "./trustclaw-brand";
 
 export function LandingNav() {
   return (
-    <header className="fixed left-0 right-0 top-0 z-50 border-b border-border bg-background">
+    <header className="border-border bg-background/70 supports-[backdrop-filter]:bg-background/50 fixed top-0 right-0 left-0 z-50 border-b backdrop-blur-xl">
       <div className="mx-auto flex h-14 max-w-6xl items-center justify-between px-4 md:px-6">
         <TrustClawBrand size="md" />
         <div className="flex items-center gap-2">
           <ThemeToggle />
           <Link href="/login">
-            <Button size="sm">Get Started</Button>
+            <Button
+              size="sm"
+              className="bg-accent-gradient rounded-xl border-0 text-white shadow-md transition-transform hover:scale-105"
+            >
+              Get started
+            </Button>
           </Link>
         </div>
       </div>
