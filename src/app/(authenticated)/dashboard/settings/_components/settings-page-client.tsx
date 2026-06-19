@@ -1,6 +1,5 @@
 "use client";
 
-import { Settings } from "lucide-react";
 import { trpc } from "~/clients/trpc";
 import Link from "next/link";
 import { ErrorDisplay } from "~/components/core/error-display";
@@ -52,10 +51,14 @@ export function SettingsPageClient() {
   }
 
   return (
-    <div className="mx-auto w-full max-w-2xl space-y-6 p-4 md:p-6">
-      <div className="flex items-center gap-2">
-        <Settings className="text-muted-foreground h-5 w-5" />
-        <h1 className="text-xl font-semibold md:text-2xl">Settings</h1>
+    <div className="mx-auto w-full max-w-2xl space-y-6 p-4 md:p-8">
+      <div className="space-y-1">
+        <h1 className="font-heading text-2xl font-bold tracking-tight md:text-3xl">
+          Settings
+        </h1>
+        <p className="text-muted-foreground text-sm">
+          Shape your agent — its brain, voice, models, and what it can do.
+        </p>
       </div>
 
       <ErrorBoundary>

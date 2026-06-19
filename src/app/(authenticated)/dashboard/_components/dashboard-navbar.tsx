@@ -59,7 +59,7 @@ export function DashboardNavbar() {
   };
 
   return (
-    <header className="border-border bg-background/95 flex h-14 shrink-0 items-center justify-between border-b px-4 backdrop-blur">
+    <header className="border-sidebar-border bg-background/70 supports-[backdrop-filter]:bg-background/60 flex h-14 shrink-0 items-center justify-between border-b px-4 backdrop-blur-xl">
       <TrustClawBrand size="sm" logoLink="/dashboard" />
 
       <div className="flex items-center gap-1">
@@ -76,7 +76,7 @@ export function DashboardNavbar() {
               <Button
                 variant="ghost"
                 size="icon"
-                className={`h-9 w-9 ${isChat ? "bg-accent" : ""}`}
+                className={`h-9 w-9 ${isChat ? "bg-primary/15 text-primary" : ""}`}
               >
                 <MessageCircle className="h-4 w-4" />
               </Button>
@@ -91,7 +91,7 @@ export function DashboardNavbar() {
               <Button
                 variant="ghost"
                 size="icon"
-                className={`h-9 w-9 ${isToolkits ? "bg-accent" : ""}`}
+                className={`h-9 w-9 ${isToolkits ? "bg-primary/15 text-primary" : ""}`}
               >
                 <Puzzle className="h-4 w-4" />
               </Button>
@@ -106,7 +106,7 @@ export function DashboardNavbar() {
               <Button
                 variant="ghost"
                 size="icon"
-                className={`h-9 w-9 ${isSettings ? "bg-accent" : ""}`}
+                className={`h-9 w-9 ${isSettings ? "bg-primary/15 text-primary" : ""}`}
               >
                 <Settings className="h-4 w-4" />
               </Button>
@@ -121,7 +121,7 @@ export function DashboardNavbar() {
               <Button
                 variant="ghost"
                 size="icon"
-                className={`hidden h-9 w-9 md:inline-flex ${terminalOpen ? "bg-accent" : ""}`}
+                className={`hidden h-9 w-9 md:inline-flex ${terminalOpen ? "bg-primary/15 text-primary" : ""}`}
                 onClick={handleToggleTerminal}
               >
                 <PanelRight className="h-4 w-4" />

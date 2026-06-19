@@ -92,7 +92,7 @@ export function UserMessage({ message }: UserMessageProps) {
 
       {textContent && (
         <div className="relative max-w-[80%]">
-          <div className="rounded-2xl bg-muted px-3 py-2 text-sm text-foreground">
+          <div className="border-primary/20 bg-primary/12 text-foreground rounded-2xl rounded-br-md border px-3.5 py-2 text-sm">
             <p className="whitespace-pre-wrap">{textContent}</p>
           </div>
         </div>

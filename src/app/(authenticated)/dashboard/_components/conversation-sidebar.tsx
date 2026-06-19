@@ -118,7 +118,7 @@ export function ConversationSidebar() {
     deleteConversation.isPending;
 
   return (
-    <aside className="border-border hidden w-64 shrink-0 flex-col border-r md:flex">
+    <aside className="border-sidebar-border bg-sidebar hidden w-64 shrink-0 flex-col border-r md:flex">
       {/* Chats | Cron toggle */}
       <div className="flex gap-1 p-2">
         <button
@@ -151,8 +151,7 @@ export function ConversationSidebar() {
         <>
           <div className="px-2 pb-2">
             <Button
-              variant="outline"
-              className="w-full justify-start gap-2"
+              className="bg-accent-gradient w-full justify-start gap-2 border-0 text-white shadow-md transition-transform hover:scale-[1.01]"
               onClick={() => void createConversation.mutateAsync()}
               disabled={createConversation.isPending}
             >
@@ -227,8 +226,10 @@ export function ConversationSidebar() {
                     <li
                       key={c.id}
                       className={cn(
-                        "group flex items-center rounded-md",
-                        isActive ? "bg-accent" : "hover:bg-accent/50",
+                        "group relative flex items-center rounded-lg transition-colors",
+                        isActive
+                          ? "bg-primary/15 before:bg-primary before:absolute before:top-1.5 before:bottom-1.5 before:left-0 before:w-0.5 before:rounded-full"
+                          : "hover:bg-accent/60",
                       )}
                     >
                       <button
@@ -238,14 +239,23 @@ export function ConversationSidebar() {
                           if (!isActive)
                             void setActive.mutateAsync({ id: c.id });
                         }}
-                        className="flex min-w-0 flex-1 items-center gap-2 px-2 py-2 text-left text-sm"
+                        className="flex min-w-0 flex-1 items-center gap-2 px-2.5 py-2 text-left text-sm"
                       >
                         {isRunning ? (
                           <Loader2 className="text-primary h-4 w-4 shrink-0 animate-spin" />
                         ) : (
-                          <MessageSquare className="text-muted-foreground h-4 w-4 shrink-0" />
+                          <MessageSquare
+                            className={cn(
+                              "h-4 w-4 shrink-0",
+                              isActive ? "text-primary" : "text-muted-foreground",
+                            )}
+                          />
                         )}
-                        <span className="truncate">{c.title}</span>
+                        <span
+                          className={cn("truncate", isActive && "font-medium")}
+                        >
+                          {c.title}
+                        </span>
                       </button>
                       <button
                         type="button"

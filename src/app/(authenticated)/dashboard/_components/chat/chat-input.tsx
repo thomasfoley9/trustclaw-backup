@@ -202,7 +202,7 @@ export function ChatInput({
           <Button
             variant="ghost"
             size="icon"
-            className="size-10 shrink-0 rounded-xl"
+            className="size-10 shrink-0 rounded-2xl"
             onClick={() => fileInputRef.current?.click()}
             disabled={isStreaming}
             aria-label="Attach files"
@@ -226,9 +226,9 @@ export function ChatInput({
             disabled={isStreaming}
             rows={1}
             className={cn(
-              "border-border bg-muted/50 max-h-[200px] min-h-[44px] resize-none rounded-xl text-base md:text-sm",
+              "border-border bg-card/60 max-h-[200px] min-h-[44px] resize-none rounded-2xl text-base md:text-sm",
               "placeholder:text-muted-foreground/50",
-              "focus-visible:ring-ring focus-visible:ring-1",
+              "focus-visible:border-primary/40 focus-visible:ring-primary/25 focus-visible:ring-[3px]",
             )}
           />
 
@@ -236,7 +236,7 @@ export function ChatInput({
             <Button
               variant="default"
               size="icon"
-              className="size-10 shrink-0 rounded-xl"
+              className="size-10 shrink-0 rounded-2xl"
               onClick={handleStop}
             >
               <Square className="size-4 fill-current" />
@@ -246,8 +246,8 @@ export function ChatInput({
               variant="default"
               size="icon"
               className={cn(
-                "size-10 shrink-0 rounded-xl",
-                !canSend && "opacity-50",
+                "bg-accent-gradient size-10 shrink-0 rounded-2xl border-0 text-white shadow-md transition-transform hover:scale-105",
+                !canSend && "opacity-50 hover:scale-100",
               )}
               onClick={handleSubmit}
               disabled={!canSend}
