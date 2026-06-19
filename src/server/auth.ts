@@ -1,4 +1,5 @@
 import { betterAuth } from "better-auth";
+import { APIError } from "better-auth/api";
 import { prismaAdapter } from "better-auth/adapters/prisma";
 import { nextCookies } from "better-auth/next-js";
 import { username } from "better-auth/plugins";
@@ -44,9 +45,49 @@ const redisRateLimitStorage = isRedisConfigured()
     }
   : {};
 
+// Email domains allowed to CREATE an account. When set, applies to BOTH
+// Google and password sign-up so social login can't slip past the invite gate.
+const ALLOWED_DOMAINS = env.ALLOWED_EMAIL_DOMAINS
+  ? env.ALLOWED_EMAIL_DOMAINS.split(",")
+      .map((d) => d.trim().toLowerCase())
+      .filter(Boolean)
+  : null;
+
+function emailDomainAllowed(email: string): boolean {
+  if (!ALLOWED_DOMAINS) return true;
+  const domain = email.split("@")[1]?.toLowerCase() ?? "";
+  return ALLOWED_DOMAINS.includes(domain);
+}
+
+const googleEnabled = !!(env.GOOGLE_CLIENT_ID && env.GOOGLE_CLIENT_SECRET);
+
 export const auth = betterAuth({
   secret: env.BETTER_AUTH_SECRET,
   baseURL: env.NEXT_PUBLIC_APP_URL,
+  ...(googleEnabled
+    ? {
+        socialProviders: {
+          google: {
+            clientId: env.GOOGLE_CLIENT_ID!,
+            clientSecret: env.GOOGLE_CLIENT_SECRET!,
+          },
+        },
+      }
+    : {}),
+  databaseHooks: {
+    user: {
+      create: {
+        before: async (user) => {
+          if (!emailDomainAllowed(user.email)) {
+            throw new APIError("FORBIDDEN", {
+              message: `Sign-up is restricted to ${ALLOWED_DOMAINS?.join(", ")} accounts.`,
+            });
+          }
+          return { data: user };
+        },
+      },
+    },
+  },
   trustedOrigins: [
     env.NEXT_PUBLIC_APP_URL,
     ...(process.env.VERCEL_PROJECT_PRODUCTION_URL

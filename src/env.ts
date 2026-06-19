@@ -35,6 +35,17 @@ export const env = createEnv({
     // Single-tenant cell gate: when set, new account registration requires
     // this code. Leave unset for open signup (local dev).
     SIGNUP_INVITE_CODE: z.string().optional(),
+
+    // Google social sign-in (optional). When both are set, a "Continue with
+    // Google" button appears. Create an OAuth client in Google Cloud and add
+    // the redirect URI <app-url>/api/auth/callback/google.
+    GOOGLE_CLIENT_ID: z.string().optional(),
+    GOOGLE_CLIENT_SECRET: z.string().optional(),
+
+    // Comma-separated email domains allowed to CREATE an account (e.g.
+    // "composio.dev"). When set, applies to BOTH Google and password sign-up
+    // so social login can't bypass the invite gate. Unset = any email.
+    ALLOWED_EMAIL_DOMAINS: z.string().optional(),
   },
   client: {
     NEXT_PUBLIC_APP_URL: z.string().url(),
@@ -51,6 +62,9 @@ export const env = createEnv({
     REDIS_URL: process.env.REDIS_URL,
     CRON_SECRET: process.env.CRON_SECRET,
     SIGNUP_INVITE_CODE: process.env.SIGNUP_INVITE_CODE,
+    GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID,
+    GOOGLE_CLIENT_SECRET: process.env.GOOGLE_CLIENT_SECRET,
+    ALLOWED_EMAIL_DOMAINS: process.env.ALLOWED_EMAIL_DOMAINS,
 
     // Client URL resolution:
     //  - dev: derive from PORT so `PORT=3001 pnpm dev` just works

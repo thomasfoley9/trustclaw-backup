@@ -3,6 +3,7 @@ import { headers } from "next/headers";
 import { LoginPage } from "./_components/login-page";
 import { auth } from "~/server/auth";
 import { db } from "~/server/clients/db";
+import { env } from "~/env";
 import { ErrorDisplay } from "~/components/core/error-display";
 
 export default async function Page() {
@@ -31,5 +32,7 @@ export default async function Page() {
     // Non-fatal: if we can't count users, default to login tab.
   }
 
-  return <LoginPage firstTime={firstTime} />;
+  const googleEnabled = !!(env.GOOGLE_CLIENT_ID && env.GOOGLE_CLIENT_SECRET);
+
+  return <LoginPage firstTime={firstTime} googleEnabled={googleEnabled} />;
 }

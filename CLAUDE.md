@@ -8,7 +8,7 @@ TrustClaw - a self-hostable personal AI agent with vector memory, Composio tools
 
 - **Framework:** [Next.js 15](https://nextjs.org/docs/15/) (App Router)
 - **Styling:** [Tailwind CSS](https://tailwindcss.com/docs) + [shadcn/ui](https://ui.shadcn.com/docs/)
-- **Auth:** [Better Auth](https://www.better-auth.com/) with username/password login.
+- **Auth:** [Better Auth](https://www.better-auth.com/) with username/password login, plus optional Google social sign-in (enabled when `GOOGLE_CLIENT_ID`/`GOOGLE_CLIENT_SECRET` are set).
 - **Server:** [tRPC](https://trpc.io/docs/) for all backend logic
 - **Date/Time:** [moment.js](https://momentjs.com/docs/) for all date formatting and parsing
 
@@ -30,7 +30,8 @@ This dashboard uses a **single tRPC backend** running within Next.js. Auth is ha
 - Server config at `src/server/auth.ts`
 - Route handler at `src/app/api/auth/[...all]/route.ts`
 - Client module at `src/clients/auth/react.tsx` (exports `authClient` from `better-auth/react`)
-- Username/password login via Better Auth (no OAuth providers)
+- Username/password login via Better Auth; optional Google OAuth (`socialProviders.google`, gated on `GOOGLE_CLIENT_ID`/`GOOGLE_CLIENT_SECRET`)
+- `ALLOWED_EMAIL_DOMAINS` (comma-separated) gates account creation for BOTH password and Google via a `databaseHooks.user.create.before` hook, so social login can't bypass the `SIGNUP_INVITE_CODE` cell gate
 - Session model: `{ user, session }` (no org/project)
 
 ```
