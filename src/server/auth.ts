@@ -5,6 +5,7 @@ import { nextCookies } from "better-auth/next-js";
 import { username } from "better-auth/plugins";
 import { db } from "~/server/clients/db";
 import { env } from "~/env";
+import { encryptSecret, isEncrypted } from "~/server/clients/crypto";
 import {
   USERNAME_MIN_LENGTH,
   USERNAME_MAX_LENGTH,
@@ -59,6 +60,27 @@ function emailDomainAllowed(email: string): boolean {
   return ALLOWED_DOMAINS.includes(domain);
 }
 
+// OAuth provider tokens (Google access/refresh/id) are secrets — encrypt them
+// at rest with the same AES-256-GCM envelope as the API keys. The app never
+// reads them back (Google tools go through Composio), so encrypt-on-write is
+// sufficient; nothing needs to decrypt them.
+const ACCOUNT_TOKEN_FIELDS = [
+  "accessToken",
+  "refreshToken",
+  "idToken",
+] as const;
+
+function encryptAccountTokens<T extends Record<string, unknown>>(account: T): T {
+  const next: Record<string, unknown> = { ...account };
+  for (const field of ACCOUNT_TOKEN_FIELDS) {
+    const value = next[field];
+    if (typeof value === "string" && value.length > 0 && !isEncrypted(value)) {
+      next[field] = encryptSecret(value);
+    }
+  }
+  return next as T;
+}
+
 const googleEnabled = !!(env.GOOGLE_CLIENT_ID && env.GOOGLE_CLIENT_SECRET);
 
 export const auth = betterAuth({
@@ -85,6 +107,14 @@ export const auth = betterAuth({
           }
           return { data: user };
         },
+      },
+    },
+    account: {
+      create: {
+        before: async (account) => ({ data: encryptAccountTokens(account) }),
+      },
+      update: {
+        before: async (account) => ({ data: encryptAccountTokens(account) }),
       },
     },
   },
