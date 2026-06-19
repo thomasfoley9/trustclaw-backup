@@ -3,6 +3,7 @@ import { ErrorBoundary } from "~/components/core/error-boundary";
 import { TrustClawChat } from "./_components/chat/trustclaw-chat";
 import { ConversationSidebar } from "./_components/conversation-sidebar";
 import { OnboardingClient } from "./_components/onboarding/onboarding-client";
+import { ComposioActivationGate } from "./_components/composio-activation-gate";
 
 // NOTE: deliberately NO data prefetching for the chat tree. Streamed prefetch
 // hydration raced client hydration here (server HTML rendered from data the
@@ -21,6 +22,19 @@ export default async function Page() {
             hasExistingInstance={status.hasInstance}
             hasOnboardingState={status.hasOnboardingState}
           />
+        </ErrorBoundary>
+      </HydrateClient>
+    );
+  }
+
+  // Account activation gate: onboarding is done, but the account stays locked
+  // until the user connects their own Composio key.
+  const composioKey = await trpcServer.api.trustclaw.getComposioKeyStatus();
+  if (!composioKey.hasKey) {
+    return (
+      <HydrateClient>
+        <ErrorBoundary>
+          <ComposioActivationGate />
         </ErrorBoundary>
       </HydrateClient>
     );
