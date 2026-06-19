@@ -3,6 +3,23 @@ const config = {
   reactStrictMode: true,
   skipTrailingSlashRedirect: true,
 
+  async redirects() {
+    // Old TrustClaw-branded production URLs -> new Thomas Claw canonical domain.
+    // Listed explicitly (not a trustclaw-* wildcard) so per-deploy/preview URLs
+    // aren't caught. thomasclaw.vercel.app is excluded, so there's no loop.
+    const OLD_HOSTS = [
+      "trustclaw-blue-kappa.vercel.app",
+      "trustclaw-thomas-s-projects-d9abdfd0.vercel.app",
+      "trustclaw-thomas-5672-thomas-s-projects-d9abdfd0.vercel.app",
+    ];
+    return OLD_HOSTS.map((host) => ({
+      source: "/:path*",
+      has: [{ type: "host", value: host }],
+      destination: "https://thomasclaw.vercel.app/:path*",
+      permanent: true,
+    }));
+  },
+
   async headers() {
     return [
       {
