@@ -159,7 +159,7 @@ export function ChatView({
 
   return (
     <div className="flex h-full overflow-hidden">
-      <div className="flex min-w-0 flex-1 flex-col">
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col">
         <ComposioCta />
         <div className="relative min-h-0 flex-1">
           {isEmpty ? (
