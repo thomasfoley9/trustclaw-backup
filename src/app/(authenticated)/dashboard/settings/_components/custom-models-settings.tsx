@@ -91,8 +91,12 @@ export function CustomModelsSettings() {
                       <Badge variant="secondary" className="gap-1">
                         <KeyRound className="h-3 w-3" /> Direct
                       </Badge>
+                    ) : m.modelId.startsWith("anthropic/") ? (
+                      <Badge variant="secondary" className="gap-1">
+                        <KeyRound className="h-3 w-3" /> Your Anthropic key
+                      </Badge>
                     ) : (
-                      <Badge variant="outline">Gateway</Badge>
+                      <Badge variant="destructive">Needs key</Badge>
                     )}
                   </div>
                   <span className="text-muted-foreground font-mono text-xs">

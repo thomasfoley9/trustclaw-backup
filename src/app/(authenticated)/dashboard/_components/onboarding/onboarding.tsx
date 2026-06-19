@@ -46,6 +46,8 @@ interface OnboardingWizardState {
   emoji: string | null;
   lore: string;
   anthropicModel: z.infer<typeof allowedAnthropicModelSchema>;
+  // In-memory only — never persisted to onboardingState (it's a secret).
+  anthropicApiKey: string;
 }
 
 function getAnimationState(step: Step): AnimationState {
@@ -121,6 +123,7 @@ export function Onboarding({
       anthropicModel: parsedModel.success
         ? parsedModel.data
         : "claude-sonnet-4-5-20250929",
+      anthropicApiKey: "",
     };
   });
 
@@ -143,6 +146,8 @@ export function Onboarding({
       void utils.trustclaw.getPersonalities.invalidate();
     },
   });
+
+  const setAnthropicKey = trpc.trustclaw.setAnthropicApiKey.useMutation();
 
   const saveState = trpc.trustclaw.saveOnboardingState.useMutation();
 
@@ -177,15 +182,19 @@ export function Onboarding({
   };
 
   const handleModelNext = async () => {
-    if (instanceCreated) {
-      goToStep("integrations");
-      return;
-    }
+    const key = wizardState.anthropicApiKey.trim();
     try {
-      await createInstance.mutateAsync({
-        anthropicModel: wizardState.anthropicModel,
-      });
-      setInstanceCreated(true);
+      if (!instanceCreated) {
+        await createInstance.mutateAsync({
+          anthropicModel: wizardState.anthropicModel,
+        });
+        setInstanceCreated(true);
+      }
+      // Validate + save the user's Anthropic key (skippable only if one is
+      // already on the instance from a previous pass).
+      if (key) {
+        await setAnthropicKey.mutateAsync({ apiKey: key });
+      }
       goToStep("integrations");
     } catch (error) {
       showTrpcErrorToast(error);
@@ -204,7 +213,7 @@ export function Onboarding({
     ? (PERSONALITY_OUTFIT_MAP[wizardState.personality] ?? null)
     : null;
 
-  if (createInstance.isPending) {
+  if (createInstance.isPending || setAnthropicKey.isPending) {
     return (
       <div className="flex h-full items-start justify-center p-4 pt-12 md:pt-20">
         <div className="w-full max-w-lg">
@@ -221,10 +230,10 @@ export function Onboarding({
                 Setting things up...
               </h2>
               <p className="text-muted-foreground mt-1 text-sm">
-                Creating your Thomas Claw instance and connecting tools
+                Setting up your instance and validating your Anthropic key
               </p>
             </motion.div>
-            {createInstance.isError && (
+            {(createInstance.isError || setAnthropicKey.isError) && (
               <motion.div variants={itemVariants}>
                 <Button
                   variant="outline"
@@ -328,6 +337,12 @@ export function Onboarding({
               onChange={(anthropicModel) =>
                 setWizardState((prev) => ({ ...prev, anthropicModel }))
               }
+              apiKey={wizardState.anthropicApiKey}
+              onApiKeyChange={(anthropicApiKey) =>
+                setWizardState((prev) => ({ ...prev, anthropicApiKey }))
+              }
+              keyAlreadySet={instanceCreated}
+              saving={createInstance.isPending || setAnthropicKey.isPending}
               onNext={() => void handleModelNext()}
               onBack={goBack}
             />

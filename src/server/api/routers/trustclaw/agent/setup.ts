@@ -418,6 +418,10 @@ export async function prepareAgentRun(
     ...customTools,
   });
 
+  // Resolve the model first (per-user Anthropic key). Fails closed with a
+  // PRECONDITION_FAILED before we create the assistant row if no key is set.
+  const model = await resolveAgentModel(instanceId, instance.anthropicModel);
+
   // Pre-create assistant message row so we can update it in onFinish
   const assistantMessageRow = await db.message.create({
     data: {
@@ -433,8 +437,6 @@ export async function prepareAgentRun(
       cacheWriteTokens: 0,
     },
   });
-
-  const model = await resolveAgentModel(instanceId, instance.anthropicModel);
 
   const agent = new ToolLoopAgent({
     model,

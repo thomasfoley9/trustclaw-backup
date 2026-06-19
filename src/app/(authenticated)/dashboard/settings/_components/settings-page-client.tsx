@@ -7,6 +7,7 @@ import { ErrorBoundary } from "~/components/core/error-boundary";
 import { ModelSettings } from "./model-settings";
 import { CustomModelsSettings } from "./custom-models-settings";
 import { ComposioApiKeySettings } from "./composio-api-key-settings";
+import { AnthropicApiKeySettings } from "./anthropic-api-key-settings";
 import { TelegramSettings } from "./telegram-settings";
 import { CronJobsSettings } from "./cron-jobs-settings";
 import { MemorySettings } from "./memory-settings";
@@ -60,6 +61,10 @@ export function SettingsPageClient() {
           Shape your agent — its brain, voice, models, and what it can do.
         </p>
       </div>
+
+      <ErrorBoundary>
+        <AnthropicApiKeySettings />
+      </ErrorBoundary>
 
       <ErrorBoundary>
         <ComposioApiKeySettings />

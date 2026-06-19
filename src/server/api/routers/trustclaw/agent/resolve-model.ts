@@ -1,18 +1,12 @@
 import type { LanguageModel } from "ai";
+import { TRPCError } from "@trpc/server";
 import { createOpenAI } from "@ai-sdk/openai";
 import { createAnthropic } from "@ai-sdk/anthropic";
 import { createGoogleGenerativeAI } from "@ai-sdk/google";
 import { db } from "~/server/clients/db";
 import { decryptSecret } from "~/server/clients/crypto";
 
-// Bare Claude ids (no provider prefix) get the historical "anthropic/" prefix
-// so the gateway resolves them; provider-prefixed ids pass through unchanged.
-function gatewayString(modelId: string): string {
-  return modelId.includes("/") ? modelId : `anthropic/${modelId}`;
-}
-
-// First-party providers we can call directly with a user's key. Anything else
-// (no SDK installed) falls back to the gateway string id.
+// First-party providers we can call directly with a user's key.
 function directModel(
   provider: string,
   bareModel: string,
@@ -30,31 +24,70 @@ function directModel(
   }
 }
 
-// Single source of truth for turning instance.anthropicModel into an AI-SDK
-// model. Claude presets and key-less custom ids resolve to the gateway string
-// (byte-for-byte the old behavior); a custom model with a BYO key resolves to
-// a direct provider client. Decrypt failures fall back to the gateway string
-// rather than killing the run.
+// The instance's own Anthropic key (decrypted), or null. Never throws.
+async function instanceAnthropicKey(
+  instanceId: string,
+): Promise<string | null> {
+  try {
+    const inst = await db.composioClawInstance.findUnique({
+      where: { id: instanceId },
+      select: { anthropicApiKey: true },
+    });
+    return inst?.anthropicApiKey ? decryptSecret(inst.anthropicApiKey) : null;
+  } catch {
+    return null;
+  }
+}
+
+function missingKey(message: string): never {
+  throw new TRPCError({ code: "PRECONDITION_FAILED", message });
+}
+
+// Single source of truth for turning a model id into an AI-SDK model — always
+// billed to the USER, never the owner's gateway. Bare Claude presets use the
+// instance's own Anthropic key; provider-prefixed custom models use their own
+// BYO key (Anthropic customs may fall back to the instance Anthropic key). If
+// no user key is available we fail closed so nobody rides the owner's spend.
 export async function resolveAgentModel(
   instanceId: string,
   modelId: string,
 ): Promise<LanguageModel> {
   if (modelId.includes("/")) {
+    const slash = modelId.indexOf("/");
+    const provider = modelId.slice(0, slash).toLowerCase();
+    const bareModel = modelId.slice(slash + 1);
+
+    const row = await db.customModel.findUnique({
+      where: { instanceId_modelId: { instanceId, modelId } },
+      select: { providerApiKey: true },
+    });
+
+    let apiKey: string | null = null;
     try {
-      const row = await db.customModel.findUnique({
-        where: { instanceId_modelId: { instanceId, modelId } },
-        select: { provider: true, providerApiKey: true },
-      });
-      if (row?.providerApiKey) {
-        const apiKey = decryptSecret(row.providerApiKey);
-        const bareModel = modelId.slice(modelId.indexOf("/") + 1);
-        const direct = directModel(row.provider, bareModel, apiKey);
-        if (direct) return direct;
-      }
+      apiKey = row?.providerApiKey ? decryptSecret(row.providerApiKey) : null;
     } catch {
-      // DB error or rotated/missing ENCRYPTION_KEY — never kill the run; fall
-      // through to the gateway string.
+      apiKey = null;
     }
+    // Anthropic custom ids can reuse the instance's Anthropic key.
+    if (!apiKey && provider === "anthropic") {
+      apiKey = await instanceAnthropicKey(instanceId);
+    }
+    if (!apiKey) {
+      missingKey(
+        `Add your ${provider} API key for "${modelId}" in Settings to use this model.`,
+      );
+    }
+    const direct = directModel(provider, bareModel, apiKey);
+    if (direct) return direct;
+    missingKey(
+      `"${provider}" isn't a supported provider — use OpenAI, Anthropic, or Google with your own key.`,
+    );
   }
-  return gatewayString(modelId);
+
+  // Bare Claude preset → instance's own Anthropic key. No gateway fallback.
+  const apiKey = await instanceAnthropicKey(instanceId);
+  if (!apiKey) {
+    missingKey("Add your Anthropic API key in Settings to start chatting.");
+  }
+  return createAnthropic({ apiKey })(modelId);
 }
