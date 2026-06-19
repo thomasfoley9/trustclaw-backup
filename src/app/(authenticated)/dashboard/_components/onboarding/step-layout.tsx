@@ -37,7 +37,7 @@ export function StepLayout({
       className="space-y-6"
     >
       <motion.div variants={itemVariants} className="text-center">
-        <h2 className="text-xl font-semibold tracking-tight md:text-2xl">
+        <h2 className="text-2xl font-bold tracking-tight md:text-3xl">
           {title}
         </h2>
         {subtitle && (
@@ -73,7 +73,7 @@ export function StepLayout({
             <Button
               onClick={onNext}
               disabled={nextDisabled}
-              className="min-h-[44px] w-full sm:w-auto"
+              className="bg-accent-gradient min-h-[44px] w-full border-0 text-white shadow-md transition-transform hover:scale-[1.02] disabled:hover:scale-100 sm:w-auto"
             >
               {nextLabel ?? "Continue"}
             </Button>

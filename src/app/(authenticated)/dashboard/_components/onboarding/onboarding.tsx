@@ -236,8 +236,12 @@ export function Onboarding({
   }
 
   return (
-    <div className="flex h-full items-start justify-center p-4 pt-12 md:pt-20">
-      <div className="w-full max-w-lg">
+    <div className="relative flex h-full items-start justify-center overflow-hidden p-4 pt-12 md:pt-20">
+      <div
+        className="ambient-glow pointer-events-none absolute inset-0"
+        aria-hidden
+      />
+      <div className="relative w-full max-w-lg">
         <div className="mb-6 flex flex-col items-center">
           <OnboardingClawLogo
             name={wizardState.name || null}
