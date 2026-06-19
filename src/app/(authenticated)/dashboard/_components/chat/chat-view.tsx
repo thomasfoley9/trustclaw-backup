@@ -19,6 +19,7 @@ import { ThinkingIndicator } from "./assistant-message/thinking-indicator";
 import { ChatInput } from "./chat-input";
 import { TerminalPane } from "../terminal/terminal-pane";
 import { ComposioCta } from "./composio-cta";
+import { OpenClawLogo } from "~/app/_components/openclaw-logo";
 
 const SAMPLE_PROMPTS = [
   "Summarize my emails for today",
@@ -163,15 +164,24 @@ export function ChatView({
         <ComposioCta />
         <div className="relative min-h-0 flex-1">
           {isEmpty ? (
-            <div className="flex h-full flex-col items-center justify-center gap-4">
-              <div className="flex flex-wrap justify-center gap-2">
+            <div className="flex h-full flex-col items-center justify-center gap-6 px-4 text-center">
+              <OpenClawLogo size={64} className="opacity-95" />
+              <div className="space-y-1.5">
+                <h2 className="font-heading text-2xl font-bold tracking-tight">
+                  What can I do for you?
+                </h2>
+                <p className="text-muted-foreground text-sm">
+                  Ask anything, or start with one of these.
+                </p>
+              </div>
+              <div className="flex max-w-md flex-wrap justify-center gap-2">
                 {SAMPLE_PROMPTS.map((prompt) => (
                   <button
                     key={prompt}
                     onClick={() => {
                       void handleSend(prompt);
                     }}
-                    className="border-border text-muted-foreground hover:bg-accent hover:text-foreground rounded-full border px-4 py-2 text-sm transition-colors"
+                    className="border-border bg-card/50 text-muted-foreground hover:border-primary/40 hover:text-foreground rounded-full border px-4 py-2 text-sm transition-all hover:scale-[1.02]"
                   >
                     {prompt}
                   </button>

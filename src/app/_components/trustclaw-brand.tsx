@@ -21,9 +21,15 @@ export function TrustClawBrand({ size = "md", logoLink }: TrustClawBrandProps) {
 
   return (
     <div className={`flex items-center ${s.gap}`}>
-      {logoLink ? <Link href={logoLink}>{logo}</Link> : logo}
+      {logoLink ? (
+        <Link href={logoLink} className="transition-transform hover:scale-105">
+          {logo}
+        </Link>
+      ) : (
+        logo
+      )}
       <div className="flex flex-col leading-tight">
-        <span className={`${s.text} font-bold text-foreground`}>
+        <span className={`${s.text} text-gradient font-heading font-bold`}>
           The Almost Epic AI Club
         </span>
         <span className={`${s.by} ${s.tagline} text-muted-foreground font-medium`}>
