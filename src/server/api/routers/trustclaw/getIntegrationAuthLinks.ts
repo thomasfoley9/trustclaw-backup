@@ -1,3 +1,4 @@
+import { TRPCError } from "@trpc/server";
 import { protectedProcedure } from "~/server/api/trpc";
 import { getComposioForUser } from "~/server/clients/composio";
 
@@ -21,9 +22,32 @@ const ONBOARDING_TOOLKITS = [
 
 export const getIntegrationAuthLinks = protectedProcedure.query(
   async ({ ctx }) => {
-    const { client, composioUserId } = await getComposioForUser(
-      ctx.session.user.id,
-    );
+    // Every brand-new user is keyless until they add a Composio key. Don't let
+    // that throw during onboarding — return placeholders so the integrations
+    // step can render a friendly "add your key later" state and proceed.
+    let composio;
+    try {
+      composio = await getComposioForUser(ctx.session.user.id);
+    } catch (error) {
+      if (
+        error instanceof TRPCError &&
+        error.code === "PRECONDITION_FAILED"
+      ) {
+        return {
+          keyMissing: true,
+          integrations: ONBOARDING_TOOLKITS.map((t) => ({
+            toolkit: t.slug,
+            name: t.name,
+            logo: t.logo,
+            connected: false,
+            redirectUrl: null as string | null,
+          })),
+        };
+      }
+      throw error;
+    }
+
+    const { client, composioUserId } = composio;
     const session = await client.create(composioUserId, {});
     const toolkitsInfo = await session.toolkits({
       toolkits: ONBOARDING_TOOLKITS.map((t) => t.slug),
@@ -54,6 +78,6 @@ export const getIntegrationAuthLinks = protectedProcedure.query(
       }),
     );
 
-    return { integrations };
+    return { keyMissing: false, integrations };
   },
 );
