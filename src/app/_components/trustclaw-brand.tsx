@@ -33,7 +33,7 @@ export function TrustClawBrand({ size = "md", logoLink }: TrustClawBrandProps) {
           Thomas Claw
         </span>
         <span className={`${s.by} ${s.tagline} text-muted-foreground font-medium`}>
-          Brought to you by Foley
+          Brought to you by Cracked Cookies
         </span>
       </div>
     </div>

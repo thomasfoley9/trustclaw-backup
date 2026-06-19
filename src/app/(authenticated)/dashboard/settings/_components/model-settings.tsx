@@ -25,14 +25,7 @@ import {
   showSuccessToast,
   trpcToastOnError,
 } from "~/components/core/toast-notifications";
-
-const MODELS = [
-  { value: "claude-opus-4-8", label: "Claude Opus 4.8", description: "Most capable" },
-  { value: "claude-opus-4-7", label: "Claude Opus 4.7", description: "Highly capable" },
-  { value: "claude-opus-4-6", label: "Claude Opus 4.6", description: "Very capable" },
-  { value: "claude-sonnet-4-5-20250929", label: "Claude Sonnet 4.5", description: "Balanced" },
-  { value: "claude-haiku-4-5-20251001", label: "Claude Haiku 4.5", description: "Fast & affordable" },
-] as const;
+import { MODELS } from "~/app/(authenticated)/dashboard/_components/onboarding/onboarding.consts";
 
 interface ModelSettingsProps {
   currentModel: string;

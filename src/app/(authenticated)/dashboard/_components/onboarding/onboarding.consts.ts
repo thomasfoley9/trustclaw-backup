@@ -56,6 +56,12 @@ export const MODELS = [
     cost: "$$$",
   },
   {
+    value: "claude-sonnet-4-6" as const,
+    label: "Claude Sonnet 4.6",
+    description: "Fast & balanced",
+    cost: "$$",
+  },
+  {
     value: "claude-sonnet-4-5-20250929" as const,
     label: "Claude Sonnet 4.5",
     description: "Balanced",
@@ -66,6 +72,12 @@ export const MODELS = [
     label: "Claude Haiku 4.5",
     description: "Fast & affordable",
     cost: "$",
+  },
+  {
+    value: "claude-fable-5" as const,
+    label: "Claude Fable 5",
+    description: "Creative & expressive",
+    cost: "$$",
   },
 ] as const;
 

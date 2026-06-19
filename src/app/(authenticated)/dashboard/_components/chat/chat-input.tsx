@@ -8,6 +8,7 @@ import { Textarea } from "~/components/ui/textarea";
 import { cn } from "~/lib/utils";
 import { showErrorToast } from "~/components/core/toast-notifications";
 import type { ChatFilePart } from "../use-chat-hook";
+import { ModelPicker } from "./model-picker";
 
 interface ChatInputProps {
   onSend: (message: string, files?: ChatFilePart[]) => void;
@@ -255,6 +256,10 @@ export function ChatInput({
               <ArrowUp className="size-4" />
             </Button>
           )}
+        </div>
+
+        <div className="mt-1.5 flex items-center">
+          <ModelPicker />
         </div>
       </div>
       {isTooLong && (
