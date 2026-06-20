@@ -73,12 +73,6 @@ export const MODELS = [
     description: "Fast & affordable",
     cost: "$",
   },
-  {
-    value: "claude-fable-5" as const,
-    label: "Claude Fable 5",
-    description: "Creative & expressive",
-    cost: "$$",
-  },
 ] as const;
 
 export const INTEGRATION_DESCRIPTIONS: Record<string, string> = {
