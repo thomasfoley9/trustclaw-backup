@@ -1,0 +1,502 @@
+[
+  {
+    "key": "mutant-01",
+    "label": "Triple Eye",
+    "category": "mutants"
+  },
+  {
+    "key": "mutant-02",
+    "label": "Slime Brain",
+    "category": "mutants"
+  },
+  {
+    "key": "mutant-03",
+    "label": "Extra Arm",
+    "category": "mutants"
+  },
+  {
+    "key": "mutant-04",
+    "label": "Melting Face",
+    "category": "mutants"
+  },
+  {
+    "key": "mutant-05",
+    "label": "Tentacle Head",
+    "category": "mutants"
+  },
+  {
+    "key": "mutant-06",
+    "label": "Split Face",
+    "category": "mutants"
+  },
+  {
+    "key": "mutant-07",
+    "label": "Radioactive",
+    "category": "mutants"
+  },
+  {
+    "key": "platformer-01",
+    "label": "Cap Jump",
+    "category": "platformer"
+  },
+  {
+    "key": "platformer-02",
+    "label": "Green Pipe",
+    "category": "platformer"
+  },
+  {
+    "key": "platformer-03",
+    "label": "Star Power",
+    "category": "platformer"
+  },
+  {
+    "key": "platformer-04",
+    "label": "Mustache Plumber",
+    "category": "platformer"
+  },
+  {
+    "key": "platformer-05",
+    "label": "Coin Chaser",
+    "category": "platformer"
+  },
+  {
+    "key": "platformer-06",
+    "label": "Block Breaker",
+    "category": "platformer"
+  },
+  {
+    "key": "platformer-07",
+    "label": "Warp Zone",
+    "category": "platformer"
+  },
+  {
+    "key": "adventure-01",
+    "label": "Green Tunic",
+    "category": "adventure"
+  },
+  {
+    "key": "adventure-02",
+    "label": "Shield Bearer",
+    "category": "adventure"
+  },
+  {
+    "key": "adventure-03",
+    "label": "Forest Spirit",
+    "category": "adventure"
+  },
+  {
+    "key": "adventure-04",
+    "label": "Crystal Sage",
+    "category": "adventure"
+  },
+  {
+    "key": "adventure-05",
+    "label": "Bow Ranger",
+    "category": "adventure"
+  },
+  {
+    "key": "adventure-06",
+    "label": "Ruin Explorer",
+    "category": "adventure"
+  },
+  {
+    "key": "adventure-07",
+    "label": "Triforce Seeker",
+    "category": "adventure"
+  },
+  {
+    "key": "jrpg-01",
+    "label": "Spiky Blonde",
+    "category": "jrpg"
+  },
+  {
+    "key": "jrpg-02",
+    "label": "Dark Knight",
+    "category": "jrpg"
+  },
+  {
+    "key": "jrpg-03",
+    "label": "White Mage",
+    "category": "jrpg"
+  },
+  {
+    "key": "jrpg-04",
+    "label": "Summoner",
+    "category": "jrpg"
+  },
+  {
+    "key": "jrpg-05",
+    "label": "Chocobo Rider",
+    "category": "jrpg"
+  },
+  {
+    "key": "jrpg-06",
+    "label": "Limit Break",
+    "category": "jrpg"
+  },
+  {
+    "key": "jrpg-07",
+    "label": "Materia Mage",
+    "category": "jrpg"
+  },
+  {
+    "key": "blocky-01",
+    "label": "Classic Block",
+    "category": "blocky"
+  },
+  {
+    "key": "blocky-02",
+    "label": "Noob Green",
+    "category": "blocky"
+  },
+  {
+    "key": "blocky-03",
+    "label": "Builder Pro",
+    "category": "blocky"
+  },
+  {
+    "key": "blocky-04",
+    "label": "Neon Avatar",
+    "category": "blocky"
+  },
+  {
+    "key": "blocky-05",
+    "label": "Obby Runner",
+    "category": "blocky"
+  },
+  {
+    "key": "blocky-06",
+    "label": "Tycoon Boss",
+    "category": "blocky"
+  },
+  {
+    "key": "blocky-07",
+    "label": "Rainbow Block",
+    "category": "blocky"
+  },
+  {
+    "key": "voxel-01",
+    "label": "Block Miner",
+    "category": "voxel"
+  },
+  {
+    "key": "voxel-02",
+    "label": "Green Stalker",
+    "category": "voxel"
+  },
+  {
+    "key": "voxel-03",
+    "label": "Pig Snout",
+    "category": "voxel"
+  },
+  {
+    "key": "voxel-04",
+    "label": "Ender Style",
+    "category": "voxel"
+  },
+  {
+    "key": "voxel-05",
+    "label": "Diamond Gear",
+    "category": "voxel"
+  },
+  {
+    "key": "voxel-06",
+    "label": "Villager Nose",
+    "category": "voxel"
+  },
+  {
+    "key": "voxel-07",
+    "label": "Nether Blaze",
+    "category": "voxel"
+  },
+  {
+    "key": "robot-01",
+    "label": "Chrome Bot",
+    "category": "robots"
+  },
+  {
+    "key": "robot-02",
+    "label": "Retro Droid",
+    "category": "robots"
+  },
+  {
+    "key": "robot-03",
+    "label": "Mech Pilot",
+    "category": "robots"
+  },
+  {
+    "key": "robot-04",
+    "label": "Cute Companion",
+    "category": "robots"
+  },
+  {
+    "key": "robot-05",
+    "label": "Rust Bucket",
+    "category": "robots"
+  },
+  {
+    "key": "robot-06",
+    "label": "Laser Unit",
+    "category": "robots"
+  },
+  {
+    "key": "robot-07",
+    "label": "AI Core",
+    "category": "robots"
+  },
+  {
+    "key": "sea-01",
+    "label": "Angler Lure",
+    "category": "sea"
+  },
+  {
+    "key": "sea-02",
+    "label": "Octo Grin",
+    "category": "sea"
+  },
+  {
+    "key": "sea-03",
+    "label": "Blobfish",
+    "category": "sea"
+  },
+  {
+    "key": "sea-04",
+    "label": "Puffer Panic",
+    "category": "sea"
+  },
+  {
+    "key": "sea-05",
+    "label": "Shark Grin",
+    "category": "sea"
+  },
+  {
+    "key": "sea-06",
+    "label": "Jelly Wobble",
+    "category": "sea"
+  },
+  {
+    "key": "ghost-01",
+    "label": "Classic Boo",
+    "category": "ghosts"
+  },
+  {
+    "key": "ghost-02",
+    "label": "Spooky Sheet",
+    "category": "ghosts"
+  },
+  {
+    "key": "ghost-03",
+    "label": "Phantom Glow",
+    "category": "ghosts"
+  },
+  {
+    "key": "ghost-04",
+    "label": "Friendly Float",
+    "category": "ghosts"
+  },
+  {
+    "key": "ghost-05",
+    "label": "Haunted Wisp",
+    "category": "ghosts"
+  },
+  {
+    "key": "ghost-06",
+    "label": "Poltergeist",
+    "category": "ghosts"
+  },
+  {
+    "key": "alien-01",
+    "label": "Grey Visitor",
+    "category": "aliens"
+  },
+  {
+    "key": "alien-02",
+    "label": "One Eye",
+    "category": "aliens"
+  },
+  {
+    "key": "alien-03",
+    "label": "Martian",
+    "category": "aliens"
+  },
+  {
+    "key": "alien-04",
+    "label": "UFO Pilot",
+    "category": "aliens"
+  },
+  {
+    "key": "alien-05",
+    "label": "Tentacle Invader",
+    "category": "aliens"
+  },
+  {
+    "key": "alien-06",
+    "label": "Neon Probe",
+    "category": "aliens"
+  },
+  {
+    "key": "alien-07",
+    "label": "Cosmic Blob",
+    "category": "aliens"
+  },
+  {
+    "key": "monster-01",
+    "label": "Horned Beast",
+    "category": "monsters"
+  },
+  {
+    "key": "monster-02",
+    "label": "Slime King",
+    "category": "monsters"
+  },
+  {
+    "key": "monster-03",
+    "label": "Cyclops Troll",
+    "category": "monsters"
+  },
+  {
+    "key": "monster-04",
+    "label": "Fang Face",
+    "category": "monsters"
+  },
+  {
+    "key": "monster-05",
+    "label": "Eye Monster",
+    "category": "monsters"
+  },
+  {
+    "key": "monster-06",
+    "label": "Moss Golem",
+    "category": "monsters"
+  },
+  {
+    "key": "monster-07",
+    "label": "Chaos Imp",
+    "category": "monsters"
+  },
+  {
+    "key": "animal-01",
+    "label": "Grumpy Cat",
+    "category": "animals"
+  },
+  {
+    "key": "animal-02",
+    "label": "Party Dog",
+    "category": "animals"
+  },
+  {
+    "key": "animal-03",
+    "label": "Wise Owl",
+    "category": "animals"
+  },
+  {
+    "key": "animal-04",
+    "label": "Frog Prince",
+    "category": "animals"
+  },
+  {
+    "key": "animal-05",
+    "label": "Derpy Penguin",
+    "category": "animals"
+  },
+  {
+    "key": "animal-06",
+    "label": "Trash Panda",
+    "category": "animals"
+  },
+  {
+    "key": "funny-01",
+    "label": "Derp Face",
+    "category": "funnyFaces"
+  },
+  {
+    "key": "funny-02",
+    "label": "Big Nose",
+    "category": "funnyFaces"
+  },
+  {
+    "key": "funny-03",
+    "label": "Unibrow",
+    "category": "funnyFaces"
+  },
+  {
+    "key": "funny-04",
+    "label": "Buck Teeth",
+    "category": "funnyFaces"
+  },
+  {
+    "key": "funny-05",
+    "label": "WTF Face",
+    "category": "funnyFaces"
+  },
+  {
+    "key": "funny-06",
+    "label": "Side Eye",
+    "category": "funnyFaces"
+  },
+  {
+    "key": "cryptid-01",
+    "label": "Mothman",
+    "category": "cryptids"
+  },
+  {
+    "key": "cryptid-02",
+    "label": "Bigfoot",
+    "category": "cryptids"
+  },
+  {
+    "key": "cryptid-03",
+    "label": "Jackalope",
+    "category": "cryptids"
+  },
+  {
+    "key": "cryptid-04",
+    "label": "Loch Ness",
+    "category": "cryptids"
+  },
+  {
+    "key": "cryptid-05",
+    "label": "Flatwoods",
+    "category": "cryptids"
+  },
+  {
+    "key": "cryptid-06",
+    "label": "Chupacabra",
+    "category": "cryptids"
+  },
+  {
+    "key": "cryptid-07",
+    "label": "Jersey Devil",
+    "category": "cryptids"
+  },
+  {
+    "key": "skeleton-01",
+    "label": "Classic Skull",
+    "category": "skeletons"
+  },
+  {
+    "key": "skeleton-02",
+    "label": "Zombie",
+    "category": "skeletons"
+  },
+  {
+    "key": "skeleton-03",
+    "label": "Bone Dog",
+    "category": "skeletons"
+  },
+  {
+    "key": "skeleton-04",
+    "label": "Reaper",
+    "category": "skeletons"
+  },
+  {
+    "key": "skeleton-05",
+    "label": "Mummy",
+    "category": "skeletons"
+  },
+  {
+    "key": "skeleton-06",
+    "label": "Lich",
+    "category": "skeletons"
+  }
+]

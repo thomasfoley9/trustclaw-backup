@@ -268,7 +268,7 @@ export function PersonalitySettings() {
             </div>
             <div className="space-y-1.5">
               <p className="text-muted-foreground text-xs font-medium">Avatar</p>
-              <div className="grid max-h-44 grid-cols-8 gap-1 overflow-y-auto rounded-md border p-2">
+              <div className="grid max-h-60 grid-cols-8 gap-1 overflow-y-auto rounded-md border p-2 sm:grid-cols-10">
                 {PERSONALITY_AVATARS.map((a) => (
                   <button
                     key={a.key}
