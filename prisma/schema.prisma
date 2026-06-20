@@ -153,6 +153,7 @@ model ComposioClawInstance {
   memoryBuckets MemoryBucket[]
   customModels  CustomModel[]
   skills        Skill[]
+  mcpServers    McpServer[]
 
   @@index([userId])
   @@map("composio_claw_instance")
@@ -199,6 +200,23 @@ model CustomModel {
   @@unique([instanceId, modelId])
   @@index([instanceId])
   @@map("composio_claw_custom_model")
+}
+
+// Per-user MCP (Model Context Protocol) servers — e.g. Composio MCP URLs.
+// The agent connects to each at run time and merges its tools. The `url`
+// embeds an auth token, so it's encrypted at rest (enc:v1: envelope).
+model McpServer {
+  id         String   @id @default(cuid())
+  instanceId String
+  label      String
+  url        String
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  instance ComposioClawInstance @relation(fields: [instanceId], references: [id], onDelete: Cascade)
+
+  @@index([instanceId])
+  @@map("composio_claw_mcp_server")
 }
 
 // User-editable knowledge buckets. `slug` is the stable key stored in

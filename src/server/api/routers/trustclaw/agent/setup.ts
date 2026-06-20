@@ -2,6 +2,7 @@ import { ToolLoopAgent, stepCountIs } from "ai";
 import type { ToolSet, SystemModelMessage } from "ai";
 import { db } from "~/server/clients/db";
 import { getComposioForInstance } from "~/server/clients/composio";
+import { loadMcpTools } from "~/server/clients/mcp";
 import { resolveAgentModel } from "./resolve-model";
 import { buildSystemPrompt } from "./system-prompt";
 import {
@@ -413,9 +414,15 @@ export async function prepareAgentRun(
     incognito,
   });
 
+  // Tools from the user's MCP servers (Composio MCP URLs, etc.). Clients stay
+  // open for the run and are closed in onFinish; per-server failures are
+  // isolated and never block the run.
+  const mcp = await loadMcpTools(instanceId);
+
   const allTools: ToolSet = sanitizeToolResults({
     ...composioTools,
     ...customTools,
+    ...mcp.tools,
   });
 
   // Resolve the model first (per-user Anthropic key). Fails closed with a
@@ -537,6 +544,9 @@ export async function prepareAgentRun(
             "[agent/onFinish] clearStreamingMessage failed:",
             error,
           ),
+        );
+        await mcp.close().catch((error) =>
+          console.error("[agent/onFinish] mcp close failed:", error),
         );
       }
     },

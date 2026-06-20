@@ -37,6 +37,9 @@ import { deleteBucket } from "./deleteBucket";
 import { getCustomModels } from "./getCustomModels";
 import { addCustomModel } from "./addCustomModel";
 import { deleteCustomModel } from "./deleteCustomModel";
+import { getMcpServers } from "./getMcpServers";
+import { addMcpServer } from "./addMcpServer";
+import { removeMcpServer } from "./removeMcpServer";
 import { saveConversationToBucket } from "./saveConversationToBucket";
 import { getSkills } from "./getSkills";
 import { generateSkill } from "./generateSkill";
@@ -84,6 +87,9 @@ export const trustclawRouter = router({
   getCustomModels,
   addCustomModel,
   deleteCustomModel,
+  getMcpServers,
+  addMcpServer,
+  removeMcpServer,
   saveConversationToBucket,
   getSkills,
   generateSkill,

@@ -6,6 +6,7 @@ import { ErrorDisplay } from "~/components/core/error-display";
 import { ErrorBoundary } from "~/components/core/error-boundary";
 import { ModelSettings } from "./model-settings";
 import { CustomModelsSettings } from "./custom-models-settings";
+import { McpServersSettings } from "./mcp-servers-settings";
 import { ComposioApiKeySettings } from "./composio-api-key-settings";
 import { AnthropicApiKeySettings } from "./anthropic-api-key-settings";
 import { TelegramSettings } from "./telegram-settings";
@@ -76,6 +77,10 @@ export function SettingsPageClient() {
 
       <ErrorBoundary>
         <CustomModelsSettings />
+      </ErrorBoundary>
+
+      <ErrorBoundary>
+        <McpServersSettings />
       </ErrorBoundary>
 
       <ErrorBoundary>
