@@ -3,7 +3,7 @@ import type { ToolSet, SystemModelMessage } from "ai";
 import { db } from "~/server/clients/db";
 import { getComposioForInstance } from "~/server/clients/composio";
 import { loadMcpTools } from "~/server/clients/mcp";
-import { resolveAgentModel } from "./resolve-model";
+import { resolveAgentModel, isHouseModel } from "./resolve-model";
 import { buildSystemPrompt } from "./system-prompt";
 import {
   createCustomTools,
@@ -266,6 +266,7 @@ export async function prepareAgentRun(
       skills,
       hasCompactionSummary: !!conversation.lastCompactionSummary,
       userTimezone,
+      uncensored: isHouseModel(instance.anthropicModel),
     }),
   );
 

@@ -53,10 +53,7 @@ export function CustomModelsSettings() {
   });
 
   const isBusy = addModel.isPending || deleteModel.isPending;
-  const canAdd =
-    /^[a-z0-9-]+\/[\w.:-]+$/i.test(modelId.trim()) &&
-    label.trim().length > 0 &&
-    !isBusy;
+  const canAdd = /^[a-z0-9-]+\/[\w.:/-]+$/i.test(modelId.trim()) && !isBusy;
 
   return (
     <Card>
@@ -65,9 +62,11 @@ export function CustomModelsSettings() {
           <Boxes className="h-4 w-4" /> Custom models
         </CardTitle>
         <CardDescription>
-          Bring any provider/model id (e.g. <code>openai/gpt-4o</code>). Add a
-          provider API key to call it directly; without one it routes through
-          the gateway. Direct keys work for OpenAI, Anthropic, and Google.
+          Bring any <code>provider/model</code> id — e.g.{" "}
+          <code>deepseek/deepseek-chat</code> or{" "}
+          <code>openrouter/moonshotai/kimi-k2</code> — plus that provider&apos;s
+          API key. Works with OpenAI, Anthropic, Google, DeepSeek, Moonshot,
+          OpenRouter, Groq, Together, xAI, and Fireworks.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -131,7 +130,7 @@ export function CustomModelsSettings() {
               />
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="cm-label">Label</Label>
+              <Label htmlFor="cm-label">Label (optional)</Label>
               <Input
                 id="cm-label"
                 placeholder="GPT-4o"
@@ -153,7 +152,8 @@ export function CustomModelsSettings() {
               disabled={isBusy}
             />
             <p className="text-muted-foreground text-xs">
-              Stored encrypted at rest. Leave blank to use your gateway credits.
+              Stored encrypted at rest. Required to run the model (Anthropic
+              custom ids reuse your Anthropic key).
             </p>
           </div>
           <Button

@@ -5,8 +5,34 @@ import { createAnthropic } from "@ai-sdk/anthropic";
 import { createGoogleGenerativeAI } from "@ai-sdk/google";
 import { db } from "~/server/clients/db";
 import { decryptSecret } from "~/server/clients/crypto";
+import { env } from "~/env";
 
-// First-party providers we can call directly with a user's key.
+// OpenAI-compatible providers (identical wire format, different base URL) — lets
+// users bring DeepSeek, Kimi/Moonshot, OpenRouter, Groq, etc. with their own key.
+const OPENAI_COMPATIBLE_BASE_URLS: Record<string, string> = {
+  deepseek: "https://api.deepseek.com/v1",
+  moonshot: "https://api.moonshot.ai/v1",
+  openrouter: "https://openrouter.ai/api/v1",
+  groq: "https://api.groq.com/openai/v1",
+  together: "https://api.together.xyz/v1",
+  xai: "https://api.x.ai/v1",
+  fireworks: "https://api.fireworks.ai/inference/v1",
+};
+
+const OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1";
+
+// "House" models ride the OWNER's shared OpenRouter key — free to every user,
+// billed to the owner's account. Map: house id -> OpenRouter model slug.
+const HOUSE_MODELS: Record<string, string> = {
+  "house/kimi-k2": "moonshotai/kimi-k2",
+  "house/deepseek": "deepseek/deepseek-chat",
+};
+
+export function isHouseModel(modelId: string): boolean {
+  return modelId in HOUSE_MODELS;
+}
+
+// First-party + OpenAI-compatible providers we can call directly with a user's key.
 function directModel(
   provider: string,
   bareModel: string,
@@ -19,8 +45,10 @@ function directModel(
       return createAnthropic({ apiKey })(bareModel);
     case "google":
       return createGoogleGenerativeAI({ apiKey })(bareModel);
-    default:
-      return null;
+    default: {
+      const baseURL = OPENAI_COMPATIBLE_BASE_URLS[provider];
+      return baseURL ? createOpenAI({ apiKey, baseURL })(bareModel) : null;
+    }
   }
 }
 
@@ -52,6 +80,21 @@ export async function resolveAgentModel(
   instanceId: string,
   modelId: string,
 ): Promise<LanguageModel> {
+  // House models: owner-funded shared key, free to all users. Checked first so
+  // "house/..." isn't treated as a BYO custom model below.
+  const houseSlug = HOUSE_MODELS[modelId];
+  if (houseSlug) {
+    if (!env.OPENROUTER_API_KEY) {
+      missingKey(
+        "The house models aren't set up yet — ask the owner to add an OpenRouter key.",
+      );
+    }
+    return createOpenAI({
+      apiKey: env.OPENROUTER_API_KEY,
+      baseURL: OPENROUTER_BASE_URL,
+    })(houseSlug);
+  }
+
   if (modelId.includes("/")) {
     const slash = modelId.indexOf("/");
     const provider = modelId.slice(0, slash).toLowerCase();
@@ -80,7 +123,7 @@ export async function resolveAgentModel(
     const direct = directModel(provider, bareModel, apiKey);
     if (direct) return direct;
     missingKey(
-      `"${provider}" isn't a supported provider — use OpenAI, Anthropic, or Google with your own key.`,
+      `"${provider}" isn't a supported provider. Use one of: openai, anthropic, google, deepseek, moonshot, openrouter, groq, together, xai, fireworks.`,
     );
   }
 

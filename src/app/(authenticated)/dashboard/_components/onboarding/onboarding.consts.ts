@@ -75,6 +75,23 @@ export const MODELS = [
   },
 ] as const;
 
+// House models: owner-funded (Kimi K2 + DeepSeek via OpenRouter), free to every
+// user, no key needed — they run an uncensored persona.
+export const HOUSE_MODELS = [
+  {
+    value: "house/kimi-k2" as const,
+    label: "Kimi K2",
+    description: "Free · uncensored · on the house",
+    cost: "free",
+  },
+  {
+    value: "house/deepseek" as const,
+    label: "DeepSeek",
+    description: "Free · uncensored · on the house",
+    cost: "free",
+  },
+] as const;
+
 export const INTEGRATION_DESCRIPTIONS: Record<string, string> = {
   gmail: "Read and send emails",
   github: "Manage repos and issues",

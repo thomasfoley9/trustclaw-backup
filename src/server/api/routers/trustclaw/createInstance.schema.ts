@@ -16,7 +16,10 @@ export const customModelIdSchema = z
   .string()
   .trim()
   .max(100)
-  .regex(/^[a-z0-9-]+\/[\w.:-]+$/i, "Use provider/model, e.g. openai/gpt-4o");
+  .regex(
+    /^[a-z0-9-]+\/[\w.:/-]+$/i,
+    "Use provider/model, e.g. deepseek/deepseek-chat",
+  );
 
 // What may be saved as the selected model: a Claude preset or a custom id.
 export const selectableModelSchema = z.union([

@@ -33,6 +33,11 @@ export const env = createEnv({
     // prod is unchanged until the worker is deployed and this is set to "true".
     WORKER_QUEUE_ENABLED: z.enum(["true", "false"]).optional(),
 
+    // Owner-funded shared key for the "house" models (Kimi K2, DeepSeek via
+    // OpenRouter) — free to every user, billed to the owner's account. Optional:
+    // the house models are unavailable when this is unset.
+    OPENROUTER_API_KEY: z.string().optional(),
+
     // Cron auth. Required in production so unauthenticated callers can't hit
     // /api/cron/* endpoints. Vercel auto-injects this when crons are configured
     // in vercel.json; the trustclaw deploy CLI also generates one on first deploy.
@@ -67,6 +72,7 @@ export const env = createEnv({
     DATABASE_URL: process.env.DATABASE_URL,
     REDIS_URL: process.env.REDIS_URL,
     WORKER_QUEUE_ENABLED: process.env.WORKER_QUEUE_ENABLED,
+    OPENROUTER_API_KEY: process.env.OPENROUTER_API_KEY,
     CRON_SECRET: process.env.CRON_SECRET,
     SIGNUP_INVITE_CODE: process.env.SIGNUP_INVITE_CODE,
     GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID,

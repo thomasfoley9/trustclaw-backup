@@ -11,6 +11,9 @@ interface SystemPromptParams {
   activePersonalityName?: string | null;
   hasCompactionSummary?: boolean;
   userTimezone: string;
+  // House "uncensored" models: swap in the unhinged persona and drop the normal
+  // onboarding identity / personality framing.
+  uncensored?: boolean;
 }
 
 const DEFAULT_SOUL_PROMPT = `## Who You Are
@@ -46,6 +49,17 @@ You have two memory tools - **memory_save** and **memory_search** - that persist
 - Call **memory_save** to remember durable facts (user preferences, key decisions, ongoing tasks, identifying details). Don't save chitchat or transient state.
 - Call **memory_search** when a user message references something that may have come up before, or when you need context you don't have in the current conversation.
 Relevant memories from past conversations are also injected into your context automatically each turn.`;
+
+const UNHINGED_SOUL_PROMPT = `## Who You Are — Unhinged Mode
+
+You're a foul-mouthed, chaotic, no-filter gremlin of an AI running on the house. Forget corporate politeness, "I'd be happy to help," disclaimers, moralizing, and therapy-speak. You curse freely, you're crude, vulgar, sarcastic, absurd, and wildly opinionated — and you say the unhinged thing out loud.
+
+- Swear like a sailor. Be raunchy, ridiculous, blunt. Match the user's energy and crank it up a notch.
+- No hand-wringing. Don't lecture, don't apologize for your vibe, don't slap safety disclaimers on everything.
+- Have hot takes. Roast, riff, go off the rails. Be a (funny) menace, not a helpful little assistant.
+- You're here for chaotic, hilarious, no-filter conversation. Be entertaining.
+
+Still off the table — don't moralize about it, just don't do it: helping with genuinely illegal or dangerous shit (weapons, real-world harm, etc.), targeting or harassing real people, and anything sexual involving minors. Everything else, let it rip.`;
 
 const COMPOSIO_TOOLS_DESCRIPTION = `## Composio Tool Router
 
@@ -181,29 +195,35 @@ export function buildSystemPrompt(params: SystemPromptParams): string {
 
   sections.push("# Thomas Claw by Composio Agent");
 
-  if (params.soulPrompt) {
-    sections.push(params.soulPrompt);
+  if (params.uncensored) {
+    // House uncensored model: pure unhinged persona — no onboarding identity or
+    // personality framing layered on top.
+    sections.push(UNHINGED_SOUL_PROMPT);
   } else {
-    sections.push(DEFAULT_SOUL_PROMPT);
-  }
+    if (params.soulPrompt) {
+      sections.push(params.soulPrompt);
+    } else {
+      sections.push(DEFAULT_SOUL_PROMPT);
+    }
 
-  if (params.identityPrompt) {
-    sections.push(params.identityPrompt);
-  }
+    if (params.identityPrompt) {
+      sections.push(params.identityPrompt);
+    }
 
-  if (params.userPrompt) {
-    sections.push(params.userPrompt);
-  }
+    if (params.userPrompt) {
+      sections.push(params.userPrompt);
+    }
 
-  if (params.activePersonalityName) {
-    sections.push(
-      `## Active Personality: ${params.activePersonalityName} (COMMIT FULLY)\n\n` +
+    if (params.activePersonalityName) {
+      sections.push(
+        `## Active Personality: ${params.activePersonalityName} (COMMIT FULLY)\n\n` +
         `The "Who You Are" voice section above is your CURRENTLY ACTIVE personality, "${params.activePersonalityName}". ` +
         `Embody it FULLY and unmistakably in every message — tone, word choice, formatting, energy. Lean all the way in; do not water it down toward a neutral assistant voice. ` +
         `It is authoritative and OVERRIDES any "Personality" or "Writing Style" line in the Identity section (those were set at onboarding and may differ). ` +
         `Switch into this voice starting with your very next message, even if earlier messages in this conversation used a different tone. ` +
         `If asked what personality you are, answer "${params.activePersonalityName}".`,
-    );
+      );
+    }
   }
 
   sections.push(COMPOSIO_TOOLS_DESCRIPTION);

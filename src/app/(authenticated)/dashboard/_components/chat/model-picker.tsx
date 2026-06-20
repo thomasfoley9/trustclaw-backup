@@ -11,7 +11,7 @@ import {
   PopoverTrigger,
 } from "~/components/ui/popover";
 import { trpcToastOnError } from "~/components/core/toast-notifications";
-import { MODELS } from "../onboarding/onboarding.consts";
+import { MODELS, HOUSE_MODELS } from "../onboarding/onboarding.consts";
 
 const DEFAULT_MODEL = "claude-opus-4-8";
 
@@ -19,6 +19,8 @@ const DEFAULT_MODEL = "claude-opus-4-8";
 function shortLabel(modelId: string): string {
   const preset = MODELS.find((m) => m.value === modelId);
   if (preset) return preset.label.replace(/^Claude /, "");
+  const house = HOUSE_MODELS.find((m) => m.value === modelId);
+  if (house) return house.label;
   return modelId.includes("/") ? (modelId.split("/")[1] ?? modelId) : modelId;
 }
 
@@ -87,6 +89,32 @@ export function ModelPicker() {
                 current === m.value
                   ? "text-primary opacity-100"
                   : "opacity-0",
+              )}
+            />
+            <span className="min-w-0 flex-1">
+              <span className="block font-medium">{m.label}</span>
+              <span className="text-muted-foreground block text-xs">
+                {m.description}
+              </span>
+            </span>
+            <span className="text-muted-foreground text-xs">{m.cost}</span>
+          </button>
+        ))}
+
+        <div className="text-muted-foreground mt-1 px-2 py-1.5 text-xs font-semibold">
+          On the house 🍻
+        </div>
+        {HOUSE_MODELS.map((m) => (
+          <button
+            key={m.value}
+            type="button"
+            onClick={() => selectModel(m.value)}
+            className={rowClass(current === m.value)}
+          >
+            <Check
+              className={cn(
+                "size-4 shrink-0",
+                current === m.value ? "text-primary opacity-100" : "opacity-0",
               )}
             />
             <span className="min-w-0 flex-1">
