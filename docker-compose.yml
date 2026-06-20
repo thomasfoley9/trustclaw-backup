@@ -22,7 +22,8 @@ services:
       POSTGRES_PASSWORD: trustclaw
       POSTGRES_DB: trustclaw
     ports:
-      - "5434:5432"
+      # Bind to loopback only — never expose the dev DB to the LAN.
+      - "127.0.0.1:5434:5432"
     volumes:
       - pg-data:/var/lib/postgresql/data
 
@@ -30,7 +31,8 @@ services:
     image: redis:7-alpine
     command: redis-server --maxmemory-policy noeviction --appendonly yes
     ports:
-      - "6399:6379"
+      # Bind to loopback only — never expose Redis to the LAN.
+      - "127.0.0.1:6399:6379"
     volumes:
       - redis-data:/data
 
