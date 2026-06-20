@@ -64,8 +64,10 @@ function directModel(
     case "google":
       return createGoogleGenerativeAI({ apiKey })(bareModel);
     default: {
+      // OpenAI-compatible providers only implement Chat Completions, not the
+      // OpenAI Responses API — use .chat() so we hit /v1/chat/completions.
       const baseURL = OPENAI_COMPATIBLE_BASE_URLS[provider];
-      return baseURL ? createOpenAI({ apiKey, baseURL })(bareModel) : null;
+      return baseURL ? createOpenAI({ apiKey, baseURL }).chat(bareModel) : null;
     }
   }
 }
@@ -105,16 +107,18 @@ export async function resolveAgentModel(
   if (houseRoute) {
     const nativeKey = houseNativeKey(modelId);
     if (nativeKey) {
+      // .chat() = Chat Completions API. The default callable uses the OpenAI
+      // Responses API (/v1/responses), which DeepSeek/Moonshot don't implement.
       return createOpenAI({
         apiKey: nativeKey,
         baseURL: houseRoute.nativeBaseURL,
-      })(houseRoute.nativeModel);
+      }).chat(houseRoute.nativeModel);
     }
     if (env.OPENROUTER_API_KEY) {
       return createOpenAI({
         apiKey: env.OPENROUTER_API_KEY,
         baseURL: OPENROUTER_BASE_URL,
-      })(houseRoute.openrouterModel);
+      }).chat(houseRoute.openrouterModel);
     }
     missingKey(
       "This house model isn't set up yet — the owner needs to add its API key.",
