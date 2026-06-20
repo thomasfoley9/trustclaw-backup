@@ -85,10 +85,30 @@ export function useVoicePlayback() {
       revoke();
 
       try {
+        // 1) Curate the reply into a short spoken brief (the EA layer) — voice
+        // speaks this, not the full on-screen digest. Falls back to the reply.
+        let toSpeak = clean;
+        try {
+          const br = await fetch("/api/voice/brief", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ text: clean }),
+          });
+          if (br.ok) {
+            const data = (await br.json()) as { brief?: string };
+            if (typeof data.brief === "string" && data.brief.trim()) {
+              toSpeak = data.brief.trim();
+            }
+          }
+        } catch {
+          // keep the full reply text
+        }
+
+        // 2) Speak the brief.
         const res = await fetch("/api/voice/tts", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ text: clean.slice(0, MAX_TTS_CHARS) }),
+          body: JSON.stringify({ text: toSpeak.slice(0, MAX_TTS_CHARS) }),
         });
         if (!res.ok) {
           if (res.status === 412) {
