@@ -10,11 +10,24 @@
 //
 import { createAgentWorker } from "~/server/clients/job-queue";
 import { runAgent } from "~/server/workers/agent-runner";
+import { runCronJobs } from "~/server/cron/run-cron-jobs";
 
 const worker = createAgentWorker(async (job) => {
-  const { instanceId, userMessage, source, conversationId } = job.data;
-  console.log(`[worker] job ${job.id} starting (instance=${instanceId})`);
-  await runAgent({ instanceId, userMessage, source, conversationId });
+  const data = job.data;
+  if (data.kind === "cron") {
+    console.log(
+      `[worker] cron job ${job.id} starting (${data.jobs.length} task(s))`,
+    );
+    await runCronJobs(data.jobs, data.invocationId, data.nowOverride);
+    return;
+  }
+  console.log(`[worker] job ${job.id} starting (instance=${data.instanceId})`);
+  await runAgent({
+    instanceId: data.instanceId,
+    userMessage: data.userMessage,
+    source: data.source,
+    conversationId: data.conversationId,
+  });
 });
 
 worker.on("completed", (job) => {

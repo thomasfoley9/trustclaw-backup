@@ -3,11 +3,12 @@ import { Prisma } from "~/generated/prisma/client";
 import { z } from "zod";
 import { env } from "~/env";
 import { db } from "~/server/clients/db";
-import { prepareAgentRun } from "~/server/api/routers/trustclaw/agent/setup";
-import { computeNextRunSafe } from "~/server/api/routers/trustclaw/agent/tools/cron-utils";
-import { stripToolResultEchoes } from "~/server/api/routers/trustclaw/agent/strip-tool-echoes";
-import { sendTelegramMessage } from "~/server/clients/telegram";
-import { executeJobInput, cronJobRow, type CronJobRow } from "./route.schema";
+import { runCronJobs } from "~/server/cron/run-cron-jobs";
+import {
+  enqueueCronJob,
+  isWorkerQueueEnabled,
+} from "~/server/clients/job-queue";
+import { executeJobInput, cronJobRow } from "./route.schema";
 
 async function loadJobsFromDb(jobIds: string[]) {
   const rows = z.array(cronJobRow).parse(
@@ -27,96 +28,6 @@ async function loadJobsFromDb(jobIds: string[]) {
   );
 
   return rows;
-}
-
-async function releaseJobLocks(
-  jobs: CronJobRow[],
-  invocationId: string,
-  now: Date,
-  error?: string,
-) {
-  const values = jobs.map((job) => {
-    const nextRunAt = computeNextRunSafe(job.expression, job.timezone);
-    return nextRunAt
-      ? Prisma.sql`(${job.id}, ${nextRunAt}::timestamptz)`
-      : Prisma.sql`(${job.id}, NULL::timestamptz)`;
-  });
-
-  await db.$queryRaw`
-    UPDATE composio_claw_cron_job AS cj
-    SET
-      "lastRunAt" = CASE WHEN ${error ?? null}::text IS NULL THEN ${now}::timestamptz ELSE cj."lastRunAt" END,
-      "nextRunAt" = v."nextRunAt"::timestamptz,
-      "lockedAt" = NULL,
-      "lockedBy" = NULL,
-      "lastError" = ${error ?? null}
-    FROM (VALUES ${Prisma.join(values)}) AS v(id, "nextRunAt")
-    WHERE cj.id = v.id
-      AND cj."lockedBy" = ${invocationId}
-  `;
-}
-
-async function executeJobs(
-  jobs: CronJobRow[],
-  invocationId: string,
-  nowOverride?: string,
-) {
-  const now = nowOverride ? new Date(nowOverride) : new Date();
-  const instanceId = jobs[0]!.instanceId;
-  const telegramChatId = jobs[0]!.telegramChatId;
-
-  try {
-    // Combine all prompts into a single user message
-    const combinedMessage = jobs
-      .map((j) => `<scheduled-task>\n${j.prompt}\n</scheduled-task>`)
-      .join("\n\n");
-
-    // Runs in a dedicated "Scheduled tasks" session so automated turns never
-    // land in whatever chat the user has open. The trigger stays visible
-    // there (no "hidden" type) so the session reads as a coherent transcript.
-    const prepareResult = await prepareAgentRun({
-      instanceId,
-      userMessage: combinedMessage,
-      source: "cron",
-      dedicatedConversationTitle: "Scheduled tasks",
-    });
-
-    const { agent, messages } = prepareResult.result;
-
-    const result = await agent.generate({ prompt: messages });
-
-    // Release all job locks in a single query (each gets its own nextRunAt)
-    await releaseJobLocks(jobs, invocationId, now);
-
-    // Forward to Telegram if linked
-    if (telegramChatId) {
-      const cleanedText = stripToolResultEchoes(result.text);
-      if (cleanedText) {
-        const truncated =
-          cleanedText.length > 4096
-            ? cleanedText.slice(0, 4093) + "..."
-            : cleanedText;
-        try {
-          await sendTelegramMessage(telegramChatId, truncated);
-        } catch (error) {
-          console.error("[cron/execute] telegram delivery failed:", error);
-        }
-      }
-    }
-  } catch (error) {
-    console.error("[cron/execute] job execution failed:", error);
-
-    try {
-      await releaseJobLocks(
-        jobs,
-        invocationId,
-        now,
-        "Scheduled task execution failed",
-      );
-    } catch (releaseError) {
-      console.error("[cron/execute] lock release failed:", releaseError);
-    }
-  }
 }
 
 export const maxDuration = 60;
@@ -169,7 +80,18 @@ export async function POST(request: Request) {
     );
   }
 
-  after(executeJobs(validJobs, invocationId, nowOverride));
+  if (isWorkerQueueEnabled()) {
+    // Hand off to the standalone worker (no Vercel duration ceiling). The
+    // invocationId is the idempotency key, so a retried dispatch dedupes to a
+    // single run. The worker re-runs the exact same runCronJobs() logic.
+    await enqueueCronJob(`cron:${invocationId}`, {
+      jobs: validJobs,
+      invocationId,
+      ...(nowOverride ? { nowOverride } : {}),
+    });
+  } else {
+    after(runCronJobs(validJobs, invocationId, nowOverride));
+  }
 
   return NextResponse.json(
     { status: "accepted", jobCount: validJobs.length },

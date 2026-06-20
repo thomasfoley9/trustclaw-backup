@@ -27,6 +27,12 @@ export const env = createEnv({
     // Redis (optional - resumable streams disabled when missing; basic streaming still works)
     REDIS_URL: z.string().optional(),
 
+    // Route long-running jobs (cron today; more later) to the standalone worker
+    // queue instead of running them inline on Vercel. Requires REDIS_URL + a
+    // running worker. Unset/"false" = inline execution (current behavior), so
+    // prod is unchanged until the worker is deployed and this is set to "true".
+    WORKER_QUEUE_ENABLED: z.enum(["true", "false"]).optional(),
+
     // Cron auth. Required in production so unauthenticated callers can't hit
     // /api/cron/* endpoints. Vercel auto-injects this when crons are configured
     // in vercel.json; the trustclaw deploy CLI also generates one on first deploy.
@@ -60,6 +66,7 @@ export const env = createEnv({
     TELEGRAM_WEBHOOK_SECRET: process.env.TELEGRAM_WEBHOOK_SECRET,
     DATABASE_URL: process.env.DATABASE_URL,
     REDIS_URL: process.env.REDIS_URL,
+    WORKER_QUEUE_ENABLED: process.env.WORKER_QUEUE_ENABLED,
     CRON_SECRET: process.env.CRON_SECRET,
     SIGNUP_INVITE_CODE: process.env.SIGNUP_INVITE_CODE,
     GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID,
