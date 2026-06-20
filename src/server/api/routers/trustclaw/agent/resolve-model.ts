@@ -21,15 +21,33 @@ const OPENAI_COMPATIBLE_BASE_URLS: Record<string, string> = {
 
 const OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1";
 
-// "House" models ride the OWNER's shared OpenRouter key — free to every user,
-// billed to the owner's account. Map: house id -> OpenRouter model slug.
-const HOUSE_MODELS: Record<string, string> = {
-  "house/kimi-k2": "moonshotai/kimi-k2",
-  "house/deepseek": "deepseek/deepseek-chat",
+// "House" models ride OWNER-funded keys — free to every user, billed to the
+// owner. Each prefers its native provider key (if set), else the shared
+// OpenRouter key.
+const HOUSE_MODELS: Record<
+  string,
+  { nativeBaseURL: string; nativeModel: string; openrouterModel: string }
+> = {
+  "house/deepseek": {
+    nativeBaseURL: "https://api.deepseek.com/v1",
+    nativeModel: "deepseek-chat",
+    openrouterModel: "deepseek/deepseek-chat",
+  },
+  "house/kimi-k2": {
+    nativeBaseURL: "https://api.moonshot.cn/v1",
+    nativeModel: "kimi-k2.6",
+    openrouterModel: "moonshotai/kimi-k2",
+  },
 };
 
 export function isHouseModel(modelId: string): boolean {
   return modelId in HOUSE_MODELS;
+}
+
+function houseNativeKey(modelId: string): string | undefined {
+  if (modelId === "house/deepseek") return env.DEEPSEEK_API_KEY;
+  if (modelId === "house/kimi-k2") return env.MOONSHOT_API_KEY;
+  return undefined;
 }
 
 // First-party + OpenAI-compatible providers we can call directly with a user's key.
@@ -80,19 +98,27 @@ export async function resolveAgentModel(
   instanceId: string,
   modelId: string,
 ): Promise<LanguageModel> {
-  // House models: owner-funded shared key, free to all users. Checked first so
-  // "house/..." isn't treated as a BYO custom model below.
-  const houseSlug = HOUSE_MODELS[modelId];
-  if (houseSlug) {
-    if (!env.OPENROUTER_API_KEY) {
-      missingKey(
-        "The house models aren't set up yet — ask the owner to add an OpenRouter key.",
-      );
+  // House models: owner-funded, free to all users. Checked first so "house/..."
+  // isn't treated as a BYO custom model below. Prefer the native provider key;
+  // fall back to the shared OpenRouter key.
+  const houseRoute = HOUSE_MODELS[modelId];
+  if (houseRoute) {
+    const nativeKey = houseNativeKey(modelId);
+    if (nativeKey) {
+      return createOpenAI({
+        apiKey: nativeKey,
+        baseURL: houseRoute.nativeBaseURL,
+      })(houseRoute.nativeModel);
     }
-    return createOpenAI({
-      apiKey: env.OPENROUTER_API_KEY,
-      baseURL: OPENROUTER_BASE_URL,
-    })(houseSlug);
+    if (env.OPENROUTER_API_KEY) {
+      return createOpenAI({
+        apiKey: env.OPENROUTER_API_KEY,
+        baseURL: OPENROUTER_BASE_URL,
+      })(houseRoute.openrouterModel);
+    }
+    missingKey(
+      "This house model isn't set up yet — the owner needs to add its API key.",
+    );
   }
 
   if (modelId.includes("/")) {
