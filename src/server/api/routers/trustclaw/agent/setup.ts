@@ -5,6 +5,7 @@ import { getComposioForInstance } from "~/server/clients/composio";
 import { loadMcpTools } from "~/server/clients/mcp";
 import { resolveAgentModel, isHouseModel } from "./resolve-model";
 import { buildSystemPrompt } from "./system-prompt";
+import { narrateWithAgentA, buildToolStepsDigest } from "./narrate";
 import {
   createCustomTools,
   searchMemoriesForContext,
@@ -84,6 +85,9 @@ interface PrepareAgentRunResult {
   messages: ReconstructedMessage[];
   // The session this run resolved to (pinned, dedicated, or active).
   conversationId: string;
+  // Resolves to Agent A's narration (the concise chat bubble) once B finishes.
+  // The route injects it into the live stream; onFinish also persists it.
+  narrationPromise: Promise<string>;
 }
 
 type PrepareResult = { status: "ready"; result: PrepareAgentRunResult };
@@ -450,6 +454,14 @@ export async function prepareAgentRun(
     },
   });
 
+  // Agent A narration: onFinish computes it once (and persists it); the route
+  // awaits this to inject A's concise reply into the live stream. Defaults to
+  // B's text on any failure so the chat is never empty.
+  let resolveNarration!: (text: string) => void;
+  const narrationPromise = new Promise<string>((resolve) => {
+    resolveNarration = resolve;
+  });
+
   const agent = new ToolLoopAgent({
     model,
     instructions: {
@@ -475,8 +487,12 @@ export async function prepareAgentRun(
         const cacheWriteTokens =
           totalUsage.inputTokenDetails?.cacheWriteTokens ?? 0;
 
-        // Build assistant content from steps (UIMessage parts format)
+        // Build B's tool parts (the cockpit's source of truth) + collect B's
+        // full text. Agent A then narrates B's text into the concise chat reply;
+        // the persisted message is [B's tool parts] + [A's narration text].
         const assistantParts: Array<Record<string, unknown>> = [];
+        const toolNames: string[] = [];
+        let executorText = "";
 
         for (const step of steps) {
           for (let i = 0; i < step.toolCalls.length; i++) {
@@ -493,12 +509,28 @@ export async function prepareAgentRun(
               input: tcInput,
               output: tcResult ?? {},
             });
+            toolNames.push(tc.toolName);
           }
 
           const stepText = stripToolResultEchoes(step.text);
           if (stepText) {
-            assistantParts.push({ type: "text" as const, text: stepText });
+            executorText += (executorText ? "\n\n" : "") + stepText;
           }
+        }
+
+        // Agent A: turn B's raw output into the concise conversational reply.
+        // Resolve the narration promise first (the live stream is waiting on it),
+        // then append A's text as the chat bubble's text part.
+        const narration = await narrateWithAgentA({
+          instanceId,
+          modelId: instance.anthropicModel,
+          executorText,
+          toolStepsDigest: buildToolStepsDigest(toolNames),
+          personaName: activePersonalityName,
+        });
+        resolveNarration(narration);
+        if (narration.trim()) {
+          assistantParts.push({ type: "text" as const, text: narration });
         }
 
         // Update the pre-created assistant message with final content + totals
@@ -567,6 +599,7 @@ export async function prepareAgentRun(
       agent,
       messages: prunedMessages,
       conversationId,
+      narrationPromise,
     },
   };
 }
