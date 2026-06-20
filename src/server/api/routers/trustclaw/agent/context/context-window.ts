@@ -3,6 +3,16 @@
 // specific custom ids here if that becomes a problem.
 const CONTEXT_WINDOW = 200_000;
 
-export function getContextWindow(_modelId: string): number {
-  return CONTEXT_WINDOW;
+// Models whose window differs from the 200K default. House models are
+// OpenAI-compatible providers with their own limits — assuming 200K for a
+// smaller-window model makes compaction fire too late and the provider 400s on
+// long chats. Best-effort published values; lower if a provider rejects long
+// contexts.
+const MODEL_CONTEXT_WINDOWS: Record<string, number> = {
+  "house/deepseek": 128_000,
+  "house/kimi-k2": 256_000,
+};
+
+export function getContextWindow(modelId: string): number {
+  return MODEL_CONTEXT_WINDOWS[modelId] ?? CONTEXT_WINDOW;
 }

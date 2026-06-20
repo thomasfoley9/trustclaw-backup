@@ -351,9 +351,13 @@ export async function prepareAgentRun(
   const contextWindow = getContextWindow(instance.anthropicModel);
   const { messages: prunedMessages } = pruneContext(aiMessages, contextWindow);
 
+  // Anthropic prompt-caching options are meaningless to OpenAI-compatible house
+  // models — only attach them for Anthropic-backed models.
+  const isHouse = isHouseModel(instance.anthropicModel);
+
   // Add cache breakpoint to last history message (before new user message)
   // so the conversation prefix is cached across turns
-  if (prunedMessages.length >= 2) {
+  if (!isHouse && prunedMessages.length >= 2) {
     const lastHistoryIndex = prunedMessages.length - 2;
     const msg = prunedMessages[lastHistoryIndex]!;
     prunedMessages[lastHistoryIndex] = {
@@ -451,9 +455,13 @@ export async function prepareAgentRun(
     instructions: {
       role: "system",
       content: systemPrompt,
-      providerOptions: {
-        anthropic: { cacheControl: { type: "ephemeral" } },
-      },
+      ...(isHouse
+        ? {}
+        : {
+            providerOptions: {
+              anthropic: { cacheControl: { type: "ephemeral" } },
+            },
+          }),
     } satisfies SystemModelMessage,
     tools: allTools,
     stopWhen: stepCountIs(100),

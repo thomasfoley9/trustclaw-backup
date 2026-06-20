@@ -25,7 +25,10 @@ import {
   showSuccessToast,
   trpcToastOnError,
 } from "~/components/core/toast-notifications";
-import { MODELS } from "~/app/(authenticated)/dashboard/_components/onboarding/onboarding.consts";
+import {
+  MODELS,
+  HOUSE_MODELS,
+} from "~/app/(authenticated)/dashboard/_components/onboarding/onboarding.consts";
 
 interface ModelSettingsProps {
   currentModel: string;
@@ -73,6 +76,17 @@ export function ModelSettings({ currentModel }: ModelSettingsProps) {
               <SelectGroup>
                 <SelectLabel>Claude</SelectLabel>
                 {MODELS.map((m) => (
+                  <SelectItem key={m.value} value={m.value}>
+                    <span>{m.label}</span>
+                    <span className="text-muted-foreground ml-2">
+                      - {m.description}
+                    </span>
+                  </SelectItem>
+                ))}
+              </SelectGroup>
+              <SelectGroup>
+                <SelectLabel>On the house 🍻</SelectLabel>
+                {HOUSE_MODELS.map((m) => (
                   <SelectItem key={m.value} value={m.value}>
                     <span>{m.label}</span>
                     <span className="text-muted-foreground ml-2">

@@ -21,6 +21,16 @@ export const addCustomModel = protectedProcedure
     const provider = input.modelId.slice(0, slash).toLowerCase();
     const modelId = `${provider}/${input.modelId.slice(slash + 1)}`;
 
+    // "house/" is reserved for built-in owner-funded models — a custom row with
+    // that prefix would be silently shadowed by the house route in resolve-model.
+    if (provider === "house") {
+      throw new TRPCError({
+        code: "BAD_REQUEST",
+        message:
+          'The "house/" prefix is reserved for built-in models. Use a different provider id.',
+      });
+    }
+
     // Catch obvious paste-into-wrong-field mistakes so a key isn't sent to a
     // provider it doesn't belong to. Lenient: only the clearest cross-provider
     // cases are rejected.
