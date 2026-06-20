@@ -34,7 +34,7 @@ const HOUSE_MODELS: Record<
     openrouterModel: "deepseek/deepseek-chat",
   },
   "house/kimi-k2": {
-    nativeBaseURL: "https://api.moonshot.cn/v1",
+    nativeBaseURL: "https://api.moonshot.ai/v1",
     nativeModel: "kimi-k2.6",
     openrouterModel: "moonshotai/kimi-k2",
   },
