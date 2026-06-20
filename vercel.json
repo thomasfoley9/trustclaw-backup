@@ -1,4 +1,9 @@
 {
+  "functions": {
+    "src/app/api/**/route.ts": {
+      "memory": 3009
+    }
+  },
   "crons": [
     {
       "path": "/api/cron/trustclaw",
