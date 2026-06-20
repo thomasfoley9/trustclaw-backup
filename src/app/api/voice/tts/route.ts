@@ -1,7 +1,8 @@
 import { auth } from "~/server/auth";
 import { db } from "~/server/clients/db";
 import { decryptSecret } from "~/server/clients/crypto";
-import { synthesizeSpeech } from "~/server/clients/smallest";
+import { synthesizeSpeech, DEFAULT_VOICE_ID } from "~/server/clients/smallest";
+import { env } from "~/env";
 
 export const maxDuration = 30;
 
@@ -29,21 +30,29 @@ export async function POST(request: Request) {
     where: { userId: session.user.id },
     select: { voiceApiKey: true, voiceId: true },
   });
-  if (!instance?.voiceApiKey) {
+
+  // A per-user (BYO) key wins; otherwise fall back to the shared owner-funded
+  // Smallest key so every user gets voice without signing up for one.
+  let apiKey: string | null = null;
+  if (instance?.voiceApiKey) {
+    try {
+      apiKey = decryptSecret(instance.voiceApiKey);
+    } catch {
+      return new Response("Voice key could not be decrypted", { status: 500 });
+    }
+  } else if (env.SMALLEST_API_KEY) {
+    apiKey = env.SMALLEST_API_KEY;
+  }
+  if (!apiKey) {
     return new Response("No voice key set", { status: 412 });
   }
 
-  let apiKey: string;
-  try {
-    apiKey = decryptSecret(instance.voiceApiKey);
-  } catch {
-    return new Response("Voice key could not be decrypted", { status: 500 });
-  }
+  const voiceId = instance?.voiceId ?? DEFAULT_VOICE_ID;
 
   try {
     const audio = await synthesizeSpeech({
       apiKey,
-      voiceId: instance.voiceId,
+      voiceId,
       text,
     });
     return new Response(audio, {

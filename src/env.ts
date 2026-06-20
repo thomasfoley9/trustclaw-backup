@@ -41,6 +41,10 @@ export const env = createEnv({
     DEEPSEEK_API_KEY: z.string().optional(),
     MOONSHOT_API_KEY: z.string().optional(),
 
+    // Owner-funded shared Smallest.ai (voice/TTS) key — every user gets spoken
+    // replies without bringing their own. A per-user voice key still overrides it.
+    SMALLEST_API_KEY: z.string().optional(),
+
     // Cron auth. Required in production so unauthenticated callers can't hit
     // /api/cron/* endpoints. Vercel auto-injects this when crons are configured
     // in vercel.json; the trustclaw deploy CLI also generates one on first deploy.
@@ -78,6 +82,7 @@ export const env = createEnv({
     OPENROUTER_API_KEY: process.env.OPENROUTER_API_KEY,
     DEEPSEEK_API_KEY: process.env.DEEPSEEK_API_KEY,
     MOONSHOT_API_KEY: process.env.MOONSHOT_API_KEY,
+    SMALLEST_API_KEY: process.env.SMALLEST_API_KEY,
     CRON_SECRET: process.env.CRON_SECRET,
     SIGNUP_INVITE_CODE: process.env.SIGNUP_INVITE_CODE,
     GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID,
