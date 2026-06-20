@@ -61,8 +61,31 @@ export function useSpeechDictation({ onFinal }: UseSpeechDictationOptions) {
     recognitionRef.current?.stop();
   }, []);
 
-  const start = useCallback(() => {
+  const start = useCallback(async () => {
     if (!isSupported || listeningRef.current || !ctorRef.current) return;
+
+    // Force an explicit, visible mic-permission prompt with a clear error path.
+    // SpeechRecognition's implicit permission can silently no-op (no prompt, no
+    // error) when the permission state is ambiguous; getUserMedia never does.
+    if (typeof navigator !== "undefined" && navigator.mediaDevices?.getUserMedia) {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({
+          audio: true,
+        });
+        stream.getTracks().forEach((t) => t.stop());
+      } catch (err) {
+        const name = err instanceof Error ? err.name : "";
+        if (name === "NotFoundError" || name === "DevicesNotFoundError") {
+          showErrorToast("No microphone found.");
+        } else {
+          showErrorToast(
+            "Microphone blocked — allow it for this site in your browser's site settings, then try again.",
+          );
+        }
+        return;
+      }
+    }
+
     const recognition = new ctorRef.current();
     recognition.continuous = true;
     recognition.interimResults = true;
@@ -103,14 +126,21 @@ export function useSpeechDictation({ onFinal }: UseSpeechDictationOptions) {
     recognitionRef.current = recognition;
     try {
       recognition.start();
-    } catch {
-      // InvalidStateError if already started — ignore.
+    } catch (error) {
+      listeningRef.current = false;
+      setIsListening(false);
+      // Don't swallow — surface why nothing happened (e.g. InvalidStateError).
+      showErrorToast(
+        error instanceof Error && error.message
+          ? `Couldn't start dictation: ${error.message}`
+          : "Couldn't start voice dictation.",
+      );
     }
   }, [isSupported, handleError]);
 
   const toggle = useCallback(() => {
     if (listeningRef.current) stop();
-    else start();
+    else void start();
   }, [start, stop]);
 
   // Strict-Mode-safe teardown: abort drops pending results immediately.
