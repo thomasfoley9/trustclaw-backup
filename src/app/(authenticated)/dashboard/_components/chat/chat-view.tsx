@@ -17,6 +17,7 @@ import { UserMessage } from "./user-message";
 import { AssistantMessage } from "./assistant-message/assistant-message";
 import { ThinkingIndicator } from "./assistant-message/thinking-indicator";
 import { ChatInput } from "./chat-input";
+import { useVoicePlayback } from "./use-voice-playback";
 import { TerminalPane } from "../terminal/terminal-pane";
 import { ComposioCta } from "./composio-cta";
 import { OpenClawLogo } from "~/app/_components/openclaw-logo";
@@ -29,6 +30,16 @@ const SAMPLE_PROMPTS = [
 
 const NEAR_BOTTOM_PX = 80;
 const NEAR_TOP_PX = 120;
+
+// Plain text of an assistant message (text parts only — tool calls/results are
+// skipped) for text-to-speech.
+function assistantText(parts: UIMessage["parts"]): string {
+  let out = "";
+  for (const part of parts) {
+    if (part.type === "text") out += (out ? " " : "") + part.text;
+  }
+  return out.trim();
+}
 
 interface ChatViewProps {
   initialMessages: UIMessage[];
@@ -61,6 +72,14 @@ export function ChatView({
   const terminalOpen = useTerminalStore((s) => s.terminalOpen);
   const setTerminalOpen = useTerminalStore((s) => s.setTerminalOpen);
   const isEmpty = messages.length === 0;
+
+  const {
+    enabled: voiceEnabled,
+    isSpeaking: voiceSpeaking,
+    toggle: toggleVoice,
+    speak: speakReply,
+    stop: stopSpeaking,
+  } = useVoicePlayback();
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const atBottomRef = useRef(true);
@@ -148,14 +167,35 @@ export function ChatView({
     }
   }, [hasOlderMessages, isFetchingOlderMessages, fetchOlderMessages]);
 
+  // Speak each assistant reply aloud once it finishes streaming (voice mode on).
+  // Detecting the streaming -> ready transition avoids speaking pre-existing
+  // history on load; the spoken-id ref guards against re-speaking on re-render.
+  const prevStatusRef = useRef(status);
+  const spokenIdRef = useRef<string | null>(null);
+  useEffect(() => {
+    const prev = prevStatusRef.current;
+    prevStatusRef.current = status;
+    const justFinished =
+      (prev === "streaming" || prev === "submitted") && status === "ready";
+    if (!justFinished || !voiceEnabled) return;
+    const last = messages[messages.length - 1];
+    if (last?.role !== "assistant" || spokenIdRef.current === last.id) {
+      return;
+    }
+    spokenIdRef.current = last.id;
+    const text = assistantText(last.parts);
+    if (text) void speakReply(text);
+  }, [status, messages, voiceEnabled, speakReply]);
+
   const handleSend = useCallback(
     (text: string, files?: ChatFilePart[]) => {
+      stopSpeaking(); // barge-in: cut off any reply still being spoken aloud
       const result = sendMessage(text, files);
       atBottomRef.current = true;
       requestAnimationFrame(() => scrollToBottom("smooth"));
       return result;
     },
-    [sendMessage, scrollToBottom],
+    [sendMessage, scrollToBottom, stopSpeaking],
   );
 
   return (
@@ -252,6 +292,9 @@ export function ChatView({
           onStop={stop}
           status={status}
           backgroundBusy={backgroundBusy}
+          voiceEnabled={voiceEnabled}
+          voiceSpeaking={voiceSpeaking}
+          onToggleVoice={toggleVoice}
         />
       </div>
 

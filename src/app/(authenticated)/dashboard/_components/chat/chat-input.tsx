@@ -1,7 +1,16 @@
 "use client";
 
 import { useState, useRef, useEffect, useCallback } from "react";
-import { ArrowUp, Square, Paperclip, X, FileText, Mic } from "lucide-react";
+import {
+  ArrowUp,
+  Square,
+  Paperclip,
+  X,
+  FileText,
+  Mic,
+  Volume2,
+  VolumeX,
+} from "lucide-react";
 import type { ChatStatus } from "ai";
 import { Button } from "~/components/ui/button";
 import { Textarea } from "~/components/ui/textarea";
@@ -18,6 +27,10 @@ interface ChatInputProps {
   // A server-side background run is executing for this session (no local
   // stream). Input is blocked and the stop button targets the server run.
   backgroundBusy?: boolean;
+  // Voice mode: speak assistant replies aloud (Smallest.ai TTS).
+  voiceEnabled: boolean;
+  voiceSpeaking: boolean;
+  onToggleVoice: () => void;
 }
 
 const MAX_MESSAGE_LENGTH = 50_000;
@@ -46,6 +59,9 @@ export function ChatInput({
   onStop,
   status,
   backgroundBusy = false,
+  voiceEnabled,
+  voiceSpeaking,
+  onToggleVoice,
 }: ChatInputProps) {
   const [input, setInput] = useState("");
   const [attachments, setAttachments] = useState<Attachment[]>([]);
@@ -247,6 +263,29 @@ export function ChatInput({
               <Mic className={cn("size-4", isListening && "animate-pulse")} />
             </Button>
           )}
+
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className={cn(
+              "size-10 shrink-0 rounded-2xl",
+              voiceEnabled && "bg-primary/15 text-primary",
+            )}
+            onClick={onToggleVoice}
+            aria-label={
+              voiceEnabled ? "Turn off spoken replies" : "Turn on spoken replies"
+            }
+            aria-pressed={voiceEnabled}
+          >
+            {voiceEnabled ? (
+              <Volume2
+                className={cn("size-4", voiceSpeaking && "animate-pulse")}
+              />
+            ) : (
+              <VolumeX className="size-4" />
+            )}
+          </Button>
 
           <Textarea
             ref={textareaRef}
