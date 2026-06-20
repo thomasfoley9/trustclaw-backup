@@ -79,6 +79,7 @@ export function ChatView({
     toggle: toggleVoice,
     speak: speakReply,
     stop: stopSpeaking,
+    unlock: voiceUnlock,
   } = useVoicePlayback();
 
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -190,12 +191,13 @@ export function ChatView({
   const handleSend = useCallback(
     (text: string, files?: ChatFilePart[]) => {
       stopSpeaking(); // barge-in: cut off any reply still being spoken aloud
+      voiceUnlock(); // prime audio within this gesture so the reply can autoplay
       const result = sendMessage(text, files);
       atBottomRef.current = true;
       requestAnimationFrame(() => scrollToBottom("smooth"));
       return result;
     },
-    [sendMessage, scrollToBottom, stopSpeaking],
+    [sendMessage, scrollToBottom, stopSpeaking, voiceUnlock],
   );
 
   return (

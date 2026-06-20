@@ -4,17 +4,36 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { showErrorToast } from "~/components/core/toast-notifications";
 
 const STORAGE_KEY = "trustclaw-voice-enabled";
-// A 0-sample silent WAV. Played inside the toggle's click gesture to "unlock"
-// the audio element on mobile, so later programmatic playback (after a stream
-// finishes — not a user gesture) is allowed by iOS/Android.
+// A 0-sample silent WAV. Played inside a user gesture to "unlock" the audio
+// element on mobile/Safari, so later programmatic playback (after a reply, not
+// a gesture) is allowed by the browser's autoplay policy.
 const SILENT_WAV =
   "data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQAAAAA=";
 // The /api/voice/tts route caps text at 5000 chars — trim with margin.
 const MAX_TTS_CHARS = 4800;
 
-// Speaks the assistant's replies aloud via the user's Smallest.ai key. One
-// reused <audio> element keeps the mobile unlock alive and guarantees only one
-// utterance plays at a time.
+// POST with a small retry on 5xx / network errors — the voice routes are
+// serverless and can cold-start 503 like the rest of the API. Null if all fail.
+async function postRetry(url: string, body: string): Promise<Response | null> {
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      const res = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body,
+      });
+      if (res.ok || res.status < 500) return res;
+    } catch {
+      // network error — fall through to retry
+    }
+    await new Promise((resolve) => setTimeout(resolve, 500 * (attempt + 1)));
+  }
+  return null;
+}
+
+// Speaks the assistant's replies aloud via the user's/owner's Smallest.ai key.
+// One reused <audio> element keeps the mobile unlock alive and guarantees only
+// one utterance plays at a time.
 export function useVoicePlayback() {
   const [enabled, setEnabled] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
@@ -58,6 +77,21 @@ export function useVoicePlayback() {
     setIsSpeaking(false);
   }, [revoke]);
 
+  // Prime the <audio> element inside a user gesture so a later (non-gesture)
+  // reply is allowed to autoplay. Called on every send — handles the case where
+  // voice is persisted-on across reloads with no fresh toggle gesture.
+  const unlock = useCallback(() => {
+    if (!enabledRef.current) return;
+    const audio = ensureAudio();
+    if (!audio.paused) return; // a real reply is playing — don't interrupt it
+    try {
+      audio.src = SILENT_WAV;
+      void audio.play().catch(() => undefined);
+    } catch {
+      // ignore
+    }
+  }, [ensureAudio]);
+
   const toggle = useCallback(() => {
     setEnabled((prev) => {
       const next = !prev;
@@ -88,28 +122,26 @@ export function useVoicePlayback() {
         // 1) Curate the reply into a short spoken brief (the EA layer) — voice
         // speaks this, not the full on-screen digest. Falls back to the reply.
         let toSpeak = clean;
-        try {
-          const br = await fetch("/api/voice/brief", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ text: clean }),
-          });
-          if (br.ok) {
-            const data = (await br.json()) as { brief?: string };
-            if (typeof data.brief === "string" && data.brief.trim()) {
-              toSpeak = data.brief.trim();
-            }
+        const briefRes = await postRetry(
+          "/api/voice/brief",
+          JSON.stringify({ text: clean }),
+        );
+        if (briefRes?.ok) {
+          const data = (await briefRes.json()) as { brief?: string };
+          if (typeof data.brief === "string" && data.brief.trim()) {
+            toSpeak = data.brief.trim();
           }
-        } catch {
-          // keep the full reply text
         }
 
         // 2) Speak the brief.
-        const res = await fetch("/api/voice/tts", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ text: toSpeak.slice(0, MAX_TTS_CHARS) }),
-        });
+        const res = await postRetry(
+          "/api/voice/tts",
+          JSON.stringify({ text: toSpeak.slice(0, MAX_TTS_CHARS) }),
+        );
+        if (!res) {
+          showErrorToast("Voice service is busy — try again in a moment.");
+          return;
+        }
         if (!res.ok) {
           if (res.status === 412) {
             showErrorToast(
@@ -151,5 +183,5 @@ export function useVoicePlayback() {
     };
   }, []);
 
-  return { enabled, isSpeaking, toggle, speak, stop };
+  return { enabled, isSpeaking, toggle, speak, stop, unlock };
 }
