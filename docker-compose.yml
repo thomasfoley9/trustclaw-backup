@@ -1,0 +1,31 @@
+# Local harness for the Phase 2 agent worker. Brings up Redis + the worker so
+# the enqueue -> run -> persist loop can be exercised locally before Fly.
+#
+#   DATABASE_URL=... ENCRYPTION_KEY=... docker compose up --build
+#
+# Redis mirrors the production config the plan calls for: noeviction (BullMQ
+# jobs must never be evicted) + AOF persistence.
+services:
+  redis:
+    image: redis:7-alpine
+    command: redis-server --maxmemory-policy noeviction --appendonly yes
+    ports:
+      - "6399:6379"
+    volumes:
+      - redis-data:/data
+
+  worker:
+    build:
+      context: .
+      dockerfile: Dockerfile.worker
+    depends_on:
+      - redis
+    environment:
+      # In-network Redis; overrides the host port mapping above.
+      REDIS_URL: redis://redis:6379
+      DATABASE_URL: ${DATABASE_URL}
+      ENCRYPTION_KEY: ${ENCRYPTION_KEY}
+    restart: unless-stopped
+
+volumes:
+  redis-data:

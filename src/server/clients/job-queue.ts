@@ -50,26 +50,33 @@ export function getAgentQueue(): Queue<AgentJobData> | null {
 }
 
 /**
- * Enqueue an agent job. `jobId` is the idempotency key (e.g. sessionId+turnId):
+ * Enqueue an agent job. `jobId` is the idempotency key (e.g. "sessionId:turnId"):
  * BullMQ refuses a second job with an id that already exists, so a retried
- * enqueue can't double-run a side-effectful tool. `attempts: 1` — no auto-retry
- * until the confirm/idempotency work (plan §5B, Phase 4) makes re-execution of
- * a partially-completed run provably safe.
+ * enqueue can't double-run a side-effectful tool. Returns the actual id used.
+ *
+ * BullMQ forbids ':' in custom job ids (it's BullMQ's internal Redis key
+ * separator), so we normalize ':' -> '_'. The transform is deterministic, so
+ * idempotency still holds across retried enqueues of the same logical id.
+ *
+ * `attempts: 1` — no auto-retry until the confirm/idempotency work (plan §5B,
+ * Phase 4) makes re-execution of a partially-completed run provably safe.
  */
 export async function enqueueAgentJob(
   jobId: string,
   data: AgentJobData,
-): Promise<void> {
+): Promise<string> {
   const queue = getAgentQueue();
   if (!queue) {
     throw new Error("Job queue unavailable (REDIS_URL unset)");
   }
+  const safeId = jobId.replace(/:/g, "_");
   await queue.add("run", data, {
-    jobId,
+    jobId: safeId,
     attempts: 1,
     removeOnComplete: { age: 3600, count: 1000 },
     removeOnFail: { age: 24 * 3600 },
   });
+  return safeId;
 }
 
 /**

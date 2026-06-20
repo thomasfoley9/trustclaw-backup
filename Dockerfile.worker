@@ -1,0 +1,35 @@
+# Standalone agent worker (Phase 2). Runs the BullMQ consumer OUTSIDE Vercel —
+# a long-lived container with no function-duration ceiling — so multi-minute
+# agent runs can finish. Built from the same source as the Next app; only the
+# entrypoint differs.
+#
+# Build:  docker build -f Dockerfile.worker -t thomasclaw-worker .
+# Run:    docker run --env-file .env thomasclaw-worker
+FROM node:24-slim AS base
+ENV PNPM_HOME=/pnpm
+ENV PATH=$PNPM_HOME:$PATH
+# OpenSSL is required by Prisma's query engine at runtime.
+RUN apt-get update && apt-get install -y --no-install-recommends openssl \
+  && rm -rf /var/lib/apt/lists/*
+RUN corepack enable
+WORKDIR /app
+
+# Dependencies first — cached unless the manifests or schema change.
+COPY package.json pnpm-lock.yaml ./
+COPY prisma ./prisma
+RUN pnpm install --frozen-lockfile
+
+# Application source.
+COPY tsconfig.json ./
+COPY src ./src
+COPY scripts ./scripts
+
+# Generate the Prisma client for the linux/glibc target inside the image
+# (never reuse the host's generated client — wrong platform binary).
+RUN pnpm exec prisma generate
+
+ENV NODE_ENV=production
+# All secrets (REDIS_URL, DATABASE_URL, ENCRYPTION_KEY) come from the runtime
+# environment — never baked into the image. Per-user provider keys are loaded
+# and decrypted from the DB per job, not from env.
+CMD ["pnpm", "exec", "tsx", "src/workers/agent/index.ts"]

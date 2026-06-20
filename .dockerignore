@@ -1,0 +1,10 @@
+node_modules
+.next
+.turbo
+.git
+.vercel
+npm-debug.log*
+.env
+.env.*
+src/generated
+**/*.log
