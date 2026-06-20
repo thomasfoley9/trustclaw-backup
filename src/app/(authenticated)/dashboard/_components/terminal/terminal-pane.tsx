@@ -5,7 +5,9 @@ import { PanelRightClose, Terminal } from "lucide-react";
 import type { UIMessage } from "@ai-sdk/react";
 import type { ChatStatus } from "ai";
 import { isToolUIPart } from "ai";
+import { cn } from "~/lib/utils";
 import { TerminalLogEntry } from "./terminal-log-entry";
+import { CockpitView } from "./cockpit-view";
 import { toolCallToLogEntry } from "./types";
 import type { TerminalLogEntryData } from "./types";
 
@@ -56,6 +58,9 @@ interface TerminalPaneProps {
 export function TerminalPane({ messages, status, onHide }: TerminalPaneProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const [isAutoScroll, setIsAutoScroll] = useState(true);
+  // Two altitudes: "live" = curated cockpit (what the agent is doing), the
+  // default; "receipts" = the raw tool-execution log, one toggle down.
+  const [viewMode, setViewMode] = useState<"live" | "receipts">("live");
 
   useToolFocusHighlight();
   const toolCount = useToolCallCount(messages);
@@ -102,11 +107,31 @@ export function TerminalPane({ messages, status, onHide }: TerminalPaneProps) {
 
   return (
     <div className="flex h-full flex-col overflow-hidden bg-card">
-      <div className="flex items-center gap-2 border-b border-border px-4 py-3">
-        <Terminal className="size-4 text-muted-foreground" />
-        <span className="font-mono text-xs font-medium text-foreground">
-          Tool Execution
-        </span>
+      <div className="flex items-center gap-2 border-b border-border px-3 py-2.5">
+        <div className="flex items-center gap-0.5 rounded-lg bg-muted p-0.5">
+          <button
+            onClick={() => setViewMode("live")}
+            className={cn(
+              "rounded-md px-2.5 py-1 text-xs font-medium transition-colors",
+              viewMode === "live"
+                ? "bg-background text-foreground shadow-sm"
+                : "text-muted-foreground hover:text-foreground",
+            )}
+          >
+            Live
+          </button>
+          <button
+            onClick={() => setViewMode("receipts")}
+            className={cn(
+              "rounded-md px-2.5 py-1 text-xs font-medium transition-colors",
+              viewMode === "receipts"
+                ? "bg-background text-foreground shadow-sm"
+                : "text-muted-foreground hover:text-foreground",
+            )}
+          >
+            Receipts
+          </button>
+        </div>
         {toolCount > 0 && (
           <span className="rounded-full bg-muted px-2 py-0.5 font-mono text-[10px] text-muted-foreground">
             {toolCount} call{toolCount !== 1 ? "s" : ""}
@@ -126,9 +151,11 @@ export function TerminalPane({ messages, status, onHide }: TerminalPaneProps) {
       <div
         ref={scrollRef}
         onScroll={handleScroll}
-        className="flex-1 overflow-y-auto px-5 py-2"
+        className="flex-1 overflow-y-auto px-4 py-2"
       >
-        {logEntries.length === 0 ? (
+        {viewMode === "live" ? (
+          <CockpitView entries={logEntries} status={status} />
+        ) : logEntries.length === 0 ? (
           <div className="flex h-full items-center justify-center">
             <div className="text-center font-mono text-xs text-muted-foreground/40">
               <Terminal className="mx-auto mb-2 size-8" />
@@ -136,9 +163,7 @@ export function TerminalPane({ messages, status, onHide }: TerminalPaneProps) {
             </div>
           </div>
         ) : (
-          logEntries.map((log) => (
-            <TerminalLogEntry key={log.id} log={log} />
-          ))
+          logEntries.map((log) => <TerminalLogEntry key={log.id} log={log} />)
         )}
       </div>
     </div>
