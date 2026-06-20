@@ -4,10 +4,15 @@ import { env } from "~/env";
 
 function ensureVerifyFullSsl(url: string): string {
   const parsed = new URL(url);
-  // Local Postgres (e.g. the Docker dev container) does not speak SSL; only
-  // enforce verify-full for remote databases like Neon.
+  // Local Postgres does not speak SSL — this covers loopback (host dev via
+  // localhost:5433) AND single-label Docker-network service names like
+  // "postgres" (the worker container reaching the compose DB). Remote managed
+  // databases (Neon, RDS, …) are always reachable by FQDN, so they still get
+  // verify-full enforced.
   const isLocal =
-    parsed.hostname === "localhost" || parsed.hostname === "127.0.0.1";
+    parsed.hostname === "localhost" ||
+    parsed.hostname === "127.0.0.1" ||
+    !parsed.hostname.includes(".");
   if (isLocal) {
     return url;
   }

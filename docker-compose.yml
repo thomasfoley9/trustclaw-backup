@@ -1,11 +1,31 @@
-# Local harness for the Phase 2 agent worker. Brings up Redis + the worker so
-# the enqueue -> run -> persist loop can be exercised locally before Fly.
+# Self-contained local stack for the agent worker. Brings up Postgres (pgvector)
+# + Redis + the worker so the enqueue -> run -> persist loop runs entirely on
+# your machine, isolated from your real dev/prod data.
 #
-#   DATABASE_URL=... ENCRYPTION_KEY=... docker compose up --build
+#   docker compose up -d --build
+#   # migrate the schema into the compose Postgres (host port 5434):
+#   DATABASE_URL=postgresql://postgres:trustclaw@localhost:5434/trustclaw \
+#     pnpm exec prisma migrate deploy
+#
+# To run the worker against your REAL dev DB instead of the bundled Postgres,
+# set WORKER_DATABASE_URL (a distinct name so Compose's auto-loaded .env can't
+# bleed your app's DATABASE_URL in; use host.docker.internal so the container
+# can reach a DB on the host):
+#   WORKER_DATABASE_URL=postgresql://…@host.docker.internal:5433/… docker compose up -d
 #
 # Redis mirrors the production config the plan calls for: noeviction (BullMQ
 # jobs must never be evicted) + AOF persistence.
 services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    environment:
+      POSTGRES_PASSWORD: trustclaw
+      POSTGRES_DB: trustclaw
+    ports:
+      - "5434:5432"
+    volumes:
+      - pg-data:/var/lib/postgresql/data
+
   redis:
     image: redis:7-alpine
     command: redis-server --maxmemory-policy noeviction --appendonly yes
@@ -20,12 +40,23 @@ services:
       dockerfile: Dockerfile.worker
     depends_on:
       - redis
+      - postgres
     environment:
-      # In-network Redis; overrides the host port mapping above.
       REDIS_URL: redis://redis:6379
-      DATABASE_URL: ${DATABASE_URL}
-      ENCRYPTION_KEY: ${ENCRYPTION_KEY}
+      # WORKER_DATABASE_URL (not DATABASE_URL) so Compose's auto-loaded .env
+      # can't override this with the app's host DATABASE_URL — which would point
+      # the container at its own localhost. Defaults to the bundled Postgres.
+      DATABASE_URL: ${WORKER_DATABASE_URL:-postgresql://postgres:trustclaw@postgres:5432/trustclaw}
+      ENCRYPTION_KEY: ${ENCRYPTION_KEY:-0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef}
+      # The worker imports the app's env schema (via the agent graph), which
+      # validates ALL required vars at boot even though the worker doesn't use
+      # these. Local dummies below; on Fly set the REAL values (same as the web
+      # app) via `fly secrets set`.
+      BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:-local-dev-worker-secret}
+      CRON_SECRET: ${CRON_SECRET:-local-dev-worker-cron}
+      NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL:-http://localhost:3000}
     restart: unless-stopped
 
 volumes:
+  pg-data:
   redis-data:

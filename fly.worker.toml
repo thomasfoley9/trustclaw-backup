@@ -3,7 +3,10 @@
 # First time:
 #   fly apps create thomasclaw-worker
 #   fly secrets set -a thomasclaw-worker \
-#       DATABASE_URL=... REDIS_URL=... ENCRYPTION_KEY=...
+#       DATABASE_URL=... REDIS_URL=... ENCRYPTION_KEY=... \
+#       BETTER_AUTH_SECRET=... CRON_SECRET=... NEXT_PUBLIC_APP_URL=...
+#   # ^ the worker imports the app's env schema, so it needs the SAME required
+#   #   vars as the web app (even ones it doesn't directly use) or it won't boot.
 #   fly deploy -c fly.worker.toml
 #
 # Scale (queue consumers, scale by hand or by queue depth later):
