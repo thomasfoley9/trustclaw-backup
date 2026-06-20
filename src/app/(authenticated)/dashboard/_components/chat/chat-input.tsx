@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect, useCallback } from "react";
-import { ArrowUp, Square, Paperclip, X, FileText } from "lucide-react";
+import { ArrowUp, Square, Paperclip, X, FileText, Mic } from "lucide-react";
 import type { ChatStatus } from "ai";
 import { Button } from "~/components/ui/button";
 import { Textarea } from "~/components/ui/textarea";
@@ -9,6 +9,7 @@ import { cn } from "~/lib/utils";
 import { showErrorToast } from "~/components/core/toast-notifications";
 import type { ChatFilePart } from "../use-chat-hook";
 import { ModelPicker } from "./model-picker";
+import { useSpeechDictation } from "./use-speech-dictation";
 
 interface ChatInputProps {
   onSend: (message: string, files?: ChatFilePart[]) => void;
@@ -67,6 +68,22 @@ export function ChatInput({
       textarea.style.height = `${Math.min(textarea.scrollHeight, 200)}px`;
     }
   }, [input]);
+
+  const handleDictationFinal = useCallback((text: string) => {
+    setInput((prev) => (prev ? `${prev} ${text}` : text));
+    textareaRef.current?.focus();
+  }, []);
+  const {
+    isSupported: micSupported,
+    isListening,
+    toggle: toggleDictation,
+    stop: stopDictation,
+  } = useSpeechDictation({ onFinal: handleDictationFinal });
+
+  // Stop dictation if a response starts streaming.
+  useEffect(() => {
+    if (isStreaming && isListening) stopDictation();
+  }, [isStreaming, isListening, stopDictation]);
 
   const addFiles = useCallback(
     async (files: File[]) => {
@@ -210,6 +227,26 @@ export function ChatInput({
           >
             <Paperclip className="size-4" />
           </Button>
+
+          {micSupported && (
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className={cn(
+                "size-10 shrink-0 rounded-2xl",
+                isListening && "bg-primary/15 text-primary",
+              )}
+              onClick={toggleDictation}
+              disabled={isStreaming}
+              aria-label={
+                isListening ? "Stop voice dictation" : "Start voice dictation"
+              }
+              aria-pressed={isListening}
+            >
+              <Mic className={cn("size-4", isListening && "animate-pulse")} />
+            </Button>
+          )}
 
           <Textarea
             ref={textareaRef}
