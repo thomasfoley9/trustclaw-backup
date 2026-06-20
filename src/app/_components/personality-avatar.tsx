@@ -29,14 +29,17 @@ export function PersonalityAvatar({
   const svg = direct ?? (fallback ? AVATAR_SVGS[DEFAULT_AVATAR_KEY] : undefined);
   if (!svg) return null;
 
+  // Render 10% larger than requested, platform-wide.
+  const px = size * 1.1;
+
   // SVGs are static, build-time constants authored by us — safe to inline.
   return (
     <span
       className={className}
       style={{
         display: "inline-block",
-        width: size,
-        height: size,
+        width: px,
+        height: px,
         flexShrink: 0,
         lineHeight: 0,
       }}
