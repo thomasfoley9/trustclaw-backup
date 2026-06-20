@@ -64,10 +64,23 @@ export function useSpeechDictation({ onFinal }: UseSpeechDictationOptions) {
   const start = useCallback(async () => {
     if (!isSupported || listeningRef.current || !ctorRef.current) return;
 
-    // Force an explicit, visible mic-permission prompt with a clear error path.
-    // SpeechRecognition's implicit permission can silently no-op (no prompt, no
-    // error) when the permission state is ambiguous; getUserMedia never does.
-    if (typeof navigator !== "undefined" && navigator.mediaDevices?.getUserMedia) {
+    // Desktop + Android: SpeechRecognition's implicit permission can silently
+    // no-op (no prompt, no error), so force an explicit getUserMedia prompt with
+    // a clear error path. iOS Safari is the exception — it requires
+    // recognition.start() to run synchronously inside the tap gesture, and an
+    // awaited preflight drops that user-activation, so on iOS we skip the
+    // preflight and let the engine raise its own permission prompt.
+    const isIOS =
+      typeof navigator !== "undefined" &&
+      (/iP(hone|ad|od)/.test(navigator.userAgent) ||
+        (navigator.userAgent.includes("Macintosh") &&
+          navigator.maxTouchPoints > 1));
+
+    if (
+      !isIOS &&
+      typeof navigator !== "undefined" &&
+      navigator.mediaDevices?.getUserMedia
+    ) {
       try {
         const stream = await navigator.mediaDevices.getUserMedia({
           audio: true,
