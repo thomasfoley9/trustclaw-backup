@@ -127,6 +127,12 @@ export function ChatInput({
     if (isStreaming && isListening) stopDictation();
   }, [isStreaming, isListening, stopDictation]);
 
+  // Stop push-to-talk dictation when the hands-free loop starts, so two
+  // SpeechRecognition instances don't fight over the mic.
+  useEffect(() => {
+    if (conversationActive && isListening) stopDictation();
+  }, [conversationActive, isListening, stopDictation]);
+
   const addFiles = useCallback(
     async (files: File[]) => {
       const room = MAX_FILES - attachments.length;

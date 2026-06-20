@@ -77,6 +77,7 @@ export function ChatView({
   const {
     enabled: voiceEnabled,
     isSpeaking: voiceSpeaking,
+    isPreparing: voicePreparing,
     toggle: toggleVoice,
     speak: speakReply,
     stop: stopSpeaking,
@@ -213,13 +214,19 @@ export function ChatView({
     onSend: handleSend,
     isAwaitingReply: isStreaming,
     isSpeaking: voiceSpeaking,
+    isPreparing: voicePreparing,
   });
 
   const handleStartConversation = useCallback(() => {
     voiceUnlock(); // prime audio within this gesture so replies can autoplay
     if (!voiceEnabled) toggleVoice(); // replies must be spoken to drive the loop
-    startConversationLoop();
+    void startConversationLoop();
   }, [voiceUnlock, voiceEnabled, toggleVoice, startConversationLoop]);
+
+  const handleStopConversation = useCallback(() => {
+    stopSpeaking(); // cut any reply still being spoken when the user ends the call
+    stopConversationLoop();
+  }, [stopSpeaking, stopConversationLoop]);
 
   return (
     <div className="flex h-full overflow-hidden">
@@ -322,7 +329,7 @@ export function ChatView({
           conversationActive={conversationActive}
           conversationPhase={conversationPhase}
           onStartConversation={handleStartConversation}
-          onStopConversation={stopConversationLoop}
+          onStopConversation={handleStopConversation}
         />
       </div>
 

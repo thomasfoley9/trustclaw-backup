@@ -37,6 +37,10 @@ async function postRetry(url: string, body: string): Promise<Response | null> {
 export function useVoicePlayback() {
   const [enabled, setEnabled] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
+  // True from the moment a reply is requested until audio actually starts (or
+  // the attempt fails). Lets the conversation loop distinguish "about to speak"
+  // from "will never speak" so it neither reopens the mic mid-fetch nor stalls.
+  const [isPreparing, setIsPreparing] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const urlRef = useRef<string | null>(null);
   const enabledRef = useRef(false);
@@ -75,6 +79,7 @@ export function useVoicePlayback() {
     }
     revoke();
     setIsSpeaking(false);
+    setIsPreparing(false);
   }, [revoke]);
 
   // Prime the <audio> element inside a user gesture so a later (non-gesture)
@@ -114,6 +119,7 @@ export function useVoicePlayback() {
       const clean = text.trim();
       if (!clean) return;
 
+      setIsPreparing(true);
       const audio = ensureAudio();
       audio.pause();
       revoke();
@@ -139,10 +145,12 @@ export function useVoicePlayback() {
           JSON.stringify({ text: toSpeak.slice(0, MAX_TTS_CHARS) }),
         );
         if (!res) {
+          setIsPreparing(false);
           showErrorToast("Voice service is busy — try again in a moment.");
           return;
         }
         if (!res.ok) {
+          setIsPreparing(false);
           if (res.status === 412) {
             showErrorToast(
               "Add your Smallest.ai key in Settings → Voice to hear replies.",
@@ -166,9 +174,11 @@ export function useVoicePlayback() {
           setIsSpeaking(false);
           revoke();
         };
+        setIsPreparing(false);
         setIsSpeaking(true);
         await audio.play();
       } catch {
+        setIsPreparing(false);
         setIsSpeaking(false);
         revoke();
       }
@@ -183,5 +193,5 @@ export function useVoicePlayback() {
     };
   }, []);
 
-  return { enabled, isSpeaking, toggle, speak, stop, unlock };
+  return { enabled, isSpeaking, isPreparing, toggle, speak, stop, unlock };
 }
