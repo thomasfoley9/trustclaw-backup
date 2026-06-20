@@ -3,6 +3,7 @@
 import { usePathname, useRouter } from "next/navigation";
 import {
   LogOut,
+  Menu,
   MessageCircle,
   PanelRight,
   Puzzle,
@@ -19,6 +20,7 @@ import { ThemeToggle } from "~/components/core/theme-toggle";
 import { TrustClawBrand } from "~/app/_components/trustclaw-brand";
 import { authClient } from "~/clients/auth/react";
 import { useTerminalStore } from "./terminal-store";
+import { useChatDrawerStore } from "./chat-drawer-store";
 import { MemoryBucketControl } from "./memory-bucket-control";
 import { PersonalityControl } from "./personality-control";
 
@@ -29,6 +31,7 @@ export function DashboardNavbar() {
   const isToolkits = pathname.startsWith("/dashboard/toolkits");
   const terminalOpen = useTerminalStore((s) => s.terminalOpen);
   const setTerminalOpen = useTerminalStore((s) => s.setTerminalOpen);
+  const setDrawerOpen = useChatDrawerStore((s) => s.setDrawerOpen);
   const router = useRouter();
   const handleToggleTerminal = () => {
     setTerminalOpen(!terminalOpen);
@@ -41,7 +44,20 @@ export function DashboardNavbar() {
 
   return (
     <header className="border-sidebar-border bg-background/70 supports-[backdrop-filter]:bg-background/60 flex h-14 shrink-0 items-center justify-between border-b px-4 backdrop-blur-xl">
-      <TrustClawBrand size="sm" logoLink="/dashboard" />
+      <div className="flex min-w-0 items-center gap-1">
+        {isChat && (
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-10 w-10 shrink-0 md:hidden"
+            onClick={() => setDrawerOpen(true)}
+            aria-label="Open chats and controls"
+          >
+            <Menu className="h-5 w-5" />
+          </Button>
+        )}
+        <TrustClawBrand size="sm" logoLink="/dashboard" />
+      </div>
 
       <div className="flex items-center gap-1">
         {isChat && (
@@ -57,7 +73,7 @@ export function DashboardNavbar() {
               <Button
                 variant="ghost"
                 size="icon"
-                className={`h-9 w-9 ${isChat ? "bg-primary/15 text-primary" : ""}`}
+                className={`h-10 w-10 ${isChat ? "bg-primary/15 text-primary" : ""}`}
               >
                 <MessageCircle className="h-4 w-4" />
               </Button>
@@ -72,7 +88,7 @@ export function DashboardNavbar() {
               <Button
                 variant="ghost"
                 size="icon"
-                className={`h-9 w-9 ${isToolkits ? "bg-primary/15 text-primary" : ""}`}
+                className={`h-10 w-10 ${isToolkits ? "bg-primary/15 text-primary" : ""}`}
               >
                 <Puzzle className="h-4 w-4" />
               </Button>
@@ -87,7 +103,7 @@ export function DashboardNavbar() {
               <Button
                 variant="ghost"
                 size="icon"
-                className={`h-9 w-9 ${isSettings ? "bg-primary/15 text-primary" : ""}`}
+                className={`h-10 w-10 ${isSettings ? "bg-primary/15 text-primary" : ""}`}
               >
                 <Settings className="h-4 w-4" />
               </Button>
@@ -102,7 +118,7 @@ export function DashboardNavbar() {
               <Button
                 variant="ghost"
                 size="icon"
-                className={`hidden h-9 w-9 md:inline-flex ${terminalOpen ? "bg-primary/15 text-primary" : ""}`}
+                className={`hidden h-10 w-10 md:inline-flex ${terminalOpen ? "bg-primary/15 text-primary" : ""}`}
                 onClick={handleToggleTerminal}
               >
                 <PanelRight className="h-4 w-4" />
@@ -126,7 +142,7 @@ export function DashboardNavbar() {
             <Button
               variant="ghost"
               size="icon"
-              className="h-9 w-9"
+              className="h-10 w-10"
               onClick={() => handleLogout()}
             >
               <LogOut className="h-4 w-4" />

@@ -99,7 +99,7 @@ export function CustomModelsSettings() {
                       <Badge variant="destructive">Needs key</Badge>
                     )}
                   </div>
-                  <span className="text-muted-foreground font-mono text-xs">
+                  <span className="text-muted-foreground block truncate font-mono text-xs">
                     {m.modelId}
                     {m.maskedKey ? ` · ${m.maskedKey}` : ""}
                   </span>

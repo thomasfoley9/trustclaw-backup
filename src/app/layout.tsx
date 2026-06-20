@@ -1,6 +1,6 @@
 import "~/styles/globals.css";
 
-import { type Metadata } from "next";
+import { type Metadata, type Viewport } from "next";
 import { Bricolage_Grotesque, IBM_Plex_Mono, Inter } from "next/font/google";
 import { Toaster } from "sonner";
 import { TRPCReactProvider } from "~/clients/trpc";
@@ -25,6 +25,13 @@ const heading = Bricolage_Grotesque({
 export const metadata: Metadata = {
   title: "Thomas Claw",
   icons: [{ rel: "icon", url: "/favicon.ico" }],
+};
+
+// Without this, mobile browsers render at ~980px desktop width and ignore
+// every responsive breakpoint. This is the single highest-impact mobile fix.
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
 };
 
 export default async function RootLayout({

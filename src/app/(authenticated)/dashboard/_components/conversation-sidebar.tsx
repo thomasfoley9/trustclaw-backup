@@ -31,7 +31,21 @@ export function runningNow(activeRunStartedAt: string | Date | null): boolean {
 
 type View = "chats" | "cron";
 
+// Desktop sidebar wrapper — hidden on mobile (the drawer handles small screens).
 export function ConversationSidebar() {
+  return (
+    <aside className="border-sidebar-border bg-sidebar hidden w-64 shrink-0 flex-col border-r md:flex">
+      <ConversationSidebarContent />
+    </aside>
+  );
+}
+
+// The shared content — rendered in the desktop aside and the mobile drawer.
+export function ConversationSidebarContent({
+  onNavigate,
+}: {
+  onNavigate?: () => void;
+}) {
   const utils = trpc.useUtils();
   const [view, setView] = useState<View>("chats");
 
@@ -118,7 +132,7 @@ export function ConversationSidebar() {
     deleteConversation.isPending;
 
   return (
-    <aside className="border-sidebar-border bg-sidebar hidden w-64 shrink-0 flex-col border-r md:flex">
+    <div className="flex h-full min-h-0 flex-col">
       {/* Chats | Cron toggle */}
       <div className="flex gap-1 p-2">
         <button
@@ -152,7 +166,10 @@ export function ConversationSidebar() {
           <div className="px-2 pb-2">
             <Button
               className="bg-accent-gradient w-full justify-start gap-2 border-0 text-white shadow-md transition-transform hover:scale-[1.01]"
-              onClick={() => void createConversation.mutateAsync()}
+              onClick={() => {
+                void createConversation.mutateAsync();
+                onNavigate?.();
+              }}
               disabled={createConversation.isPending}
             >
               <Plus className="h-4 w-4" /> New chat
@@ -238,6 +255,7 @@ export function ConversationSidebar() {
                         onClick={() => {
                           if (!isActive)
                             void setActive.mutateAsync({ id: c.id });
+                          onNavigate?.();
                         }}
                         className="flex min-w-0 flex-1 items-center gap-2 px-2.5 py-2 text-left text-sm"
                       >
@@ -306,7 +324,7 @@ export function ConversationSidebar() {
           }}
         />
       )}
-    </aside>
+    </div>
   );
 }
 

@@ -20,7 +20,7 @@ export function TrustClawBrand({ size = "md", logoLink }: TrustClawBrandProps) {
   const logo = <OpenClawLogo size={s.logo} />;
 
   return (
-    <div className={`flex items-center ${s.gap}`}>
+    <div className={`flex min-w-0 items-center ${s.gap}`}>
       {logoLink ? (
         <Link href={logoLink} className="transition-transform hover:scale-105">
           {logo}
@@ -28,11 +28,15 @@ export function TrustClawBrand({ size = "md", logoLink }: TrustClawBrandProps) {
       ) : (
         logo
       )}
-      <div className="flex flex-col leading-tight">
-        <span className={`${s.text} text-gradient font-heading font-bold`}>
+      <div className="flex min-w-0 flex-col leading-tight">
+        <span
+          className={`${s.text} text-gradient font-heading truncate font-bold`}
+        >
           Thomas Claw
         </span>
-        <span className={`${s.by} ${s.tagline} text-muted-foreground font-medium`}>
+        <span
+          className={`${s.by} ${s.tagline} text-muted-foreground truncate font-medium`}
+        >
           Brought to you by Cracked Cookies
         </span>
       </div>

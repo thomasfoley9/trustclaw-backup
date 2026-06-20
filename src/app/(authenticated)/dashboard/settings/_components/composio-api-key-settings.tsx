@@ -71,11 +71,11 @@ export function ComposioApiKeySettings() {
       </CardHeader>
       <CardContent className="space-y-4">
         {hasKey && !editing && (
-          <div className="flex items-center justify-between gap-3 rounded-md border bg-muted/30 px-3 py-2">
-            <div className="flex items-center gap-2 text-sm">
-              <CheckCircle2 className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
-              <span className="font-medium">Connected</span>
-              <span className="text-muted-foreground font-mono">
+          <div className="flex flex-col gap-2 rounded-md border bg-muted/30 px-3 py-2 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex min-w-0 items-center gap-2 text-sm">
+              <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600 dark:text-emerald-400" />
+              <span className="shrink-0 font-medium">Connected</span>
+              <span className="text-muted-foreground truncate font-mono">
                 {data?.maskedKey}
               </span>
             </div>

@@ -4,6 +4,7 @@ import { TrustClawChat } from "./_components/chat/trustclaw-chat";
 import { ConversationSidebar } from "./_components/conversation-sidebar";
 import { OnboardingClient } from "./_components/onboarding/onboarding-client";
 import { ComposioActivationGate } from "./_components/composio-activation-gate";
+import { ConversationDrawer } from "./_components/conversation-drawer";
 
 // NOTE: deliberately NO data prefetching for the chat tree. Streamed prefetch
 // hydration raced client hydration here (server HTML rendered from data the
@@ -46,6 +47,7 @@ export default async function Page() {
         <ErrorBoundary>
           <ConversationSidebar />
         </ErrorBoundary>
+        <ConversationDrawer />
         <div className="min-w-0 flex-1">
           <ErrorBoundary>
             <TrustClawChat />
