@@ -3,6 +3,7 @@ import { protectedProcedure } from "~/server/api/trpc";
 import { db } from "~/server/clients/db";
 import { updateSettingsInput } from "./updateSettings.schema";
 import { ALLOWED_ANTHROPIC_MODELS } from "./createInstance.schema";
+import { isHouseModel } from "./agent/resolve-model";
 
 export const updateSettings = protectedProcedure
   .input(updateSettingsInput)
@@ -20,10 +21,12 @@ export const updateSettings = protectedProcedure
       });
     }
 
-    // A non-preset model id must correspond to one of the caller's own
-    // custom models — don't let a client point the agent at an arbitrary id.
+    // A non-preset model id must be either a built-in house model or one of the
+    // caller's own custom models — don't let a client point the agent at an
+    // arbitrary id.
     if (
       input.anthropicModel &&
+      !isHouseModel(input.anthropicModel) &&
       !(ALLOWED_ANTHROPIC_MODELS as readonly string[]).includes(
         input.anthropicModel,
       )
