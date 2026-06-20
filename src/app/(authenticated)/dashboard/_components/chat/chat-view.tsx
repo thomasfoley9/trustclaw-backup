@@ -18,6 +18,7 @@ import { AssistantMessage } from "./assistant-message/assistant-message";
 import { ThinkingIndicator } from "./assistant-message/thinking-indicator";
 import { ChatInput } from "./chat-input";
 import { useVoicePlayback } from "./use-voice-playback";
+import { useVoiceConversation } from "./use-voice-conversation";
 import { TerminalPane } from "../terminal/terminal-pane";
 import { ComposioCta } from "./composio-cta";
 import { OpenClawLogo } from "~/app/_components/openclaw-logo";
@@ -200,6 +201,26 @@ export function ChatView({
     [sendMessage, scrollToBottom, stopSpeaking, voiceUnlock],
   );
 
+  // Hands-free conversation loop: listens, auto-sends on a pause, and resumes
+  // listening after each reply is spoken. STT pauses while thinking/speaking.
+  const {
+    isSupported: conversationSupported,
+    phase: conversationPhase,
+    active: conversationActive,
+    start: startConversationLoop,
+    stop: stopConversationLoop,
+  } = useVoiceConversation({
+    onSend: handleSend,
+    isAwaitingReply: isStreaming,
+    isSpeaking: voiceSpeaking,
+  });
+
+  const handleStartConversation = useCallback(() => {
+    voiceUnlock(); // prime audio within this gesture so replies can autoplay
+    if (!voiceEnabled) toggleVoice(); // replies must be spoken to drive the loop
+    startConversationLoop();
+  }, [voiceUnlock, voiceEnabled, toggleVoice, startConversationLoop]);
+
   return (
     <div className="flex h-full overflow-hidden">
       <div className="flex min-h-0 min-w-0 flex-1 flex-col">
@@ -297,6 +318,11 @@ export function ChatView({
           voiceEnabled={voiceEnabled}
           voiceSpeaking={voiceSpeaking}
           onToggleVoice={toggleVoice}
+          conversationSupported={conversationSupported}
+          conversationActive={conversationActive}
+          conversationPhase={conversationPhase}
+          onStartConversation={handleStartConversation}
+          onStopConversation={stopConversationLoop}
         />
       </div>
 

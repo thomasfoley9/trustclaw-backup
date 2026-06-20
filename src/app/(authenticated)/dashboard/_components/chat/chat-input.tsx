@@ -10,7 +10,13 @@ import {
   Mic,
   Volume2,
   VolumeX,
+  PhoneCall,
+  PhoneOff,
+  Ear,
+  Loader2,
+  AudioLines,
 } from "lucide-react";
+import type { ConversationPhase } from "./use-voice-conversation";
 import type { ChatStatus } from "ai";
 import { Button } from "~/components/ui/button";
 import { Textarea } from "~/components/ui/textarea";
@@ -31,7 +37,22 @@ interface ChatInputProps {
   voiceEnabled: boolean;
   voiceSpeaking: boolean;
   onToggleVoice: () => void;
+  // Hands-free conversation loop (browser-native STT -> auto-send -> spoken reply).
+  conversationSupported: boolean;
+  conversationActive: boolean;
+  conversationPhase: ConversationPhase;
+  onStartConversation: () => void;
+  onStopConversation: () => void;
 }
+
+const CONVERSATION_STATUS: Record<
+  Exclude<ConversationPhase, "off">,
+  { icon: typeof Ear; label: string }
+> = {
+  listening: { icon: Ear, label: "Listening…" },
+  thinking: { icon: Loader2, label: "Thinking…" },
+  speaking: { icon: AudioLines, label: "Speaking…" },
+};
 
 const MAX_MESSAGE_LENGTH = 50_000;
 const MAX_FILE_BYTES = 25 * 1024 * 1024;
@@ -62,6 +83,11 @@ export function ChatInput({
   voiceEnabled,
   voiceSpeaking,
   onToggleVoice,
+  conversationSupported,
+  conversationActive,
+  conversationPhase,
+  onStartConversation,
+  onStopConversation,
 }: ChatInputProps) {
   const [input, setInput] = useState("");
   const [attachments, setAttachments] = useState<Attachment[]>([]);
@@ -221,6 +247,32 @@ export function ChatInput({
           </div>
         )}
 
+        {conversationActive && conversationPhase !== "off" && (
+          <div className="mb-2 flex items-center justify-between gap-2 rounded-2xl border border-primary/30 bg-primary/10 px-3 py-2">
+            <div className="text-primary flex items-center gap-2 text-sm font-medium">
+              {(() => {
+                const { icon: Icon, label } =
+                  CONVERSATION_STATUS[conversationPhase];
+                return (
+                  <>
+                    <Icon
+                      className={cn(
+                        "size-4",
+                        conversationPhase === "thinking" && "animate-spin",
+                        conversationPhase !== "thinking" && "animate-pulse",
+                      )}
+                    />
+                    <span>{label}</span>
+                  </>
+                );
+              })()}
+            </div>
+            <span className="text-muted-foreground text-xs">
+              Hands-free — just talk
+            </span>
+          </div>
+        )}
+
         <div className="flex items-end gap-2">
           <input
             ref={fileInputRef}
@@ -254,7 +306,7 @@ export function ChatInput({
                 isListening && "bg-primary/15 text-primary",
               )}
               onClick={toggleDictation}
-              disabled={isStreaming}
+              disabled={isStreaming || conversationActive}
               aria-label={
                 isListening ? "Stop voice dictation" : "Start voice dictation"
               }
@@ -286,6 +338,33 @@ export function ChatInput({
               <VolumeX className="size-4" />
             )}
           </Button>
+
+          {conversationSupported && (
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className={cn(
+                "size-10 shrink-0 rounded-2xl",
+                conversationActive && "bg-primary/15 text-primary",
+              )}
+              onClick={
+                conversationActive ? onStopConversation : onStartConversation
+              }
+              aria-label={
+                conversationActive
+                  ? "End hands-free conversation"
+                  : "Start hands-free conversation"
+              }
+              aria-pressed={conversationActive}
+            >
+              {conversationActive ? (
+                <PhoneOff className="size-4" />
+              ) : (
+                <PhoneCall className="size-4" />
+              )}
+            </Button>
+          )}
 
           <Textarea
             ref={textareaRef}
