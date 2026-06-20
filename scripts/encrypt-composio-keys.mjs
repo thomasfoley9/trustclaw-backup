@@ -1,8 +1,12 @@
-// One-shot backfill: encrypt any plaintext Composio API keys already stored on
-// composio_claw_instance.composioApiKey. Idempotent — rows already in the
-// `enc:v1:` format are skipped, so it's safe to run repeatedly.
+// One-shot backfill: encrypt any plaintext secrets stored before ENCRYPTION_KEY
+// was configured. Covers EVERY secret column, not just Composio keys:
+//   composio_claw_instance:      composioApiKey, anthropicApiKey, voiceApiKey
+//   composio_claw_custom_model:  providerApiKey
+// Idempotent — values already in the `enc:v1:` format are skipped, so it's safe
+// to run repeatedly.
 //
-// Run AFTER ENCRYPTION_KEY is set in the environment:
+// Run AFTER ENCRYPTION_KEY is set in BOTH this process AND the app (same key),
+// or the app won't be able to decrypt what this writes:
 //   ENCRYPTION_KEY=... DATABASE_URL=... node scripts/encrypt-composio-keys.mjs
 // On Vercel/Neon use the unpooled URL (DATABASE_URL_UNPOOLED).
 //
@@ -15,12 +19,19 @@ const PREFIX = "enc:v1:";
 const KEY_BYTES = 32;
 const IV_BYTES = 12;
 
+// (table, column) pairs that hold an encryptable secret. Hardcoded constants —
+// never interpolate untrusted input into these identifiers.
+const TARGETS = [
+  { table: "composio_claw_instance", column: "composioApiKey" },
+  { table: "composio_claw_instance", column: "anthropicApiKey" },
+  { table: "composio_claw_instance", column: "voiceApiKey" },
+  { table: "composio_claw_custom_model", column: "providerApiKey" },
+];
+
 function loadKey() {
   const raw = process.env.ENCRYPTION_KEY;
   if (!raw) {
-    console.error(
-      "ENCRYPTION_KEY is not set — nothing to do. Set it and re-run.",
-    );
+    console.error("ENCRYPTION_KEY is not set — nothing to do. Set it and re-run.");
     process.exit(1);
   }
   const buf = /^[0-9a-fA-F]{64}$/.test(raw)
@@ -63,25 +74,31 @@ const client = new pg.Client({ connectionString: url });
 
 await client.connect();
 try {
-  const { rows } = await client.query(
-    `SELECT id, "composioApiKey" AS k
-       FROM composio_claw_instance
-      WHERE "composioApiKey" IS NOT NULL
-        AND "composioApiKey" NOT LIKE $1`,
-    [`${PREFIX}%`],
-  );
-
-  if (rows.length === 0) {
-    console.log("No plaintext Composio keys to encrypt. Already up to date.");
-  } else {
+  let total = 0;
+  for (const { table, column } of TARGETS) {
+    const { rows } = await client.query(
+      `SELECT id, "${column}" AS k
+         FROM "${table}"
+        WHERE "${column}" IS NOT NULL
+          AND "${column}" NOT LIKE $1`,
+      [`${PREFIX}%`],
+    );
     for (const row of rows) {
       await client.query(
-        `UPDATE composio_claw_instance SET "composioApiKey" = $1 WHERE id = $2`,
+        `UPDATE "${table}" SET "${column}" = $1 WHERE id = $2`,
         [encrypt(row.k, key), row.id],
       );
     }
-    console.log(`Encrypted ${rows.length} Composio key(s).`);
+    if (rows.length > 0) {
+      console.log(`Encrypted ${rows.length} ${table}.${column}`);
+    }
+    total += rows.length;
   }
+  console.log(
+    total === 0
+      ? "No plaintext secrets to encrypt. Already up to date."
+      : `Done — encrypted ${total} secret value(s).`,
+  );
 } finally {
   await client.end();
 }
