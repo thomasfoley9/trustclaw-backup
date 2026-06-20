@@ -30,8 +30,8 @@ const HOUSE_MODELS: Record<
 > = {
   "house/deepseek": {
     nativeBaseURL: "https://api.deepseek.com/v1",
-    nativeModel: "deepseek-chat",
-    openrouterModel: "deepseek/deepseek-chat",
+    nativeModel: "deepseek-v4-flash",
+    openrouterModel: "deepseek/deepseek-v4-flash",
   },
   "house/kimi-k2": {
     nativeBaseURL: "https://api.moonshot.ai/v1",

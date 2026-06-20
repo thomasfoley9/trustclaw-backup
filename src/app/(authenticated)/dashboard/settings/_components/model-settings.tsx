@@ -44,6 +44,14 @@ export function ModelSettings({ currentModel }: ModelSettingsProps) {
   const customModels = customData?.models ?? [];
 
   const updateSettings = trpc.trustclaw.updateSettings.useMutation({
+    // Retry transient cold-start 5xx (the write is idempotent) so a Vercel-edge
+    // 503 doesn't surface as a false failure.
+    retry: (failureCount, error) => {
+      if (failureCount >= 3) return false;
+      const status = error.data?.httpStatus;
+      return status === undefined || status >= 500;
+    },
+    retryDelay: (attempt) => Math.min(500 * 2 ** attempt, 2000),
     onSuccess: () => {
       showSuccessToast("Model updated");
       void utils.trustclaw.getInstance.invalidate();

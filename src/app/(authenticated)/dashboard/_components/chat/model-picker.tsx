@@ -34,6 +34,16 @@ export function ModelPicker() {
   const [open, setOpen] = useState(false);
 
   const updateSettings = trpc.trustclaw.updateSettings.useMutation({
+    // Cold-starting the heavy tRPC function can 503 at the Vercel edge even
+    // though the write commits server-side. updateSettings is idempotent, so
+    // retry transient 5xx to self-heal instead of showing a false error +
+    // reverting the picker.
+    retry: (failureCount, error) => {
+      if (failureCount >= 3) return false;
+      const status = error.data?.httpStatus;
+      return status === undefined || status >= 500;
+    },
+    retryDelay: (attempt) => Math.min(500 * 2 ** attempt, 2000),
     onError: (error) => {
       trpcToastOnError(error);
       void utils.trustclaw.getInstance.invalidate();
