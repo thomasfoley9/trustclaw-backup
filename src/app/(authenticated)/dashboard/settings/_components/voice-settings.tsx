@@ -1,0 +1,236 @@
+"use client";
+
+import { useState, useRef } from "react";
+import { CheckCircle2, Loader2, Volume2 } from "lucide-react";
+import { trpc } from "~/clients/trpc";
+import { Button } from "~/components/ui/button";
+import { Input } from "~/components/ui/input";
+import { Label } from "~/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "~/components/ui/select";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "~/components/ui/card";
+import {
+  showSuccessToast,
+  showErrorToast,
+  trpcToastOnError,
+} from "~/components/core/toast-notifications";
+
+export function VoiceSettings() {
+  const utils = trpc.useUtils();
+  const { data, isLoading } = trpc.trustclaw.getVoiceKeyStatus.useQuery();
+  const [apiKey, setApiKey] = useState("");
+  const [editing, setEditing] = useState(false);
+  const [testing, setTesting] = useState(false);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  const setKey = trpc.trustclaw.setVoiceApiKey.useMutation({
+    onSuccess: () => {
+      showSuccessToast("Voice key saved");
+      setApiKey("");
+      setEditing(false);
+      void utils.trustclaw.getVoiceKeyStatus.invalidate();
+    },
+    onError: trpcToastOnError,
+  });
+
+  const clearKey = trpc.trustclaw.clearVoiceApiKey.useMutation({
+    onSuccess: () => {
+      showSuccessToast("Voice key removed");
+      void utils.trustclaw.getVoiceKeyStatus.invalidate();
+    },
+    onError: trpcToastOnError,
+  });
+
+  const setVoice = trpc.trustclaw.setVoiceId.useMutation({
+    onSuccess: () => void utils.trustclaw.getVoiceKeyStatus.invalidate(),
+    onError: trpcToastOnError,
+  });
+
+  const hasKey = !!data?.hasKey;
+  const isBusy = setKey.isPending || clearKey.isPending || isLoading;
+  const canSave = apiKey.trim().length >= 8 && !isBusy;
+  const showInput = !hasKey || editing;
+
+  async function testVoice() {
+    setTesting(true);
+    try {
+      const res = await fetch("/api/voice/tts", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          text: "Hi! This is your assistant. I'm ready to talk.",
+        }),
+      });
+      if (!res.ok) {
+        showErrorToast("Couldn't play the voice — check your key and try again.");
+        return;
+      }
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const audio = audioRef.current ?? new Audio();
+      audioRef.current = audio;
+      audio.src = url;
+      audio.onended = () => URL.revokeObjectURL(url);
+      await audio.play();
+    } catch {
+      showErrorToast("Voice playback failed.");
+    } finally {
+      setTesting(false);
+    }
+  }
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <Volume2 className="h-4 w-4" />
+          Voice (Smallest.ai)
+        </CardTitle>
+        <CardDescription>
+          Bring your own Smallest.ai key so the assistant can speak its replies
+          aloud. Grab one from the{" "}
+          <a
+            href="https://waves.smallest.ai"
+            target="_blank"
+            rel="noreferrer noopener"
+            className="text-primary underline-offset-4 hover:underline"
+          >
+            Smallest dashboard
+          </a>
+          .
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {hasKey && !editing && (
+          <div className="flex flex-col gap-2 rounded-md border bg-muted/30 px-3 py-2 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex min-w-0 items-center gap-2 text-sm">
+              <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600 dark:text-emerald-400" />
+              <span className="shrink-0 font-medium">Connected</span>
+              <span className="text-muted-foreground truncate font-mono">
+                {data?.maskedKey}
+              </span>
+            </div>
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setEditing(true)}
+                disabled={isBusy}
+              >
+                Replace
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => void clearKey.mutateAsync()}
+                disabled={isBusy}
+              >
+                {clearKey.isPending ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  "Remove"
+                )}
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {showInput && (
+          <div className="space-y-3">
+            <div className="space-y-2">
+              <Label htmlFor="voice-api-key">API key</Label>
+              <Input
+                id="voice-api-key"
+                type="password"
+                autoComplete="off"
+                placeholder="sk_…"
+                value={apiKey}
+                onChange={(e) => setApiKey(e.target.value)}
+                disabled={isBusy}
+              />
+              <p className="text-muted-foreground text-xs">
+                We validate the key with Smallest.ai before saving it.
+              </p>
+            </div>
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                disabled={!canSave}
+                onClick={() => void setKey.mutateAsync({ apiKey: apiKey.trim() })}
+              >
+                {setKey.isPending ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Validating…
+                  </>
+                ) : (
+                  "Save"
+                )}
+              </Button>
+              {hasKey && (
+                <Button
+                  variant="ghost"
+                  onClick={() => {
+                    setEditing(false);
+                    setApiKey("");
+                  }}
+                  disabled={isBusy}
+                >
+                  Cancel
+                </Button>
+              )}
+            </div>
+          </div>
+        )}
+
+        {hasKey && !editing && (
+          <div className="space-y-2">
+            <Label>Voice</Label>
+            <div className="flex gap-2">
+              <Select
+                value={data?.voiceId}
+                onValueChange={(v) => void setVoice.mutateAsync({ voiceId: v })}
+              >
+                <SelectTrigger className="flex-1">
+                  <SelectValue placeholder="Pick a voice" />
+                </SelectTrigger>
+                <SelectContent>
+                  {(data?.voices ?? []).map((v) => (
+                    <SelectItem key={v.id} value={v.id}>
+                      {v.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Button
+                variant="outline"
+                onClick={() => void testVoice()}
+                disabled={testing}
+              >
+                {testing ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <>
+                    <Volume2 className="mr-2 h-4 w-4" />
+                    Test
+                  </>
+                )}
+              </Button>
+            </div>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}

@@ -12,7 +12,6 @@ export default function GlobalError({
   useEffect(() => {
     // This is the last-resort boundary — never swallow the error, or crashes
     // become undebuggable. Log the full object + surface the message below.
-    // eslint-disable-next-line no-console
     console.error("[global-error]", error);
   }, [error]);
 

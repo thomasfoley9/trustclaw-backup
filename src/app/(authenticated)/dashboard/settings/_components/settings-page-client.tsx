@@ -9,6 +9,7 @@ import { CustomModelsSettings } from "./custom-models-settings";
 import { McpServersSettings } from "./mcp-servers-settings";
 import { ComposioApiKeySettings } from "./composio-api-key-settings";
 import { AnthropicApiKeySettings } from "./anthropic-api-key-settings";
+import { VoiceSettings } from "./voice-settings";
 import { TelegramSettings } from "./telegram-settings";
 import { CronJobsSettings } from "./cron-jobs-settings";
 import { MemorySettings } from "./memory-settings";
@@ -69,6 +70,10 @@ export function SettingsPageClient() {
 
       <ErrorBoundary>
         <ComposioApiKeySettings />
+      </ErrorBoundary>
+
+      <ErrorBoundary>
+        <VoiceSettings />
       </ErrorBoundary>
 
       <ErrorBoundary>

@@ -31,6 +31,10 @@ import { clearComposioApiKey } from "./clearComposioApiKey";
 import { getAnthropicKeyStatus } from "./getAnthropicKeyStatus";
 import { setAnthropicApiKey } from "./setAnthropicApiKey";
 import { clearAnthropicApiKey } from "./clearAnthropicApiKey";
+import { getVoiceKeyStatus } from "./getVoiceKeyStatus";
+import { setVoiceApiKey } from "./setVoiceApiKey";
+import { clearVoiceApiKey } from "./clearVoiceApiKey";
+import { setVoiceId } from "./setVoiceId";
 import { getBuckets } from "./getBuckets";
 import { createBucket } from "./createBucket";
 import { updateBucket } from "./updateBucket";
@@ -82,6 +86,10 @@ export const trustclawRouter = router({
   getAnthropicKeyStatus,
   setAnthropicApiKey,
   clearAnthropicApiKey,
+  getVoiceKeyStatus,
+  setVoiceApiKey,
+  clearVoiceApiKey,
+  setVoiceId,
   getBuckets,
   createBucket,
   updateBucket,

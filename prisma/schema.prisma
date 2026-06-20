@@ -111,6 +111,11 @@ model ComposioClawInstance {
   // gateway fallback). OpenAI/Google models use their own CustomModel key.
   anthropicApiKey String?
 
+  // Voice mode (Smallest.ai TTS). Per-user key, encrypted at rest like the
+  // others; voiceId selects which voice speaks the agent's replies aloud.
+  voiceApiKey String?
+  voiceId     String  @default("avery")
+
   // Memory routing: which bucket new memories save to, and whether the
   // current chat runs incognito (no recall, no save, no history).
   activeMemoryBucket String  @default("general")
