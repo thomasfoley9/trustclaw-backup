@@ -135,3 +135,61 @@ export async function getTelegramActive(
   const val = await r.get(`telegram-active:${instanceId}`);
   return val ? Number(val) : null;
 }
+
+// ─── Sliding-Window Rate Limiter ────────────────────────────────────────────
+
+// Atomic check-and-record in one Lua script (Redis runs it single-threaded, so
+// there's no check-then-act race across concurrent requests): drop timestamps
+// older than the window, count what remains, and record the new request only
+// when it's under the limit — so a rejected request never extends its own
+// window. Sorted-set scores are request timestamps (ms); the key self-expires
+// after the window so idle instances leave nothing behind.
+const RATE_LIMIT_LUA = `
+local key = KEYS[1]
+local now = tonumber(ARGV[1])
+local windowMs = tonumber(ARGV[2])
+local maxReq = tonumber(ARGV[3])
+local member = ARGV[4]
+redis.call('ZREMRANGEBYSCORE', key, 0, now - windowMs)
+local count = redis.call('ZCARD', key)
+if count >= maxReq then
+  return 0
+end
+redis.call('ZADD', key, now, member)
+redis.call('PEXPIRE', key, windowMs)
+return 1
+`;
+
+/**
+ * Distributed sliding-window rate limit shared across all server instances.
+ * Returns true if the request is allowed, false if the limit is exceeded.
+ *
+ * Fail-open: if Redis is unconfigured or errors, returns true so an infra
+ * hiccup can never block legitimate traffic. Callers wanting stricter degraded
+ * behavior should gate on isRedisConfigured() and fall back themselves.
+ */
+export async function slidingWindowAllow(
+  key: string,
+  windowMs: number,
+  maxRequests: number,
+): Promise<boolean> {
+  const r = getRedis();
+  if (!r) return true;
+  try {
+    const now = Date.now();
+    const member = `${now}-${crypto.randomUUID()}`;
+    const result = await r.eval(
+      RATE_LIMIT_LUA,
+      1,
+      `ratelimit:${key}`,
+      String(now),
+      String(windowMs),
+      String(maxRequests),
+      member,
+    );
+    return result === 1 || result === "1";
+  } catch (err) {
+    console.error("[redis] rate-limit check failed (allowing):", err);
+    return true;
+  }
+}

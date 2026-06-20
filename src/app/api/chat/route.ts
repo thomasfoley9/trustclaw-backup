@@ -14,6 +14,8 @@ import {
   setStreamingMessage,
   getStreamingMessage,
   clearStreamingMessage,
+  isRedisConfigured,
+  slidingWindowAllow,
 } from "~/server/clients/redis";
 import { getStreamContext } from "./stream-store";
 
@@ -23,13 +25,15 @@ const MAX_ATTACHMENT_BYTES = 25 * 1024 * 1024;
 // Max simultaneous background runs per account.
 const MAX_CONCURRENT_RUNS = 3;
 
-// Per-instance request rate limit (sliding window). In-memory: correct for a
-// single-node deployment; swap to Redis when horizontally scaled.
+// Per-instance request rate limit (sliding window). Redis-backed so the limit
+// is shared across all serverless instances; the in-process map is only the
+// fallback when Redis isn't configured (local dev). Fail-open on Redis errors,
+// so an infra hiccup degrades to "no limit" rather than blocking chat.
 const RATE_WINDOW_MS = 5 * 60 * 1000;
 const RATE_MAX_REQUESTS = 30;
 const requestTimestamps = new Map<string, number[]>();
 
-function checkRateLimit(instanceId: string): boolean {
+function checkRateLimitInMemory(instanceId: string): boolean {
   const now = Date.now();
   const stamps = (requestTimestamps.get(instanceId) ?? []).filter(
     (t) => now - t < RATE_WINDOW_MS,
@@ -41,6 +45,17 @@ function checkRateLimit(instanceId: string): boolean {
   stamps.push(now);
   requestTimestamps.set(instanceId, stamps);
   return true;
+}
+
+async function checkRateLimit(instanceId: string): Promise<boolean> {
+  if (isRedisConfigured()) {
+    return slidingWindowAllow(
+      `chat:${instanceId}`,
+      RATE_WINDOW_MS,
+      RATE_MAX_REQUESTS,
+    );
+  }
+  return checkRateLimitInMemory(instanceId);
 }
 
 const chatRequestBody = z.object({
@@ -85,7 +100,7 @@ export async function POST(request: Request) {
 
   const { instanceId } = authResult;
 
-  if (!checkRateLimit(instanceId)) {
+  if (!(await checkRateLimit(instanceId))) {
     return new Response("Too many requests - slow down a little", {
       status: 429,
     });
