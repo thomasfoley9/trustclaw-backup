@@ -241,6 +241,39 @@ The decision between "LiveKit Agents framework" and "LiveKit transport-only + re
 
 ---
 
+## Review findings & pre-enable gates (added 2026-06-20)
+
+The worker tier (Phases 1–2: rate limiter, agent-runner, BullMQ job-queue, cron
+wiring) passed an adversarial review — 51 candidate findings → 16 confirmed,
+**zero critical/high on the live path**. With `WORKER_QUEUE_ENABLED` unset, the
+diff is **byte-for-byte prod-safe** (verified): nothing enqueues, no Redis
+socket opens, and cron runs inline exactly as before. Nothing must change before
+merging.
+
+These are gates to clear **before flipping `WORKER_QUEUE_ENABLED="true"` /
+deploying the worker** (none block the current state):
+
+1. **Re-run idempotency (MEDIUM).** With `attempts: 1`, a worker that crashes
+   mid-run can have its job re-queued by BullMQ's stalled-job recovery, which
+   could duplicate partially-persisted `onFinish` state (message row / memory
+   flush) until Phase 4 idempotency lands. Before enabling: shorten the
+   stalled/visibility window and/or fence re-runs with a Postgres advisory lock
+   on the logical job.
+2. **Stale-lock crash window (MEDIUM).** If a worker crashes after dequeue but
+   before `releaseJobLocks`, a cron job stays locked until the ~10-min
+   stale-lock reclaim. Add alerting on jobs locked > 5 min.
+3. **Queue shutdown hook (LOW).** The Vercel app's cached BullMQ producer
+   connection (only opened when the flag is on) is never closed — add a
+   graceful-shutdown hook to avoid connection accumulation.
+
+And a gate **before any Phase 3 user-facing enqueue** (web/voice):
+
+4. **Instance-ownership check (HIGH).** `enqueueAgentJob` trusts its payload;
+   the worker does not re-verify that `userId` owns `instanceId`. Any
+   user-facing enqueue MUST assert ownership first (as the chat route does).
+   Not exploitable today — the only enqueuer is the CRON_SECRET-gated cron
+   dispatch.
+
 ## Relevant files (all absolute)
 - `src/server/api/routers/trustclaw/agent/setup.ts` — `prepareAgentRun`, the portable seam
 - `src/app/api/chat/route.ts` — the `after()` / server-controller pattern to relocate; rate-limit map; resumable SSE

@@ -97,6 +97,13 @@ async function enqueue(jobId: string, data: QueueJobData): Promise<string> {
  * Enqueue a normal agent job. `jobId` is the idempotency key (e.g.
  * "sessionId:turnId"): BullMQ refuses a second job with an existing id, so a
  * retried enqueue can't double-run a side-effectful tool. Returns the id used.
+ *
+ * SECURITY (Phase 3 gate): the worker trusts this payload and does NOT re-check
+ * that `userId` owns `instanceId`. No user-facing caller enqueues today (only
+ * the CRON_SECRET-gated cron dispatch). Before any web/voice endpoint calls
+ * this, it MUST first assert instance ownership (as the chat route does at
+ * route.ts) — otherwise a forged request could run an agent under another
+ * user's instance.
  */
 export function enqueueAgentJob(
   jobId: string,
