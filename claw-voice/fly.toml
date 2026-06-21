@@ -1,0 +1,27 @@
+# Phase 3 (Fly deploy). NOT needed for the local spike.
+# `fly launch --no-deploy` will regenerate/adjust this; treat it as a starting
+# point. Key choices below are deliberate — keep them.
+
+app = "claw-voice"
+
+# Co-locate near the LiveKit project + Vercel (iad1). VERIFY your LiveKit Cloud
+# project's region and match it to minimize STT->bridge->TTS round-trip.
+primary_region = "iad"
+
+[build]
+
+# Secrets are set via `fly secrets set` (NOT here): LIVEKIT_URL, LIVEKIT_API_KEY,
+# LIVEKIT_API_SECRET, SMALLEST_API_KEY, VOICE_WORKER_SHARED_SECRET, VOICE_TURN_URL.
+[env]
+
+# This is an OUTBOUND-ONLY worker: it dials out to LiveKit Cloud and has no HTTP
+# service. Intentionally NO [http_service] / [[services]] block — that also means
+# Fly won't autostop it, which is what we want (a warm worker, no cold dispatch).
+[[vm]]
+  size = "performance-2x"
+  memory = "2gb"
+
+# Keep at least one worker warm. Scale concurrency with more machines, not bigger
+# ones (each call pins a job). `fly scale count 1` after first deploy.
+[deploy]
+  strategy = "rolling"

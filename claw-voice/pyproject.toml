@@ -1,0 +1,19 @@
+[project]
+name = "claw-voice"
+version = "0.1.0"
+description = "Thomas Claw real-time voice agent — LiveKit cascade (Smallest Pulse STT -> A->B bridge -> Smallest Lightning TTS)"
+requires-python = ">=3.11"
+dependencies = [
+    # LiveKit Agents 1.x + the first-party Smallest plugin (Pulse STT + Lightning
+    # TTS), Silero VAD, and the turn-detector weights. The smallestai extra is
+    # Python-only — there is no Node/agents-js Smallest plugin, which is why this
+    # worker is Python.
+    "livekit-agents[smallestai,silero,turn-detector]~=1.5",
+    "python-dotenv>=1.0",
+    # Phase 1: streams the A->B turn from /api/voice-turn.
+    "httpx>=0.27",
+]
+
+# Managed with uv. Run `uv lock` to generate uv.lock for reproducible Fly builds.
+[tool.uv]
+package = false
