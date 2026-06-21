@@ -30,28 +30,13 @@ from livekit.agents import (
     RunContext,
     function_tool,
 )
-from livekit.plugins import openai, silero, smallestai
+from livekit.plugins import openai, smallestai
 
 load_dotenv(".env.local")
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("claw-voice")
 
 server = AgentServer()
-
-
-def _prewarm(proc) -> None:
-    """Load the Silero VAD once per worker process (into the warm idle-process
-    pool) so the first call of each process doesn't stall loading it on the hot
-    path — a measurable chunk of click-to-first-word latency. Retrieved in the
-    entrypoint via ctx.proc.userdata; the session falls back to its bundled VAD
-    if this didn't run."""
-    try:
-        proc.userdata["vad"] = silero.VAD.load()
-    except Exception:  # noqa: BLE001 — non-fatal; session uses its default VAD
-        logger.warning("VAD prewarm failed", exc_info=True)
-
-
-server.setup_fnc = _prewarm
 
 # Worker -> Vercel bridge.
 VOICE_TURN_URL = os.environ.get(
@@ -116,7 +101,6 @@ class ClawAgent(Agent):
 
         logger.info("delegate -> %r", intent)
         result_text = ""
-        got_result = False
         try:
             async with httpx.AsyncClient(timeout=300) as hc:
                 async with hc.stream(
@@ -149,16 +133,12 @@ class ClawAgent(Agent):
                             await self._publish_cockpit(ev)
                         elif kind == "result":
                             result_text = ev.get("text", "")
-                            got_result = True
                         elif kind == "error":
                             return f"That didn't work — {ev.get('message', 'unknown error')}."
         except Exception as e:  # noqa: BLE001 — surface, don't crash the call
             logger.exception("delegate failed")
             return f"Something went sideways: {e}"
-        # Distinguish "the worker finished but sent no result" from a real reply.
-        if not got_result:
-            return "I didn't get anything back from the worker — want me to try again?"
-        return result_text or "Okay, that's done."
+        return result_text or "Done — though I didn't get much back."
 
     async def _publish_cockpit(self, event: dict) -> None:
         """Forward an Agent B tool event to the web cockpit via the data channel.
@@ -202,64 +182,27 @@ async def entrypoint(ctx: JobContext):
     # metadata; fall back to a sensible default if it's missing.
     voice_id = config.get("voiceId") or "avery"
     logger.info("voice session using voice_id=%s", voice_id)
-
-    # Reuse the VAD loaded at process startup (prewarm) when available, so the
-    # session doesn't load it on the hot path; fall back to the bundled default.
-    vad = None
-    try:
-        if ctx.proc is not None:
-            vad = ctx.proc.userdata.get("vad")
-    except Exception:  # noqa: BLE001
-        vad = None
-    session_kwargs = dict(
+    session = AgentSession(
         stt=smallestai.STT(),
         tts=smallestai.TTS(model="lightning_v3.1_pro", voice_id=voice_id),
         llm=build_agent_a_llm(config.get("agentAModel")),
+        # AgentSession bundles a VAD now; no explicit vad= needed.
     )
-    if vad is not None:
-        session_kwargs["vad"] = vad
-    # Tighter endpointing → snappier turn-taking (defaults are min 0.5 / max 3.0).
-    # Conservative values to avoid cutting the user off on natural pauses.
-    # Guarded: if this livekit-agents build doesn't accept turn_handling, fall
-    # back to defaults rather than crashing the worker.
-    try:
-        session = AgentSession(
-            **session_kwargs,
-            turn_handling={"endpointing": {"min_delay": 0.4, "max_delay": 2.5}},
-        )
-    except TypeError:
-        logger.warning(
-            "turn_handling unsupported on this build — using default endpointing"
-        )
-        session = AgentSession(**session_kwargs)
 
-    # Warm the pipeline (STT/TTS/LLM streams) WHILE the caller's browser finishes
-    # connecting, instead of back-to-back. Explicit dispatch can place the agent
-    # in the room before the user, so we still wait for them — the greeting isn't
-    # spoken into an empty room — but both proceed concurrently. Bounded: if the
-    # user never joins, end instead of sitting idle. (ClawAgent gets the room so
-    # delegate() can publish cockpit events.)
-    start_task = asyncio.ensure_future(
-        session.start(agent=ClawAgent(config, ctx.room), room=ctx.room)
-    )
-    joined = True
+    # Hand the room to the agent so delegate() can publish cockpit events.
+    await session.start(agent=ClawAgent(config, ctx.room), room=ctx.room)
+
+    # Explicit dispatch can place the agent in the room before the user finishes
+    # connecting — wait for them so the greeting isn't spoken into an empty room.
+    # Bounded: if the user never joins (dispatch succeeded but their browser
+    # failed to connect), end the session instead of sitting idle indefinitely.
     try:
         await asyncio.wait_for(ctx.wait_for_participant(), timeout=60.0)
     except asyncio.TimeoutError:
         logger.warning("no participant joined within 60s — ending session")
-        joined = False
-    except Exception:  # noqa: BLE001 — wait API unavailable; greet anyway
+        return
+    except Exception:  # noqa: BLE001 — API unavailable; greet immediately
         logger.info("wait_for_participant unavailable", exc_info=True)
-
-    # The pipeline must be fully up before we speak (and we must always await the
-    # task so it isn't left dangling).
-    try:
-        await start_task
-    except Exception:  # noqa: BLE001 — pipeline failed to start
-        logger.warning("session start failed", exc_info=True)
-        return
-    if not joined:
-        return
 
     try:
         await session.say("Hey — Thomas Claw here. What do you need?")

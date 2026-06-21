@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect, useMemo, memo } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
 import Markdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { Copy, Check } from "lucide-react";
@@ -45,7 +45,7 @@ interface AssistantMessageProps {
   onOpenTerminal: () => void;
 }
 
-function AssistantMessageBase({
+export function AssistantMessage({
   message,
   status,
   onOpenTerminal,
@@ -140,7 +140,3 @@ function AssistantMessageBase({
     </div>
   );
 }
-
-// Memoized: with a stable onOpenTerminal + per-message status, older messages
-// skip re-rendering (Markdown parse, segmenting) on every streaming tick.
-export const AssistantMessage = memo(AssistantMessageBase);
