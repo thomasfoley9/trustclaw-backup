@@ -1,8 +1,14 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { CheckCircle2, Loader2, Volume2 } from "lucide-react";
 import { trpc } from "~/clients/trpc";
+import {
+  VOICE_SPEEDS,
+  getVoiceSpeed,
+  setVoiceSpeed,
+  applyVoiceSpeed,
+} from "../../_components/chat/voice-speed";
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
@@ -32,7 +38,18 @@ export function VoiceSettings() {
   const [apiKey, setApiKey] = useState("");
   const [editing, setEditing] = useState(false);
   const [testing, setTesting] = useState(false);
+  const [speed, setSpeed] = useState(1);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  // Read the saved playback speed on mount (localStorage is client-only).
+  useEffect(() => {
+    setSpeed(getVoiceSpeed());
+  }, []);
+
+  function changeSpeed(value: number) {
+    setSpeed(value);
+    setVoiceSpeed(value);
+  }
 
   const setKey = trpc.trustclaw.setVoiceApiKey.useMutation({
     onSuccess: () => {
@@ -82,6 +99,7 @@ export function VoiceSettings() {
       audioRef.current = audio;
       audio.src = url;
       audio.onended = () => URL.revokeObjectURL(url);
+      applyVoiceSpeed(audio);
       await audio.play();
     } catch {
       showErrorToast("Voice playback failed.");
@@ -194,7 +212,7 @@ export function VoiceSettings() {
           </div>
         )}
 
-        {hasKey && !editing && (
+        <div className="space-y-4 border-t pt-4">
           <div className="space-y-2">
             <Label>Voice</Label>
             <div className="flex gap-2">
@@ -228,8 +246,32 @@ export function VoiceSettings() {
                 )}
               </Button>
             </div>
+            <p className="text-muted-foreground text-xs">
+              Works whether you use your own key or the shared voice.
+            </p>
           </div>
-        )}
+
+          <div className="space-y-2">
+            <Label>Speaking speed</Label>
+            <div className="flex flex-wrap gap-2">
+              {VOICE_SPEEDS.map((s) => (
+                <Button
+                  key={s.value}
+                  type="button"
+                  size="sm"
+                  variant={speed === s.value ? "default" : "outline"}
+                  onClick={() => changeSpeed(s.value)}
+                >
+                  {s.label}
+                </Button>
+              ))}
+            </div>
+            <p className="text-muted-foreground text-xs">
+              How fast replies are spoken — pitch stays natural. Tap Test to hear
+              it.
+            </p>
+          </div>
+        </div>
       </CardContent>
     </Card>
   );

@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { showErrorToast } from "~/components/core/toast-notifications";
+import { applyVoiceSpeed } from "./voice-speed";
 
 const STORAGE_KEY = "trustclaw-voice-enabled";
 // A 0-sample silent WAV. Played inside a user gesture to "unlock" the audio
@@ -197,6 +198,7 @@ export function useVoicePlayback() {
           revoke();
         };
         setIsPreparing(false);
+        applyVoiceSpeed(audio);
         setIsSpeaking(true);
         await audio.play();
       } catch {
