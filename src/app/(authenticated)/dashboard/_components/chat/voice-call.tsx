@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Room } from "livekit-client";
+import { Room, ConnectionState } from "livekit-client";
 import {
   RoomContext,
   RoomAudioRenderer,
@@ -31,6 +31,8 @@ export interface VoiceTranscriptEntry {
 
 interface VoiceCallProps {
   active: boolean;
+  // When true, the local mic track is disabled so the agent hears nothing.
+  muted: boolean;
   // Called when the session ends (disconnect, error, or token failure) so the
   // parent can flip the call button back off.
   onEnded: () => void;
@@ -47,6 +49,7 @@ interface VoiceCallProps {
 // cockpit-data bridge.
 export function VoiceCall({
   active,
+  muted,
   onEnded,
   onCockpitEvent,
   onTranscript,
@@ -135,6 +138,16 @@ export function VoiceCall({
       void room.disconnect();
     };
   }, [active, room]);
+
+  // Reflect the mute button onto the published mic track. The connect effect
+  // enables the mic on join (unmuted); this responds to later toggles. Guarded
+  // on connection state so it never races the initial connect.
+  useEffect(() => {
+    if (!active || room.state !== ConnectionState.Connected) return;
+    void room.localParticipant
+      .setMicrophoneEnabled(!muted)
+      .catch((err) => console.error("[voice] mute toggle failed —", err));
+  }, [muted, active, room]);
 
   if (!active) return null;
 

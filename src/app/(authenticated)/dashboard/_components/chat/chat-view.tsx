@@ -290,11 +290,13 @@ export function ChatView({
   // loop. The browser loop stays as the fallback when LiveKit isn't set up.
   const liveKitConfigured = !!env.NEXT_PUBLIC_LIVEKIT_URL;
   const [liveCallActive, setLiveCallActive] = useState(false);
+  const [liveCallMuted, setLiveCallMuted] = useState(false);
 
   const handleStartConversation = useCallback(() => {
     voiceUnlock(); // prime audio within this gesture so replies can autoplay
     if (liveKitConfigured) {
       clearVoiceOverlay(); // start each call with a fresh transcript + action feed
+      setLiveCallMuted(false); // each call starts unmuted
       setTerminalOpen(true); // surface the Live pane so actions are visible
       setLiveCallActive(true);
       return;
@@ -335,6 +337,13 @@ export function ChatView({
   // Call-button state reflects either path.
   const callActive = conversationActive || liveCallActive;
   const callPhase = liveCallActive ? "listening" : conversationPhase;
+  // One mute button drives whichever voice path is live: the LiveKit mic on a
+  // real-time call, otherwise the browser conversation loop.
+  const isMuted = liveCallActive ? liveCallMuted : conversationMuted;
+  const handleToggleMute = useCallback(() => {
+    if (liveCallActive) setLiveCallMuted((m) => !m);
+    else toggleConversationMute();
+  }, [liveCallActive, toggleConversationMute]);
 
   return (
     <div className="flex h-full overflow-hidden">
@@ -436,13 +445,14 @@ export function ChatView({
           conversationSupported={conversationSupported || liveKitConfigured}
           conversationActive={callActive}
           conversationPhase={callPhase}
-          conversationMuted={conversationMuted}
+          conversationMuted={isMuted}
           onStartConversation={handleStartConversation}
           onStopConversation={handleStopConversation}
-          onToggleMute={toggleConversationMute}
+          onToggleMute={handleToggleMute}
         />
         <VoiceCall
           active={liveCallActive}
+          muted={liveCallMuted}
           onEnded={handleVoiceEnded}
           onCockpitEvent={handleCockpitEvent}
           onTranscript={handleTranscript}
