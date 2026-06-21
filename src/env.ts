@@ -57,20 +57,19 @@ export const env = createEnv({
     // in vercel.json; the trustclaw deploy CLI also generates one on first deploy.
     CRON_SECRET: z.string(),
 
-    // Single-tenant cell gate: when set, new account registration requires
-    // this code. Leave unset for open signup (local dev).
-    SIGNUP_INVITE_CODE: z.string().optional(),
-
     // Google social sign-in (optional). When both are set, a "Continue with
     // Google" button appears. Create an OAuth client in Google Cloud and add
     // the redirect URI <app-url>/api/auth/callback/google.
     GOOGLE_CLIENT_ID: z.string().optional(),
     GOOGLE_CLIENT_SECRET: z.string().optional(),
 
-    // Comma-separated email domains allowed to CREATE an account (e.g.
-    // "composio.dev"). When set, applies to BOTH Google and password sign-up
-    // so social login can't bypass the invite gate. Unset = any email.
+    // Sign-up allowlist (the gate — there is no invite code). Both apply to
+    // BOTH Google and password sign-up. Unset both = open signup.
+    //   ALLOWED_EMAIL_DOMAINS: comma-separated domains, e.g. "composio.dev".
+    //   ALLOWED_EMAILS: comma-separated specific addresses to allow on top of
+    //     the domains ("anyone I tell you").
     ALLOWED_EMAIL_DOMAINS: z.string().optional(),
+    ALLOWED_EMAILS: z.string().optional(),
   },
   client: {
     NEXT_PUBLIC_APP_URL: z.string().url(),
@@ -97,10 +96,10 @@ export const env = createEnv({
     VOICE_WORKER_SHARED_SECRET: process.env.VOICE_WORKER_SHARED_SECRET,
     NEXT_PUBLIC_LIVEKIT_URL: process.env.NEXT_PUBLIC_LIVEKIT_URL,
     CRON_SECRET: process.env.CRON_SECRET,
-    SIGNUP_INVITE_CODE: process.env.SIGNUP_INVITE_CODE,
     GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID,
     GOOGLE_CLIENT_SECRET: process.env.GOOGLE_CLIENT_SECRET,
     ALLOWED_EMAIL_DOMAINS: process.env.ALLOWED_EMAIL_DOMAINS,
+    ALLOWED_EMAILS: process.env.ALLOWED_EMAILS,
 
     // Client URL resolution:
     //  - dev: derive from PORT so `PORT=3001 pnpm dev` just works

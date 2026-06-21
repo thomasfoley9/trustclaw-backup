@@ -1,9 +1,18 @@
+import { timingSafeEqual } from "node:crypto";
 import { NextResponse } from "next/server";
 import { Prisma } from "~/generated/prisma/client";
 import { z } from "zod";
 import { env } from "~/env";
 import { db } from "~/server/clients/db";
 import { computeNextRunSafe } from "~/server/api/routers/trustclaw/agent/tools/cron-utils";
+
+// Constant-time compare so the bearer check can't leak CRON_SECRET via timing.
+function safeEqual(a: string, b: string): boolean {
+  const ab = Buffer.from(a);
+  const bb = Buffer.from(b);
+  if (ab.length !== bb.length) return false;
+  return timingSafeEqual(ab, bb);
+}
 
 const LOCK_TIMEOUT_MS = 10 * 60 * 1000;
 
@@ -46,7 +55,7 @@ export async function GET(request: Request) {
       });
     }
     const auth = request.headers.get("authorization") ?? "";
-    if (auth !== `Bearer ${env.CRON_SECRET}`) {
+    if (!safeEqual(auth, `Bearer ${env.CRON_SECRET}`)) {
       return new Response("Unauthorized", { status: 401 });
     }
   }

@@ -46,18 +46,46 @@ const redisRateLimitStorage = isRedisConfigured()
     }
   : {};
 
-// Email domains allowed to CREATE an account. When set, applies to BOTH
-// Google and password sign-up so social login can't slip past the invite gate.
-const ALLOWED_DOMAINS = env.ALLOWED_EMAIL_DOMAINS
-  ? env.ALLOWED_EMAIL_DOMAINS.split(",")
-      .map((d) => d.trim().toLowerCase())
-      .filter(Boolean)
-  : null;
+// Who may CREATE an account. There is NO invite code — this allowlist is the
+// gate, and it's closed by construction: composio.dev is always allowed (this
+// instance's home domain), so even if the env vars below are unset the gate
+// never falls open to the world. Env vars only ADD on top:
+//   ALLOWED_EMAIL_DOMAINS — extra comma-separated domains.
+//   ALLOWED_EMAILS        — extra specific addresses ("anyone I tell you").
+// Enforced in the user.create.before hook, which runs for BOTH password and
+// Google sign-up, so social login can't slip past it.
+const BASE_ALLOWED_DOMAINS = ["composio.dev"];
 
-function emailDomainAllowed(email: string): boolean {
-  if (!ALLOWED_DOMAINS) return true;
-  const domain = email.split("@")[1]?.toLowerCase() ?? "";
+const ALLOWED_DOMAINS = Array.from(
+  new Set([
+    ...BASE_ALLOWED_DOMAINS,
+    ...(env.ALLOWED_EMAIL_DOMAINS
+      ? env.ALLOWED_EMAIL_DOMAINS.split(",")
+          .map((d) => d.trim().toLowerCase())
+          .filter(Boolean)
+      : []),
+  ]),
+);
+
+const ALLOWED_EMAILS = env.ALLOWED_EMAILS
+  ? env.ALLOWED_EMAILS.split(",")
+      .map((e) => e.trim().toLowerCase())
+      .filter(Boolean)
+  : [];
+
+function emailAllowed(email: string): boolean {
+  const e = email.trim().toLowerCase();
+  if (ALLOWED_EMAILS.includes(e)) return true;
+  const domain = e.split("@")[1] ?? "";
   return ALLOWED_DOMAINS.includes(domain);
+}
+
+function signupRestrictionMessage(): string {
+  const domains = ALLOWED_DOMAINS.map((d) => `@${d}`).join(", ");
+  const extra = ALLOWED_EMAILS.length
+    ? " (and specifically-invited addresses)"
+    : "";
+  return `Sign-up is restricted to ${domains}${extra}.`;
 }
 
 // OAuth provider tokens (Google access/refresh/id) are secrets — encrypt them
@@ -100,9 +128,9 @@ export const auth = betterAuth({
     user: {
       create: {
         before: async (user) => {
-          if (!emailDomainAllowed(user.email)) {
+          if (!emailAllowed(user.email)) {
             throw new APIError("FORBIDDEN", {
-              message: `Sign-up is restricted to ${ALLOWED_DOMAINS?.join(", ")} accounts.`,
+              message: signupRestrictionMessage(),
             });
           }
           return { data: user };

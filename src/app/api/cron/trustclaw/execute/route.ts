@@ -1,3 +1,4 @@
+import { timingSafeEqual } from "node:crypto";
 import { after, NextResponse } from "next/server";
 import { Prisma } from "~/generated/prisma/client";
 import { z } from "zod";
@@ -9,6 +10,14 @@ import {
   isWorkerQueueEnabled,
 } from "~/server/clients/job-queue";
 import { executeJobInput, cronJobRow } from "./route.schema";
+
+// Constant-time compare so the bearer check can't leak CRON_SECRET via timing.
+function safeEqual(a: string, b: string): boolean {
+  const ab = Buffer.from(a);
+  const bb = Buffer.from(b);
+  if (ab.length !== bb.length) return false;
+  return timingSafeEqual(ab, bb);
+}
 
 async function loadJobsFromDb(jobIds: string[]) {
   const rows = z.array(cronJobRow).parse(
@@ -47,7 +56,7 @@ export async function POST(request: Request) {
       });
     }
     const auth = request.headers.get("authorization") ?? "";
-    if (auth !== `Bearer ${env.CRON_SECRET}`) {
+    if (!safeEqual(auth, `Bearer ${env.CRON_SECRET}`)) {
       return new Response("Unauthorized", { status: 401 });
     }
   }
