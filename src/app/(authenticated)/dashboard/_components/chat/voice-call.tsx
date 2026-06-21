@@ -85,9 +85,45 @@ export function VoiceCall({
           token: string;
         };
         if (cancelled) return;
-        await room.connect(data.serverUrl, data.token);
-        await room.localParticipant.setMicrophoneEnabled(true);
-      } catch {
+
+        // Split the two failure modes so the surfaced error is precise: the room
+        // connection (network / WebRTC) vs. the mic grant (getUserMedia — the
+        // usual mobile/iOS culprit, which needs HTTPS + a permission grant).
+        try {
+          await room.connect(data.serverUrl, data.token);
+        } catch (err) {
+          const detail =
+            err instanceof Error ? `${err.name}: ${err.message}` : String(err);
+          console.error("[voice] room.connect failed —", detail);
+          showErrorToast(
+            "Couldn't connect the call — check your connection and try again.",
+          );
+          if (!cancelled) onEndedRef.current();
+          return;
+        }
+        if (cancelled) return;
+
+        try {
+          await room.localParticipant.setMicrophoneEnabled(true);
+        } catch (err) {
+          const name = err instanceof Error ? err.name : "";
+          const detail =
+            err instanceof Error ? `${err.name}: ${err.message}` : String(err);
+          console.error("[voice] microphone enable failed —", detail);
+          showErrorToast(
+            name === "NotAllowedError" || name === "SecurityError"
+              ? "Microphone access was blocked. Allow mic access for this site, then try again."
+              : name === "NotFoundError"
+                ? "No microphone was found on this device."
+                : "Couldn't turn on your microphone — try again.",
+          );
+          if (!cancelled) onEndedRef.current();
+          return;
+        }
+      } catch (err) {
+        const detail =
+          err instanceof Error ? `${err.name}: ${err.message}` : String(err);
+        console.error("[voice] call setup failed —", detail);
         showErrorToast("Couldn't connect the call.");
         if (!cancelled) onEndedRef.current();
       }
