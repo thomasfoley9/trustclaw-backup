@@ -47,7 +47,7 @@ export async function POST(request: Request) {
 
   const instance = await db.composioClawInstance.findUnique({
     where: { userId: session.user.id },
-    select: { id: true, anthropicModel: true },
+    select: { id: true, anthropicModel: true, agentAModel: true },
   });
   if (!instance) {
     return new Response("No instance", { status: 404 });
@@ -57,7 +57,10 @@ export async function POST(request: Request) {
   // — never the whole reply — so voice stays brief even when curation is down.
   const fallback = shortSpoken(text);
   try {
-    const model = await resolveAgentModel(instance.id, instance.anthropicModel);
+    const model = await resolveAgentModel(
+      instance.id,
+      instance.agentAModel ?? instance.anthropicModel,
+    );
     const { text: brief } = await generateText({
       model,
       system: BRIEF_SYSTEM,

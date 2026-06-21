@@ -99,8 +99,12 @@ model ComposioClawInstance {
   id     String @id @default(cuid())
   userId String @unique
 
-  // Anthropic config
-  anthropicModel String @default("claude-sonnet-4-5-20250929")
+  // Model config. anthropicModel = Agent B (the worker that runs tools + does
+  // the heavy reasoning). agentAModel = Agent A (the conversational voice/
+  // narrator front); null falls back to a sensible default per surface —
+  // Agent B's model for the text narrator, a house model for the voice front.
+  anthropicModel String  @default("claude-sonnet-4-5-20250929")
+  agentAModel    String?
 
   // Per-user Composio API key. Each user brings their own — no shared key.
   // Tool calls and toolkit listings require this to be set.

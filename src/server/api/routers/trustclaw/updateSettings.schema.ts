@@ -18,6 +18,9 @@ const ianaTimezone = z
 
 export const updateSettingsInput = z.object({
   anthropicModel: selectableModelSchema.optional(),
+  // Agent A (voice/conversation front) model. null clears the override -> falls
+  // back to a sensible default per surface.
+  agentAModel: selectableModelSchema.nullable().optional(),
   timezone: ianaTimezone.optional(),
   activeMemoryBucket: memoryBucketSchema.optional(),
   incognitoMode: z.boolean().optional(),

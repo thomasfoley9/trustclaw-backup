@@ -77,7 +77,10 @@ export function SettingsPageClient() {
       </ErrorBoundary>
 
       <ErrorBoundary>
-        <ModelSettings currentModel={instance.anthropicModel} />
+        <ModelSettings
+          currentModel={instance.anthropicModel}
+          currentAgentAModel={instance.agentAModel}
+        />
       </ErrorBoundary>
 
       <ErrorBoundary>

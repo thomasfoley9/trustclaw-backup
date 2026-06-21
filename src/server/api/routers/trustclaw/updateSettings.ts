@@ -43,6 +43,27 @@ export const updateSettings = protectedProcedure
       }
     }
 
+    // Same guard for the Agent A (voice/conversation) model override. A null
+    // value clears the override and is always allowed.
+    if (
+      input.agentAModel &&
+      !isHouseModel(input.agentAModel) &&
+      !(ALLOWED_ANTHROPIC_MODELS as readonly string[]).includes(
+        input.agentAModel,
+      )
+    ) {
+      const owned = await db.customModel.findFirst({
+        where: { instanceId: instance.id, modelId: input.agentAModel },
+        select: { id: true },
+      });
+      if (!owned) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "That voice model isn't in your custom models.",
+        });
+      }
+    }
+
     // Don't let a client point activePersonalityId at a personality that
     // isn't theirs (or doesn't exist).
     if (input.activePersonalityId) {
@@ -63,6 +84,9 @@ export const updateSettings = protectedProcedure
         where: { userId },
         data: {
           ...(input.anthropicModel && { anthropicModel: input.anthropicModel }),
+          ...(input.agentAModel !== undefined && {
+            agentAModel: input.agentAModel,
+          }),
           ...(input.activeMemoryBucket && {
             activeMemoryBucket: input.activeMemoryBucket,
           }),
@@ -76,6 +100,7 @@ export const updateSettings = protectedProcedure
         select: {
           id: true,
           anthropicModel: true,
+          agentAModel: true,
           activeMemoryBucket: true,
           incognitoMode: true,
           activePersonalityId: true,

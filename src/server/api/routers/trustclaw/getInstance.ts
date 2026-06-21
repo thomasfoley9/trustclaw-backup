@@ -12,6 +12,7 @@ export const getInstance = protectedProcedure.query(async ({ ctx }) => {
         id: true,
         userId: true,
         anthropicModel: true,
+        agentAModel: true,
         activeMemoryBucket: true,
         incognitoMode: true,
         activeConversationId: true,

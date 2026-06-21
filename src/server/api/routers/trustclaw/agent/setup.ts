@@ -523,7 +523,8 @@ export async function prepareAgentRun(
         // then append A's text as the chat bubble's text part.
         const narration = await narrateWithAgentA({
           instanceId,
-          modelId: instance.anthropicModel,
+          // Agent A runs on its own model if the user set one, else Agent B's.
+          modelId: instance.agentAModel ?? instance.anthropicModel,
           executorText,
           toolStepsDigest: buildToolStepsDigest(toolNames),
           personaName: activePersonalityName,
