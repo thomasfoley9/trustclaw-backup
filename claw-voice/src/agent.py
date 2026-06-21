@@ -180,11 +180,15 @@ async def entrypoint(ctx: JobContext):
 
     # The user's chosen voice (Settings -> Voice) rides in the dispatch
     # metadata; fall back to a sensible default if it's missing.
+    # IMPORTANT: model + voice must match. The Settings picker offers the
+    # standard lightning_v3.1 voices (avery, mia, ...), so the TTS MUST use the
+    # standard "lightning_v3.1" model — pairing them with the "_pro" model makes
+    # synthesis fail silently (the agent joins but never speaks).
     voice_id = config.get("voiceId") or "avery"
     logger.info("voice session using voice_id=%s", voice_id)
     session = AgentSession(
         stt=smallestai.STT(),
-        tts=smallestai.TTS(model="lightning_v3.1_pro", voice_id=voice_id),
+        tts=smallestai.TTS(model="lightning_v3.1", voice_id=voice_id),
         llm=build_agent_a_llm(config.get("agentAModel")),
         # AgentSession bundles a VAD now; no explicit vad= needed.
     )

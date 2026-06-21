@@ -123,6 +123,11 @@ export function VoiceCall({
           if (!cancelled) onEndedRef.current();
           return;
         }
+
+        // Unlock audio playback. Mobile browsers (and Safari) block autoplay
+        // until a gesture-initiated startAudio, so the agent's voice wouldn't be
+        // heard otherwise. Best-effort — RoomAudioRenderer also handles it.
+        void room.startAudio().catch(() => undefined);
       } catch (err) {
         const detail =
           err instanceof Error ? `${err.name}: ${err.message}` : String(err);
