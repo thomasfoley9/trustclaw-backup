@@ -19,6 +19,7 @@ import {
 } from "lucide-react";
 import type { ConversationPhase } from "./use-voice-conversation";
 import type { ChatStatus } from "ai";
+import { VoicePicker } from "./voice-picker";
 import { Button } from "~/components/ui/button";
 import { Textarea } from "~/components/ui/textarea";
 import { cn } from "~/lib/utils";
@@ -389,6 +390,8 @@ export function ChatInput({
               <VolumeX className="size-4" />
             )}
           </Button>
+
+          {conversationSupported && <VoicePicker disabled={isStreaming} />}
 
           {conversationSupported && (
             <Button
