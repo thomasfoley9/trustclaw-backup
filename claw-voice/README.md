@@ -56,6 +56,10 @@ Record which of these you hit — each one is a real answer the spike exists to 
   `VOICE_TURN_URL` (`/api/voice-turn`), yielding Agent A tokens to TTS and
   forwarding Agent B tool events to the `cockpit` data channel. Build the
   Next.js token route + `/api/voice-turn` + the React `VoiceCall` component.
-- **Phase 3 (deploy):** `fly launch --no-deploy`, then
-  `fly secrets set LIVEKIT_URL=... LIVEKIT_API_KEY=... LIVEKIT_API_SECRET=... SMALLEST_API_KEY=... VOICE_WORKER_SHARED_SECRET=... VOICE_TURN_URL=...`,
-  then `fly deploy`. `Dockerfile` + `fly.toml` are scaffolded for this.
+- **Phase 3 (deploy) — LiveKit Cloud managed hosting (no Fly needed):**
+  deploy the worker straight to LiveKit Cloud with `lk agent create` /
+  `lk agent deploy` (auto-scaling, same LiveKit account). Set agent secrets
+  (`SMALLEST_API_KEY`, `VOICE_WORKER_SHARED_SECRET`, `VOICE_TURN_URL`) via the
+  `lk` CLI / dashboard. LiveKit Cloud builds from this `Dockerfile`.
+  - **Fallback (self-host):** `fly launch --no-deploy` → `fly secrets set ...` →
+    `fly deploy`. `fly.toml` is scaffolded for this path only.

@@ -23,7 +23,7 @@ both feed the **existing** React cockpit/chat live mid-call.
   `{a_token, b_tool, done}`, persists the turn to Neon like `/api/chat`. Verifies a shared secret.
 - All Anthropic/DeepSeek/Kimi/Composio execution stays here. **LiveKit never sees the model.**
 
-**Fly (new Python worker):**
+**Agent worker (deploys to LiveKit Cloud managed hosting via `lk agent deploy`; Fly self-host = fallback):**
 - Always-on `AgentServer` worker (no public ingress; `fly scale count 1`, `kill_timeout 600`).
 - Per job: `AgentSession(stt=smallestai.STT, tts=smallestai.TTS, vad=silero.VAD.load())`.
 - `ClawAgent.llm_node` override = the LLM stage: httpx SSE → `/api/voice-turn`, yields `a_token` to
@@ -40,7 +40,12 @@ both feed the **existing** React cockpit/chat live mid-call.
 | `VOICE_WORKER_SHARED_SECRET` | ✅ | ✅ | yes (worker→Vercel auth) |
 | `VOICE_TURN_URL` | — | ✅ | no |
 
-LiveKit creds are now set on **Vercel**; they still need to go on **Fly** when the worker deploys.
+LiveKit creds are set on **Vercel**. **Hosting decision (2026-06-20): the agent worker
+deploys to LiveKit Cloud MANAGED hosting (`lk agent deploy`, auto-scale) — NOT Fly.** Same
+LiveKit account, one vendor. Agent-side secrets (`SMALLEST_API_KEY`,
+`VOICE_WORKER_SHARED_SECRET`, `VOICE_TURN_URL`) are set via the `lk` CLI / dashboard at deploy.
+The `Dockerfile` carries over; `fly.toml` is a self-host **fallback** only. The spike needs no
+host (runs locally). Verify LiveKit Cloud agent-hosting compute pricing before prod.
 
 ## Files to create
 - `claw-voice/src/agent.py` — Python `AgentServer` worker (the cascade + `llm_node` bridge).
@@ -97,7 +102,7 @@ refactoring A→B.
    `/api/voice-turn` on top of it. Not bundled into voice work.
 3. **Phase 1 — token route + `/api/voice-turn`** (buildable, no creds to build).
 4. **Phase 2 — React connect + cockpit/transcript wiring** (buildable; e2e verify later).
-5. **Phase 3 — real creds + deploy worker to Fly + end-to-end** (needs Fly account).
+5. **Phase 3 — deploy worker to LiveKit Cloud (`lk agent deploy`) + end-to-end** (no Fly needed).
 6. **Phase 4 — hardening + ops.**
 
 **Other gaps to fold in (not optional):**
