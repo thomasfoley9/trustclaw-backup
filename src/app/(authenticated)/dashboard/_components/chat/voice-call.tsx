@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Room, ConnectionState } from "livekit-client";
+import { Room, ConnectionState, RoomEvent } from "livekit-client";
 import {
   RoomContext,
   RoomAudioRenderer,
@@ -9,6 +9,7 @@ import {
   useTranscriptions,
   useLocalParticipant,
 } from "@livekit/components-react";
+import { Volume2 } from "lucide-react";
 import { showErrorToast } from "~/components/core/toast-notifications";
 
 // A live Agent B tool event forwarded from the LiveKit worker's cockpit channel.
@@ -154,6 +155,21 @@ export function VoiceCall({
       .catch((err) => console.error("[voice] mute toggle failed —", err));
   }, [muted, active, room]);
 
+  // Mobile/Safari block audio autoplay until a user gesture. The after-connect
+  // startAudio() runs outside the tap, so it can be blocked — track playback
+  // state and surface a tap-to-enable button, which calls startAudio inside a
+  // real gesture (the reliable path).
+  const [needsAudioUnlock, setNeedsAudioUnlock] = useState(false);
+  useEffect(() => {
+    if (!active) return;
+    const sync = () => setNeedsAudioUnlock(!room.canPlaybackAudio);
+    room.on(RoomEvent.AudioPlaybackStatusChanged, sync);
+    sync();
+    return () => {
+      room.off(RoomEvent.AudioPlaybackStatusChanged, sync);
+    };
+  }, [active, room]);
+
   if (!active) return null;
 
   return (
@@ -161,6 +177,16 @@ export function VoiceCall({
       <RoomAudioRenderer />
       <CockpitBridge onCockpitEvent={onCockpitEvent} />
       <TranscriptBridge onTranscript={onTranscript} />
+      {needsAudioUnlock && (
+        <button
+          type="button"
+          onClick={() => void room.startAudio()}
+          className="bg-primary text-primary-foreground fixed bottom-24 left-1/2 z-50 flex -translate-x-1/2 items-center gap-2 rounded-full px-4 py-2 text-sm font-medium shadow-lg"
+        >
+          <Volume2 className="size-4" />
+          Tap to enable sound
+        </button>
+      )}
     </RoomContext.Provider>
   );
 }
