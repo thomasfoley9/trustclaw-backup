@@ -155,18 +155,28 @@ export function VoiceCall({
       .catch((err) => console.error("[voice] mute toggle failed —", err));
   }, [muted, active, room]);
 
-  // Mobile/Safari block audio autoplay until a user gesture. The after-connect
-  // startAudio() runs outside the tap, so it can be blocked — track playback
-  // state and surface a tap-to-enable button, which calls startAudio inside a
-  // real gesture (the reliable path).
+  // Mobile/Safari (and often desktop Chrome) block audio autoplay until a user
+  // gesture. The after-connect startAudio() runs outside the tap, so it can be
+  // blocked — surface a tap-to-enable button that calls startAudio inside a real
+  // gesture (the reliable path on every platform). Re-check canPlaybackAudio on
+  // EVERY relevant trigger so the button can't silently fail to appear if one
+  // browser doesn't emit AudioPlaybackStatusChanged.
   const [needsAudioUnlock, setNeedsAudioUnlock] = useState(false);
   useEffect(() => {
     if (!active) return;
     const sync = () => setNeedsAudioUnlock(!room.canPlaybackAudio);
     room.on(RoomEvent.AudioPlaybackStatusChanged, sync);
+    room.on(RoomEvent.TrackSubscribed, sync);
+    room.on(RoomEvent.Connected, sync);
     sync();
+    // Belt-and-suspenders: re-check after the greeting would have arrived, in
+    // case no event fired on this browser.
+    const t = setTimeout(sync, 4000);
     return () => {
+      clearTimeout(t);
       room.off(RoomEvent.AudioPlaybackStatusChanged, sync);
+      room.off(RoomEvent.TrackSubscribed, sync);
+      room.off(RoomEvent.Connected, sync);
     };
   }, [active, room]);
 
@@ -180,7 +190,11 @@ export function VoiceCall({
       {needsAudioUnlock && (
         <button
           type="button"
-          onClick={() => void room.startAudio()}
+          onClick={() => {
+            void room
+              .startAudio()
+              .finally(() => setNeedsAudioUnlock(!room.canPlaybackAudio));
+          }}
           className="bg-primary text-primary-foreground fixed bottom-24 left-1/2 z-50 flex -translate-x-1/2 items-center gap-2 rounded-full px-4 py-2 text-sm font-medium shadow-lg"
         >
           <Volume2 className="size-4" />
