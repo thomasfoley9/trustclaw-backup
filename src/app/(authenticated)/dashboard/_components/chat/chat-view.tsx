@@ -208,8 +208,10 @@ export function ChatView({
     isSupported: conversationSupported,
     phase: conversationPhase,
     active: conversationActive,
+    muted: conversationMuted,
     start: startConversationLoop,
     stop: stopConversationLoop,
+    toggleMute: toggleConversationMute,
   } = useVoiceConversation({
     onSend: handleSend,
     isAwaitingReply: isStreaming,
@@ -328,8 +330,10 @@ export function ChatView({
           conversationSupported={conversationSupported}
           conversationActive={conversationActive}
           conversationPhase={conversationPhase}
+          conversationMuted={conversationMuted}
           onStartConversation={handleStartConversation}
           onStopConversation={handleStopConversation}
+          onToggleMute={toggleConversationMute}
         />
       </div>
 

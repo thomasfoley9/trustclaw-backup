@@ -15,6 +15,7 @@ import {
   Ear,
   Loader2,
   AudioLines,
+  MicOff,
 } from "lucide-react";
 import type { ConversationPhase } from "./use-voice-conversation";
 import type { ChatStatus } from "ai";
@@ -41,8 +42,10 @@ interface ChatInputProps {
   conversationSupported: boolean;
   conversationActive: boolean;
   conversationPhase: ConversationPhase;
+  conversationMuted: boolean;
   onStartConversation: () => void;
   onStopConversation: () => void;
+  onToggleMute: () => void;
 }
 
 const CONVERSATION_STATUS: Record<
@@ -52,6 +55,7 @@ const CONVERSATION_STATUS: Record<
   listening: { icon: Ear, label: "Listening…" },
   thinking: { icon: Loader2, label: "Thinking…" },
   speaking: { icon: AudioLines, label: "Speaking…" },
+  muted: { icon: MicOff, label: "Muted" },
 };
 
 const MAX_MESSAGE_LENGTH = 50_000;
@@ -86,8 +90,10 @@ export function ChatInput({
   conversationSupported,
   conversationActive,
   conversationPhase,
+  conversationMuted,
   onStartConversation,
   onStopConversation,
+  onToggleMute,
 }: ChatInputProps) {
   const [input, setInput] = useState("");
   const [attachments, setAttachments] = useState<Attachment[]>([]);
@@ -254,8 +260,20 @@ export function ChatInput({
         )}
 
         {conversationActive && conversationPhase !== "off" && (
-          <div className="mb-2 flex items-center justify-between gap-2 rounded-2xl border border-primary/30 bg-primary/10 px-3 py-2">
-            <div className="text-primary flex items-center gap-2 text-sm font-medium">
+          <div
+            className={cn(
+              "mb-2 flex items-center justify-between gap-2 rounded-2xl border px-3 py-2",
+              conversationMuted
+                ? "border-border bg-muted/40"
+                : "border-primary/30 bg-primary/10",
+            )}
+          >
+            <div
+              className={cn(
+                "flex items-center gap-2 text-sm font-medium",
+                conversationMuted ? "text-muted-foreground" : "text-primary",
+              )}
+            >
               {(() => {
                 const { icon: Icon, label } =
                   CONVERSATION_STATUS[conversationPhase];
@@ -264,8 +282,12 @@ export function ChatInput({
                     <Icon
                       className={cn(
                         "size-4",
-                        conversationPhase === "thinking" && "animate-spin",
-                        conversationPhase !== "thinking" && "animate-pulse",
+                        !conversationMuted &&
+                          conversationPhase === "thinking" &&
+                          "animate-spin",
+                        !conversationMuted &&
+                          conversationPhase !== "thinking" &&
+                          "animate-pulse",
                       )}
                     />
                     <span>{label}</span>
@@ -273,9 +295,32 @@ export function ChatInput({
                 );
               })()}
             </div>
-            <span className="text-muted-foreground text-xs">
-              Hands-free — just talk
-            </span>
+            <button
+              type="button"
+              onClick={onToggleMute}
+              className={cn(
+                "flex items-center gap-1.5 rounded-lg px-2 py-1 text-xs font-medium transition-colors",
+                conversationMuted
+                  ? "text-primary hover:bg-primary/10"
+                  : "text-muted-foreground hover:bg-muted hover:text-foreground",
+              )}
+              aria-label={
+                conversationMuted ? "Unmute microphone" : "Mute microphone"
+              }
+              aria-pressed={conversationMuted}
+            >
+              {conversationMuted ? (
+                <>
+                  <Mic className="size-3.5" />
+                  Tap to talk
+                </>
+              ) : (
+                <>
+                  <MicOff className="size-3.5" />
+                  Mute
+                </>
+              )}
+            </button>
           </div>
         )}
 

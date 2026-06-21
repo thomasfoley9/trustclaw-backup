@@ -14,7 +14,12 @@ import type {
 const SILENCE_MS = 1400; // pause after speech that triggers an auto-send
 const STUCK_MS = 8_000; // coarse backstop if a turn never goes busy at all
 
-export type ConversationPhase = "off" | "listening" | "thinking" | "speaking";
+export type ConversationPhase =
+  | "off"
+  | "listening"
+  | "thinking"
+  | "speaking"
+  | "muted";
 
 interface Options {
   onSend: (text: string) => void;
@@ -45,6 +50,16 @@ export function useVoiceConversation({
   const setPhaseSafe = useCallback((p: ConversationPhase) => {
     phaseRef.current = p;
     setPhase(p);
+  }, []);
+
+  // Muted = the call stays alive but the mic is paused. Distinct from End (tear
+  // down) and the speaker toggle (output). mutedRef is read synchronously by the
+  // driver effect; the state mirror drives the button.
+  const [muted, setMutedState] = useState(false);
+  const mutedRef = useRef(false);
+  const setMuted = useCallback((m: boolean) => {
+    mutedRef.current = m;
+    setMutedState(m);
   }, []);
 
   const recognitionRef = useRef<SpeechRecognitionInstance | null>(null);
@@ -200,7 +215,7 @@ export function useVoiceConversation({
     // commit later) re-asserts busy and cancels this before the mic opens. The
     // genuine resume paths (tool-only reply, TTS failure, muted voice) have no
     // such follow-up, so the timer fires and they resume within a tick.
-    if (phaseRef.current === "listening") return;
+    if (phaseRef.current === "listening" || phaseRef.current === "muted") return;
     if (turnRanRef.current && !resumeTimer.current) {
       resumeTimer.current = setTimeout(() => {
         resumeTimer.current = null;
@@ -208,6 +223,12 @@ export function useVoiceConversation({
           return;
         }
         turnRanRef.current = false;
+        // Muted: the turn finished but the user paused the mic — park in
+        // "muted" instead of reopening it.
+        if (mutedRef.current) {
+          setPhaseSafe("muted");
+          return;
+        }
         setPhaseSafe("listening");
         startRecognition();
       }, 0);
@@ -223,6 +244,10 @@ export function useVoiceConversation({
     const t = setTimeout(() => {
       if (phaseRef.current === "thinking") {
         turnRanRef.current = false;
+        if (mutedRef.current) {
+          setPhaseSafe("muted");
+          return;
+        }
         setPhaseSafe("listening");
         startRecognition();
       }
@@ -270,9 +295,10 @@ export function useVoiceConversation({
     // The loop was stopped/torn down while the preflight was awaiting — abort.
     if (startTokenRef.current !== token) return;
     transcriptRef.current = "";
+    setMuted(false);
     setPhaseSafe("listening");
     startRecognition();
-  }, [isSupported, startRecognition, setPhaseSafe]);
+  }, [isSupported, startRecognition, setPhaseSafe, setMuted]);
 
   const stop = useCallback(() => {
     startTokenRef.current++; // invalidate any in-flight start() preflight
@@ -280,8 +306,28 @@ export function useVoiceConversation({
     stopRecognition();
     transcriptRef.current = "";
     turnRanRef.current = false;
+    setMuted(false);
     setPhaseSafe("off");
-  }, [stopRecognition, clearResume, setPhaseSafe]);
+  }, [stopRecognition, clearResume, setPhaseSafe, setMuted]);
+
+  // Mute = pause the mic without ending the call. Unmute resumes listening when
+  // idle (or after the current turn finishes, via the driver's resume branch).
+  const toggleMute = useCallback(() => {
+    if (mutedRef.current) {
+      setMuted(false);
+      if (phaseRef.current === "muted") {
+        setPhaseSafe("listening");
+        startRecognition();
+      }
+      // If still thinking/speaking, the driver resumes to listening on idle.
+    } else {
+      setMuted(true);
+      clearResume();
+      stopRecognition();
+      if (phaseRef.current === "listening") setPhaseSafe("muted");
+      // If thinking/speaking, the turn finishes then parks in "muted".
+    }
+  }, [setMuted, clearResume, stopRecognition, startRecognition, setPhaseSafe]);
 
   useEffect(() => {
     return () => {
@@ -294,5 +340,13 @@ export function useVoiceConversation({
     };
   }, [stopRecognition, clearResume]);
 
-  return { isSupported, phase, active: phase !== "off", start, stop };
+  return {
+    isSupported,
+    phase,
+    active: phase !== "off",
+    muted,
+    start,
+    stop,
+    toggleMute,
+  };
 }
