@@ -45,6 +45,13 @@ export const env = createEnv({
     // replies without bringing their own. A per-user voice key still overrides it.
     SMALLEST_API_KEY: z.string().optional(),
 
+    // Real-time voice (LiveKit). API key/secret mint room-join JWTs in the token
+    // route. VOICE_WORKER_SHARED_SECRET authenticates the LiveKit Python worker
+    // when it calls /api/voice-turn. All optional — voice is opt-in.
+    LIVEKIT_API_KEY: z.string().optional(),
+    LIVEKIT_API_SECRET: z.string().optional(),
+    VOICE_WORKER_SHARED_SECRET: z.string().optional(),
+
     // Cron auth. Required in production so unauthenticated callers can't hit
     // /api/cron/* endpoints. Vercel auto-injects this when crons are configured
     // in vercel.json; the trustclaw deploy CLI also generates one on first deploy.
@@ -67,6 +74,8 @@ export const env = createEnv({
   },
   client: {
     NEXT_PUBLIC_APP_URL: z.string().url(),
+    // LiveKit project URL (wss://...). The browser needs it to join the room.
+    NEXT_PUBLIC_LIVEKIT_URL: z.string().url().optional(),
   },
   runtimeEnv: {
     // Server
@@ -83,6 +92,10 @@ export const env = createEnv({
     DEEPSEEK_API_KEY: process.env.DEEPSEEK_API_KEY,
     MOONSHOT_API_KEY: process.env.MOONSHOT_API_KEY,
     SMALLEST_API_KEY: process.env.SMALLEST_API_KEY,
+    LIVEKIT_API_KEY: process.env.LIVEKIT_API_KEY,
+    LIVEKIT_API_SECRET: process.env.LIVEKIT_API_SECRET,
+    VOICE_WORKER_SHARED_SECRET: process.env.VOICE_WORKER_SHARED_SECRET,
+    NEXT_PUBLIC_LIVEKIT_URL: process.env.NEXT_PUBLIC_LIVEKIT_URL,
     CRON_SECRET: process.env.CRON_SECRET,
     SIGNUP_INVITE_CODE: process.env.SIGNUP_INVITE_CODE,
     GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID,

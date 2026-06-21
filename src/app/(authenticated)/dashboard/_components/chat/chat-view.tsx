@@ -19,6 +19,8 @@ import { ThinkingIndicator } from "./assistant-message/thinking-indicator";
 import { ChatInput } from "./chat-input";
 import { useVoicePlayback } from "./use-voice-playback";
 import { useVoiceConversation } from "./use-voice-conversation";
+import { VoiceCall } from "./voice-call";
+import { env } from "~/env";
 import { TerminalPane } from "../terminal/terminal-pane";
 import { ComposioCta } from "./composio-cta";
 import { OpenClawLogo } from "~/app/_components/openclaw-logo";
@@ -219,16 +221,37 @@ export function ChatView({
     isPreparing: voicePreparing,
   });
 
+  // Real-time path: when LiveKit is configured, the call button opens a true
+  // full-duplex LiveKit room (Agent A worker) instead of the browser Web Speech
+  // loop. The browser loop stays as the fallback when LiveKit isn't set up.
+  const liveKitConfigured = !!env.NEXT_PUBLIC_LIVEKIT_URL;
+  const [liveCallActive, setLiveCallActive] = useState(false);
+
   const handleStartConversation = useCallback(() => {
     voiceUnlock(); // prime audio within this gesture so replies can autoplay
+    if (liveKitConfigured) {
+      setLiveCallActive(true);
+      return;
+    }
     if (!voiceEnabled) toggleVoice(); // replies must be spoken to drive the loop
     void startConversationLoop();
-  }, [voiceUnlock, voiceEnabled, toggleVoice, startConversationLoop]);
+  }, [
+    voiceUnlock,
+    liveKitConfigured,
+    voiceEnabled,
+    toggleVoice,
+    startConversationLoop,
+  ]);
 
   const handleStopConversation = useCallback(() => {
     stopSpeaking(); // cut any reply still being spoken when the user ends the call
+    setLiveCallActive(false);
     stopConversationLoop();
   }, [stopSpeaking, stopConversationLoop]);
+
+  // Call-button state reflects either path.
+  const callActive = conversationActive || liveCallActive;
+  const callPhase = liveCallActive ? "listening" : conversationPhase;
 
   return (
     <div className="flex h-full overflow-hidden">
@@ -327,13 +350,17 @@ export function ChatView({
           voiceEnabled={voiceEnabled}
           voiceSpeaking={voiceSpeaking}
           onToggleVoice={toggleVoice}
-          conversationSupported={conversationSupported}
-          conversationActive={conversationActive}
-          conversationPhase={conversationPhase}
+          conversationSupported={conversationSupported || liveKitConfigured}
+          conversationActive={callActive}
+          conversationPhase={callPhase}
           conversationMuted={conversationMuted}
           onStartConversation={handleStartConversation}
           onStopConversation={handleStopConversation}
           onToggleMute={toggleConversationMute}
+        />
+        <VoiceCall
+          active={liveCallActive}
+          onEnded={() => setLiveCallActive(false)}
         />
       </div>
 
