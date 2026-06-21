@@ -23,11 +23,17 @@ const memoryContextRow = z.object({
 async function embedQuery(query: string): Promise<string> {
   const { embedding } = await embed({
     model: "openai/text-embedding-3-large",
-    value: query,
+    value: query.slice(0, 8000),
     providerOptions: {
       openai: { dimensions: 1024 },
     },
   });
+  // Guard the ::vector cast against a wrong-sized / non-finite embedding.
+  if (embedding.length !== 1024 || !embedding.every((n) => Number.isFinite(n))) {
+    throw new Error(
+      `unexpected embedding (${embedding.length} dims / non-finite values)`,
+    );
+  }
   return `[${embedding.join(",")}]`;
 }
 
@@ -45,39 +51,48 @@ export function createMemorySearchTool(
     description: "Search your memory for relevant past information",
     inputSchema: zodSchema(memorySearchSchema),
     execute: async ({ query, maxResults, category }) => {
-      const limit = maxResults ?? 5;
-      const embeddingString = await embedQuery(query);
+      try {
+        const limit = maxResults ?? 5;
+        const embeddingString = await embedQuery(query);
 
-      // A specific category restricts to that bucket; otherwise scope to the
-      // active bucket plus the shared `general` bucket.
-      const rows = category?.trim()
-        ? await db.$queryRaw`
-            SELECT id, content, category, 1 - (embedding <=> ${embeddingString}::vector) AS similarity
-            FROM composio_claw_memory
-            WHERE "instanceId" = ${instanceId} AND category = ${category.trim()}
-            ORDER BY embedding <=> ${embeddingString}::vector
-            LIMIT ${limit}
-          `
-        : await db.$queryRaw`
-            SELECT id, content, category, 1 - (embedding <=> ${embeddingString}::vector) AS similarity
-            FROM composio_claw_memory
-            WHERE "instanceId" = ${instanceId}
-              AND (category = ${activeBucket} OR category = ${DEFAULT_MEMORY_BUCKET})
-            ORDER BY embedding <=> ${embeddingString}::vector
-            LIMIT ${limit}
-          `;
+        // A specific category restricts to that bucket; otherwise scope to the
+        // active bucket plus the shared `general` bucket.
+        const rows = category?.trim()
+          ? await db.$queryRaw`
+              SELECT id, content, category, 1 - (embedding <=> ${embeddingString}::vector) AS similarity
+              FROM composio_claw_memory
+              WHERE "instanceId" = ${instanceId} AND category = ${category.trim()}
+              ORDER BY embedding <=> ${embeddingString}::vector
+              LIMIT ${limit}
+            `
+          : await db.$queryRaw`
+              SELECT id, content, category, 1 - (embedding <=> ${embeddingString}::vector) AS similarity
+              FROM composio_claw_memory
+              WHERE "instanceId" = ${instanceId}
+                AND (category = ${activeBucket} OR category = ${DEFAULT_MEMORY_BUCKET})
+              ORDER BY embedding <=> ${embeddingString}::vector
+              LIMIT ${limit}
+            `;
 
-      const results = z.array(memorySearchResultRow).parse(rows);
-      const filtered = results.filter((r) => r.similarity > 0.5);
+        const results = z.array(memorySearchResultRow).parse(rows);
+        const filtered = results.filter((r) => r.similarity > 0.5);
 
-      return {
-        found: filtered.length > 0,
-        memories: filtered.map((r) => ({
-          content: r.content,
-          category: r.category,
-          relevance: Math.round(r.similarity * 100) / 100,
-        })),
-      };
+        return {
+          found: filtered.length > 0,
+          memories: filtered.map((r) => ({
+            content: r.content,
+            category: r.category,
+            relevance: Math.round(r.similarity * 100) / 100,
+          })),
+        };
+      } catch (err) {
+        // A memory lookup failing shouldn't crash the turn — return nothing.
+        console.error(
+          "[memory_search] failed",
+          err instanceof Error ? err.message : err,
+        );
+        return { found: false, memories: [] };
+      }
     },
   };
 }

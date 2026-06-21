@@ -96,7 +96,7 @@ export function SearchToolResult({ data }: SearchToolResultProps) {
   const primaryTool = result.primary_tool_slugs?.[0];
   const primarySchema = primaryTool ? data.tool_schemas[primaryTool] : null;
   const relatedTools = result.related_tool_slugs ?? [];
-  const connection = data.toolkit_connection_statuses[0];
+  const connection = data.toolkit_connection_statuses?.[0];
 
   const allPitfalls = result.known_pitfalls ?? [];
   const primaryPitfalls = primaryTool

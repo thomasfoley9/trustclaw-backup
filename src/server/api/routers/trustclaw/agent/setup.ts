@@ -187,9 +187,16 @@ export async function prepareAgentRun(
           })
         : null;
       if (winner) {
+        // Best-effort orphan cleanup — never fail the run over it, but log so a
+        // persistent failure (DB trouble) is visible rather than silent.
         await db.conversation
           .delete({ where: { id: created.id } })
-          .catch(() => undefined);
+          .catch((err) => {
+            console.error(
+              "[setup] orphan conversation cleanup failed",
+              err instanceof Error ? err.message : err,
+            );
+          });
         conversation = winner;
       } else {
         conversation = created;
@@ -478,6 +485,10 @@ export async function prepareAgentRun(
     tools: allTools,
     stopWhen: stepCountIs(100),
     onFinish: async (result) => {
+      // B's full text — also the fallback narration if Agent A (or anything
+      // else in here) fails, so the waiting stream is never left to hang on the
+      // race timeout.
+      let executorText = "";
       try {
         const { totalUsage, steps } = result;
         const inputTokens = totalUsage.inputTokens ?? 0;
@@ -492,7 +503,6 @@ export async function prepareAgentRun(
         // the persisted message is [B's tool parts] + [A's narration text].
         const assistantParts: Array<Record<string, unknown>> = [];
         const toolNames: string[] = [];
-        let executorText = "";
 
         for (const step of steps) {
           for (let i = 0; i < step.toolCalls.length; i++) {
@@ -581,6 +591,10 @@ export async function prepareAgentRun(
       } catch (error) {
         console.error("[agent/onFinish] post-stream processing failed:", error);
       } finally {
+        // Idempotent: if the try already resolved with A's narration this is a
+        // no-op; if it threw first, unblock the waiting stream with B's text
+        // instead of forcing it to wait out the race timeout.
+        resolveNarration(executorText);
         await clearStreamingMessage(instanceId).catch((error) =>
           console.error(
             "[agent/onFinish] clearStreamingMessage failed:",

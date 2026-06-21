@@ -27,16 +27,17 @@ export const deletePersonality = protectedProcedure
       });
     }
 
-    // If the active personality is being deleted, fall back to the default
-    // soul prompt until another is selected.
-    if (instance.activePersonalityId === personality.id) {
-      await db.composioClawInstance.update({
-        where: { id: instance.id },
-        data: { activePersonalityId: null },
-      });
-    }
-
-    await db.personality.delete({ where: { id: personality.id } });
+    // Atomic: clear the active pointer (if it was this one) and delete together,
+    // so a reader can't observe activePersonalityId pointing at a deleted row.
+    await db.$transaction(async (tx) => {
+      if (instance.activePersonalityId === personality.id) {
+        await tx.composioClawInstance.update({
+          where: { id: instance.id },
+          data: { activePersonalityId: null },
+        });
+      }
+      await tx.personality.delete({ where: { id: personality.id } });
+    });
 
     return { id: personality.id };
   });

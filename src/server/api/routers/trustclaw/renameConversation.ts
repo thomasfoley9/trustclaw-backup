@@ -4,7 +4,9 @@ import { protectedProcedure } from "~/server/api/trpc";
 import { db } from "~/server/clients/db";
 
 export const renameConversation = protectedProcedure
-  .input(z.object({ id: z.string(), title: z.string().min(1).max(100) }))
+  // trim() before min(1) so a whitespace-only title is rejected rather than
+  // saved as an empty string.
+  .input(z.object({ id: z.string(), title: z.string().trim().min(1).max(100) }))
   .mutation(async ({ ctx, input }) => {
     const userId = ctx.session.user.id;
 
@@ -29,7 +31,7 @@ export const renameConversation = protectedProcedure
 
     return db.conversation.update({
       where: { id: conversation.id },
-      data: { title: input.title.trim() },
+      data: { title: input.title },
       select: { id: true, title: true, lastMessageAt: true },
     });
   });

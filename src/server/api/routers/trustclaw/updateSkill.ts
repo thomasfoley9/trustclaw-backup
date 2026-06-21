@@ -1,4 +1,5 @@
 import { TRPCError } from "@trpc/server";
+import { Prisma } from "~/generated/prisma/client";
 import { protectedProcedure } from "~/server/api/trpc";
 import { db } from "~/server/clients/db";
 import { requiredInputsSchema } from "./skills";
@@ -40,29 +41,46 @@ export const updateSkill = protectedProcedure
       }
     }
 
-    const updated = await db.skill.update({
-      where: { id: skill.id },
-      data: {
-        ...(input.name !== undefined && { name: input.name }),
-        ...(input.whenToUse !== undefined && { whenToUse: input.whenToUse }),
-        ...(input.instructions !== undefined && {
-          instructions: input.instructions,
-        }),
-        ...(input.requiredInputs !== undefined && {
-          requiredInputs: input.requiredInputs,
-        }),
-        ...(input.enabled !== undefined && { enabled: input.enabled }),
-      },
-      select: {
-        id: true,
-        name: true,
-        whenToUse: true,
-        instructions: true,
-        requiredInputs: true,
-        enabled: true,
-        isPreset: true,
-      },
-    });
+    let updated;
+    try {
+      updated = await db.skill.update({
+        where: { id: skill.id },
+        data: {
+          ...(input.name !== undefined && { name: input.name }),
+          ...(input.whenToUse !== undefined && { whenToUse: input.whenToUse }),
+          ...(input.instructions !== undefined && {
+            instructions: input.instructions,
+          }),
+          ...(input.requiredInputs !== undefined && {
+            requiredInputs: input.requiredInputs,
+          }),
+          ...(input.enabled !== undefined && { enabled: input.enabled }),
+        },
+        select: {
+          id: true,
+          name: true,
+          whenToUse: true,
+          instructions: true,
+          requiredInputs: true,
+          enabled: true,
+          isPreset: true,
+        },
+      });
+    } catch (err) {
+      // Backstop for the rename race the clash check above can't fully close.
+      if (
+        err instanceof Prisma.PrismaClientKnownRequestError &&
+        err.code === "P2002"
+      ) {
+        throw new TRPCError({
+          code: "CONFLICT",
+          message: input.name
+            ? `You already have a skill named "${input.name}".`
+            : "You already have a skill with that name.",
+        });
+      }
+      throw err;
+    }
     return {
       ...updated,
       requiredInputs: requiredInputsSchema.catch([]).parse(updated.requiredInputs),

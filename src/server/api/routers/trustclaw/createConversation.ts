@@ -14,16 +14,18 @@ export const createConversation = protectedProcedure.mutation(
       throw new TRPCError({ code: "NOT_FOUND", message: "Instance not found" });
     }
 
-    const conversation = await db.conversation.create({
-      data: { instanceId: instance.id, title: "New chat" },
-      select: { id: true, title: true, lastMessageAt: true },
+    // Atomic: the conversation and the active-pointer update commit together,
+    // so a failed update can't orphan the conversation.
+    return db.$transaction(async (tx) => {
+      const conversation = await tx.conversation.create({
+        data: { instanceId: instance.id, title: "New chat" },
+        select: { id: true, title: true, lastMessageAt: true },
+      });
+      await tx.composioClawInstance.update({
+        where: { id: instance.id },
+        data: { activeConversationId: conversation.id },
+      });
+      return conversation;
     });
-
-    await db.composioClawInstance.update({
-      where: { id: instance.id },
-      data: { activeConversationId: conversation.id },
-    });
-
-    return conversation;
   },
 );

@@ -45,7 +45,15 @@ export async function markRunEnded(conversationId: string): Promise<void> {
       where: { id: conversationId },
       data: { activeRunStartedAt: null },
     })
-    .catch(() => undefined);
+    .catch((err) => {
+      // Best-effort (don't rethrow — the run already finished), but not silent:
+      // a failure here strands the run flag until RUN_STALE_MS, blocking the
+      // conversation. Surface it so DB trouble is visible to operators.
+      console.error(
+        `[run-registry] failed to clear run flag for ${conversationId}:`,
+        err instanceof Error ? err.message : err,
+      );
+    });
 }
 
 export function abortRun(conversationId: string): boolean {

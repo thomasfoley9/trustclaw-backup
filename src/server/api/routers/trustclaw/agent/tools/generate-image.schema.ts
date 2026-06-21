@@ -3,6 +3,8 @@ import { z } from "zod";
 export const generateImageSchema = z.object({
   prompt: z
     .string()
+    .min(1)
+    .max(2000)
     .describe("Detailed description of the image to generate"),
   size: z
     .enum(["1024x1024", "1536x1024", "1024x1536"])

@@ -67,6 +67,25 @@ export const saveConversationToBucket = protectedProcedure
       ),
     );
     const savedCount = results.filter((r) => r.status === "fulfilled").length;
+    const failures = results.filter(
+      (r): r is PromiseRejectedResult => r.status === "rejected",
+    );
+    if (failures.length > 0) {
+      console.error(
+        `[saveConversationToBucket] ${failures.length}/${results.length} saves failed`,
+        failures[0]?.reason instanceof Error
+          ? failures[0].reason.message
+          : failures[0]?.reason,
+      );
+    }
+    // If there was something to save but nothing landed, surface it instead of
+    // reporting a hollow success.
+    if (statements.length > 0 && savedCount === 0) {
+      throw new TRPCError({
+        code: "INTERNAL_SERVER_ERROR",
+        message: "Couldn't save to your bucket — please try again.",
+      });
+    }
 
     return { savedCount };
   });

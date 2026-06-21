@@ -2,7 +2,7 @@ import { z } from "zod";
 import { selectableModelSchema } from "./createInstance.schema";
 import { memoryBucketSchema } from "./memory-buckets";
 
-const ianaTimezone = z
+export const ianaTimezone = z
   .string()
   .refine(
     (tz) => {

@@ -2,6 +2,7 @@
 // Adaptive chunking / staged summarization from openclaw: src/agents/compaction.ts:110-129, 244-305
 // Fallback chain from openclaw: src/agents/compaction.ts:176-242
 import { generateText, type LanguageModel } from "ai";
+import { Prisma } from "~/generated/prisma/client";
 import { db } from "~/server/clients/db";
 import { resolveAgentModel } from "../resolve-model";
 import type { ReconstructedMessage } from "../types";
@@ -156,7 +157,24 @@ export async function runCompaction(
         tokensAtCompaction: estimatedTokens,
       },
     });
-  } catch {
+  } catch (err) {
+    // P2025 = the optimistic lock lost: a concurrent compaction already advanced
+    // compactionCount. Benign — this run's summary is discarded and the next
+    // turn recomputes from the winner's boundary. Anything else is a real
+    // persistence failure that was previously invisible.
+    if (
+      err instanceof Prisma.PrismaClientKnownRequestError &&
+      err.code === "P2025"
+    ) {
+      console.warn(
+        `[compaction] optimistic lock lost for conversation ${conversationId} — a concurrent compaction won; skipping`,
+      );
+    } else {
+      console.error(
+        `[compaction] failed to persist summary for conversation ${conversationId}:`,
+        err instanceof Error ? err.message : err,
+      );
+    }
     return null;
   }
 

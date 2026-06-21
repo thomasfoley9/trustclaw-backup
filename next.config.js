@@ -68,7 +68,10 @@ const config = {
                     "style-src 'self' 'unsafe-inline'",
                     "img-src 'self' data: https:",
                     "font-src 'self' data:",
-                    "connect-src 'self' *.composio.dev",
+                    // LiveKit Cloud: wss:// for the realtime signal socket and
+                    // https:// for the region-settings fetch (voice calls). The
+                    // wildcard covers the project host and its regional edges.
+                    "connect-src 'self' *.composio.dev wss://*.livekit.cloud https://*.livekit.cloud",
                     "frame-ancestors 'none'",
                     "object-src 'none'",
                     "base-uri 'self'",

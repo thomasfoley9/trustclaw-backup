@@ -15,18 +15,18 @@ export function ComposioKeyBanner() {
   if (!data || data.hasKey) return null;
 
   return (
-    <div className="border-b bg-amber-50 px-4 py-2 text-sm dark:bg-amber-950/30">
-      <div className="mx-auto flex max-w-5xl items-center justify-between gap-3">
-        <div className="flex items-center gap-2 text-amber-900 dark:text-amber-200">
-          <KeyRound className="h-4 w-4 shrink-0" />
+    <div className="bg-chart-4/10 border-border border-b px-4 py-2 text-sm">
+      <div className="mx-auto flex max-w-5xl flex-col items-start justify-between gap-2 md:flex-row md:items-center md:gap-3">
+        <div className="text-foreground flex items-center gap-2">
+          <KeyRound className="text-chart-4 h-4 w-4 shrink-0" />
           <span>
-            No Composio API key set — tools and integrations are disabled
-            until you add one.
+            No Composio API key set — tools and integrations are disabled until
+            you add one.
           </span>
         </div>
         <Link
           href="/dashboard/settings"
-          className="shrink-0 rounded-md border border-amber-700/30 bg-amber-100 px-3 py-1 text-xs font-medium text-amber-900 hover:bg-amber-200 dark:border-amber-300/30 dark:bg-amber-900/50 dark:text-amber-100 dark:hover:bg-amber-900/70"
+          className="border-chart-4/30 bg-chart-4/15 text-foreground hover:bg-chart-4/25 shrink-0 rounded-md border px-3 py-1 text-xs font-medium"
         >
           Add key
         </Link>

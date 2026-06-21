@@ -10,6 +10,7 @@ import { TerminalLogEntry } from "./terminal-log-entry";
 import { CockpitView } from "./cockpit-view";
 import { toolCallToLogEntry } from "./types";
 import type { TerminalLogEntryData } from "./types";
+import type { VoiceCockpitEvent } from "../chat/voice-call";
 
 export function useToolFocusHighlight() {
   useEffect(() => {
@@ -53,9 +54,18 @@ interface TerminalPaneProps {
   messages: UIMessage[];
   status: ChatStatus;
   onHide?: () => void;
+  // Live Agent B tool activity from an in-progress voice call. These don't live
+  // in the message stream (the voice turn runs server-side), so they're merged
+  // in here for the duration of the call.
+  liveEvents?: VoiceCockpitEvent[];
 }
 
-export function TerminalPane({ messages, status, onHide }: TerminalPaneProps) {
+export function TerminalPane({
+  messages,
+  status,
+  onHide,
+  liveEvents,
+}: TerminalPaneProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const [isAutoScroll, setIsAutoScroll] = useState(true);
   // Two altitudes: "live" = curated cockpit (what the agent is doing), the
@@ -63,8 +73,10 @@ export function TerminalPane({ messages, status, onHide }: TerminalPaneProps) {
   const [viewMode, setViewMode] = useState<"live" | "receipts">("live");
 
   useToolFocusHighlight();
-  const toolCount = useToolCallCount(messages);
+  const toolCount = useToolCallCount(messages) + (liveEvents?.length ?? 0);
 
+  // Stable timestamps for voice events (which carry no time of their own).
+  const voiceTimestamps = useRef(new Map<string, Date>());
   const logEntries = useMemo(() => {
     const entries: TerminalLogEntryData[] = [];
     for (const msg of messages) {
@@ -75,8 +87,26 @@ export function TerminalPane({ messages, status, onHide }: TerminalPaneProps) {
         }
       }
     }
+    for (const e of liveEvents ?? []) {
+      if (!voiceTimestamps.current.has(e.id)) {
+        voiceTimestamps.current.set(e.id, new Date());
+      }
+      entries.push({
+        id: e.id,
+        toolName: e.name,
+        status: e.status === "done" ? "complete" : "executing",
+        timestamp: voiceTimestamps.current.get(e.id)!,
+        args: e.args ?? {},
+      });
+    }
     return entries;
-  }, [messages, status]);
+  }, [messages, status, liveEvents]);
+
+  // Drop the per-call timestamp cache once the call ends (liveEvents cleared) so
+  // it doesn't accumulate stale ids across calls in a long session.
+  useEffect(() => {
+    if (!liveEvents || liveEvents.length === 0) voiceTimestamps.current.clear();
+  }, [liveEvents]);
 
   const lastToolCallIdRef = useRef<string | null>(null);
   useEffect(() => {

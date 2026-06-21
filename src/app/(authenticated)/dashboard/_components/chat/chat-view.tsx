@@ -6,6 +6,7 @@ import {
   useRef,
   useEffect,
   useLayoutEffect,
+  useMemo,
 } from "react";
 import type { UIMessage } from "@ai-sdk/react";
 import { Loader2, ArrowDown } from "lucide-react";
@@ -19,7 +20,11 @@ import { ThinkingIndicator } from "./assistant-message/thinking-indicator";
 import { ChatInput } from "./chat-input";
 import { useVoicePlayback } from "./use-voice-playback";
 import { useVoiceConversation } from "./use-voice-conversation";
-import { VoiceCall } from "./voice-call";
+import {
+  VoiceCall,
+  type VoiceCockpitEvent,
+  type VoiceTranscriptEntry,
+} from "./voice-call";
 import { env } from "~/env";
 import { TerminalPane } from "../terminal/terminal-pane";
 import { ComposioCta } from "./composio-cta";
@@ -74,7 +79,59 @@ export function ChatView({
   });
   const terminalOpen = useTerminalStore((s) => s.terminalOpen);
   const setTerminalOpen = useTerminalStore((s) => s.setTerminalOpen);
-  const isEmpty = messages.length === 0;
+
+  // Live voice-call overlay: ephemeral transcript lines + Agent B tool events
+  // arriving over the LiveKit data channel during a call. Display-only — the
+  // voice turn itself is persisted server-side to its own conversation thread.
+  const [voiceTranscripts, setVoiceTranscripts] = useState<
+    VoiceTranscriptEntry[]
+  >([]);
+  const [voiceEvents, setVoiceEvents] = useState<VoiceCockpitEvent[]>([]);
+  const clearVoiceOverlay = useCallback(() => {
+    setVoiceTranscripts([]);
+    setVoiceEvents([]);
+  }, []);
+  const handleTranscript = useCallback((entries: VoiceTranscriptEntry[]) => {
+    // useTranscriptions emits a fresh array reference on every tick; skip the
+    // state update (and re-render) when the content is unchanged.
+    setVoiceTranscripts((prev) => {
+      if (
+        prev.length === entries.length &&
+        prev.every(
+          (p, i) => p.id === entries[i]?.id && p.text === entries[i]?.text,
+        )
+      ) {
+        return prev;
+      }
+      return entries;
+    });
+  }, []);
+  const handleCockpitEvent = useCallback((event: VoiceCockpitEvent) => {
+    setVoiceEvents((prev) => {
+      const idx = prev.findIndex((p) => p.id === event.id);
+      if (idx === -1) return [...prev, event];
+      const next = prev.slice();
+      // Merge so the later "done" event (which carries no args) keeps the args
+      // captured on the earlier "running" event.
+      next[idx] = { ...prev[idx], ...event };
+      return next;
+    });
+  }, []);
+
+  // The rendered list = persisted chat messages + ephemeral voice transcript
+  // lines (as plain text bubbles). Effects below still key off `messages`.
+  const displayMessages = useMemo<UIMessage[]>(() => {
+    if (voiceTranscripts.length === 0) return messages;
+    const ephemeral = voiceTranscripts.map(
+      (t): UIMessage => ({
+        id: `voice-${t.id}`,
+        role: t.role,
+        parts: [{ type: "text", text: t.text }],
+      }),
+    );
+    return [...messages, ...ephemeral];
+  }, [messages, voiceTranscripts]);
+  const isEmpty = displayMessages.length === 0;
 
   const {
     enabled: voiceEnabled,
@@ -194,6 +251,7 @@ export function ChatView({
 
   const handleSend = useCallback(
     (text: string, files?: ChatFilePart[]) => {
+      clearVoiceOverlay(); // typing clears the voice overlay so text chat stays clean
       stopSpeaking(); // barge-in: cut off any reply still being spoken aloud
       voiceUnlock(); // prime audio within this gesture so the reply can autoplay
       const result = sendMessage(text, files);
@@ -201,8 +259,14 @@ export function ChatView({
       requestAnimationFrame(() => scrollToBottom("smooth"));
       return result;
     },
-    [sendMessage, scrollToBottom, stopSpeaking, voiceUnlock],
+    [sendMessage, scrollToBottom, stopSpeaking, voiceUnlock, clearVoiceOverlay],
   );
+
+  // Follow the live transcript down as new lines stream in (when already at the
+  // bottom). `messages`-keyed scroll effects don't fire on transcript updates.
+  useEffect(() => {
+    if (atBottomRef.current) scrollToBottom("auto");
+  }, [voiceTranscripts, scrollToBottom]);
 
   // Hands-free conversation loop: listens, auto-sends on a pause, and resumes
   // listening after each reply is spoken. STT pauses while thinking/speaking.
@@ -230,6 +294,8 @@ export function ChatView({
   const handleStartConversation = useCallback(() => {
     voiceUnlock(); // prime audio within this gesture so replies can autoplay
     if (liveKitConfigured) {
+      clearVoiceOverlay(); // start each call with a fresh transcript + action feed
+      setTerminalOpen(true); // surface the Live pane so actions are visible
       setLiveCallActive(true);
       return;
     }
@@ -241,6 +307,8 @@ export function ChatView({
     voiceEnabled,
     toggleVoice,
     startConversationLoop,
+    clearVoiceOverlay,
+    setTerminalOpen,
   ]);
 
   const handleStopConversation = useCallback(() => {
@@ -294,7 +362,7 @@ export function ChatView({
                   <Loader2 className="text-muted-foreground h-4 w-4 animate-spin" />
                 </div>
               )}
-              {messages.map((message) => (
+              {displayMessages.map((message) => (
                 <div
                   key={message.id}
                   className="mx-auto w-full max-w-3xl px-4 pt-6 md:px-8"
@@ -361,6 +429,8 @@ export function ChatView({
         <VoiceCall
           active={liveCallActive}
           onEnded={() => setLiveCallActive(false)}
+          onCockpitEvent={handleCockpitEvent}
+          onTranscript={handleTranscript}
         />
       </div>
 
@@ -370,6 +440,7 @@ export function ChatView({
             messages={messages}
             status={status}
             onHide={() => setTerminalOpen(false)}
+            liveEvents={voiceEvents}
           />
         </div>
       )}

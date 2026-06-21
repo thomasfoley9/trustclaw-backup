@@ -1,3 +1,4 @@
+import { Prisma } from "~/generated/prisma/client";
 import { protectedProcedure } from "~/server/api/trpc";
 import { db } from "~/server/clients/db";
 import { createInstanceInput } from "./createInstance.schema";
@@ -172,26 +173,44 @@ export const createInstance = protectedProcedure
       ? assembleSoulPrompt(onboardingState)
       : null;
 
-    const instance = await db.composioClawInstance.create({
-      data: {
-        userId,
-        anthropicModel: input.anthropicModel,
-        identityPrompt,
-        soulPrompt,
-      },
-      select: INSTANCE_SELECT,
-    });
-
-    // Every instance starts with one active chat session so the chat UI has a
-    // conversation to load immediately.
-    const conversation = await db.conversation.create({
-      data: { instanceId: instance.id, title: "New chat" },
-      select: { id: true },
-    });
-    await db.composioClawInstance.update({
-      where: { id: instance.id },
-      data: { activeConversationId: conversation.id },
-    });
-
-    return instance;
+    // Atomic create: instance + its first conversation + the active pointer all
+    // commit together (no orphaned conversation if a later step fails). A racing
+    // create for the same user trips the userId unique constraint (P2002); treat
+    // that as idempotent and return whatever the winning request created.
+    try {
+      return await db.$transaction(async (tx) => {
+        const instance = await tx.composioClawInstance.create({
+          data: {
+            userId,
+            anthropicModel: input.anthropicModel,
+            identityPrompt,
+            soulPrompt,
+          },
+          select: INSTANCE_SELECT,
+        });
+        // Every instance starts with one active chat so the UI has a
+        // conversation to load immediately.
+        const conversation = await tx.conversation.create({
+          data: { instanceId: instance.id, title: "New chat" },
+          select: { id: true },
+        });
+        await tx.composioClawInstance.update({
+          where: { id: instance.id },
+          data: { activeConversationId: conversation.id },
+        });
+        return instance;
+      });
+    } catch (err) {
+      if (
+        err instanceof Prisma.PrismaClientKnownRequestError &&
+        err.code === "P2002"
+      ) {
+        const raced = await db.composioClawInstance.findUnique({
+          where: { userId },
+          select: INSTANCE_SELECT,
+        });
+        if (raced) return raced;
+      }
+      throw err;
+    }
   });

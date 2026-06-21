@@ -11,6 +11,8 @@ async function validateAgainstComposio(apiKey: string): Promise<void> {
   try {
     res = await fetch(`${COMPOSIO_BASE_URL}/api/v3/toolkits?limit=1`, {
       headers: { "x-api-key": apiKey },
+      // Don't let a hung upstream pin the serverless function — bail after 8s.
+      signal: AbortSignal.timeout(8000),
     });
   } catch {
     throw new TRPCError({

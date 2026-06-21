@@ -1,8 +1,4 @@
-import {
-  AccessToken,
-  RoomConfiguration,
-  RoomAgentDispatch,
-} from "livekit-server-sdk";
+import { AccessToken, AgentDispatchClient } from "livekit-server-sdk";
 import { auth } from "~/server/auth";
 import { db } from "~/server/clients/db";
 import { env } from "~/env";
@@ -60,7 +56,9 @@ export async function POST(request: Request) {
     agentBModel: instance.anthropicModel,
   });
 
-  const roomName = `claw_voice_${userId}`;
+  // Unique room per call (keyed by the fresh conversation) → a clean room with
+  // exactly one agent dispatch, no leftover dispatches from prior calls.
+  const roomName = `claw_voice_${conversation.id}`;
   const at = new AccessToken(apiKey, apiSecret, {
     identity: `user_${userId}`,
     name: session.user.name ?? "user",
@@ -75,15 +73,37 @@ export async function POST(request: Request) {
     canPublishData: true,
     canSubscribe: true,
   });
-  // Explicitly dispatch the named worker into this room and hand it the session
-  // config (the agent reads ctx.job.metadata).
-  at.roomConfig = new RoomConfiguration({
-    agents: [
-      new RoomAgentDispatch({ agentName: "claw-voice", metadata: sessionConfig }),
-    ],
-  });
-
   const token = await at.toJwt();
+
+  // Dispatch the worker EXPLICITLY via the dispatch API — the same reliable path
+  // LiveKit's own console uses. Embedding the dispatch in the join token
+  // (RoomConfiguration) proved flaky for Cloud agents. The agent reads
+  // ctx.job.metadata for the session config.
+  const httpUrl = serverUrl.replace(/^ws/, "http"); // wss:// -> https://
+  const dispatcher = new AgentDispatchClient(httpUrl, apiKey, apiSecret);
+  try {
+    // Bounded: if the dispatch service is slow/unreachable, fail fast with a
+    // clear error instead of hanging the call (or 500ing) and leaving the user
+    // in an agent-less room.
+    await Promise.race([
+      dispatcher.createDispatch(roomName, "claw-voice", {
+        metadata: sessionConfig,
+      }),
+      new Promise((_, reject) =>
+        setTimeout(() => reject(new Error("dispatch timeout")), 8000),
+      ),
+    ]);
+  } catch {
+    // Don't leave an orphaned "Voice call" conversation behind if the agent
+    // never got dispatched.
+    await db.conversation
+      .delete({ where: { id: conversation.id } })
+      .catch(() => undefined);
+    return new Response("Couldn't start the voice agent — try again.", {
+      status: 503,
+    });
+  }
+
   return Response.json(
     { serverUrl, roomName, token, conversationId: conversation.id },
     { headers: { "Cache-Control": "no-store" } },

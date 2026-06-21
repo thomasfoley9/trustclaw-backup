@@ -27,32 +27,36 @@ export const deleteConversation = protectedProcedure
       });
     }
 
-    // Cascade-deletes the conversation's messages.
-    await db.conversation.delete({ where: { id: conversation.id } });
+    // Atomic: delete + re-point the active pointer together, so a concurrent
+    // reader can't observe an activeConversationId pointing at a deleted row.
+    return db.$transaction(async (tx) => {
+      // Cascade-deletes the conversation's messages.
+      await tx.conversation.delete({ where: { id: conversation.id } });
 
-    // If the deleted session was active, fall back to the most recent
-    // remaining one (creating a fresh one if none remain), so there's always
-    // an active session.
-    let activeConversationId = instance.activeConversationId;
-    if (activeConversationId === conversation.id) {
-      const next = await db.conversation.findFirst({
-        where: { instanceId: instance.id },
-        select: { id: true },
-        orderBy: { lastMessageAt: "desc" },
-      });
-      activeConversationId =
-        next?.id ??
-        (
-          await db.conversation.create({
-            data: { instanceId: instance.id, title: "New chat" },
-            select: { id: true },
-          })
-        ).id;
-      await db.composioClawInstance.update({
-        where: { id: instance.id },
-        data: { activeConversationId },
-      });
-    }
+      // If the deleted session was active, fall back to the most recent
+      // remaining one (creating a fresh one if none remain), so there's always
+      // an active session.
+      let activeConversationId = instance.activeConversationId;
+      if (activeConversationId === conversation.id) {
+        const next = await tx.conversation.findFirst({
+          where: { instanceId: instance.id },
+          select: { id: true },
+          orderBy: { lastMessageAt: "desc" },
+        });
+        activeConversationId =
+          next?.id ??
+          (
+            await tx.conversation.create({
+              data: { instanceId: instance.id, title: "New chat" },
+              select: { id: true },
+            })
+          ).id;
+        await tx.composioClawInstance.update({
+          where: { id: instance.id },
+          data: { activeConversationId },
+        });
+      }
 
-    return { id: conversation.id, activeConversationId };
+      return { id: conversation.id, activeConversationId };
+    });
   });

@@ -15,6 +15,8 @@ async function validateAgainstAnthropic(apiKey: string): Promise<void> {
         "x-api-key": apiKey,
         "anthropic-version": "2023-06-01",
       },
+      // Don't let a hung upstream pin the serverless function — bail after 8s.
+      signal: AbortSignal.timeout(8000),
     });
   } catch {
     throw new TRPCError({

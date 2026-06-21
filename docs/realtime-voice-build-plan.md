@@ -122,7 +122,42 @@ refactoring A→B.
   deprecated text one); `AgentServer`/`@server.rtc_session` vs `WorkerOptions` (both exist in 1.x —
   most sample code still uses `WorkerOptions`).
 
-## Open questions (answer to finalize)
+## Design C — LOCKED (2026-06-21, supersedes the no-LLM `llm_node` bridge above)
+
+The architecture evolved from "no-LLM bridge" to a real, on-label LLM front. The
+spike (no-LLM stub) still validates the audio plane (Smallest STT/TTS + barge-in);
+the **real build is Design C**, which kills the off-label fragility.
+
+- **Agent A = a real `llm=` in LiveKit** — the conversational voice front (persona,
+  fast). It has ONE function tool, `delegate(intent)`. Chit-chat → A answers
+  directly; real work → A calls `delegate`. On-label → robust.
+- **Agent B = the existing `/api/voice-turn` agent** (Composio + tools, user's
+  model) invoked via `delegate`. A passes a concise *intent* + the conversation id;
+  B is the smart executor and returns a result; A condenses it for voice.
+- **Models (shipped):** A = `agentAModel` (Settings, default house Kimi K2 — agentic
+  /tool-calling); B = `anthropicModel` (user's key, Opus-grade for serious work).
+- **Memory/thread = SEPARATE.** Voice gets its **own conversation thread** (clean,
+  fast, no concurrency races with text) but **inherits the shared instance-level
+  pgvector memory** automatically (so it still "knows you"). Optional future:
+  a "continue this conversation by voice" button to attach a voice call to a chosen
+  text thread for live same-task handoff.
+- **Capability awareness:** A's system prompt is injected with the user's connected
+  Composio toolkits so it routes correctly (delegate vs. answer).
+- **Filler:** A acknowledges in persona the instant it delegates ("on it — pulling
+  your inbox"), then quiet while the cockpit shows progress; one nudge on long jobs;
+  **no hold music**.
+- **Confirm-gate (side-effects):** B **stages** writes (drafts replies, stages CRM
+  fields) without committing → A voices a tight confirm → user "yes" → B commits.
+  Read-only flows run free; the cockpit shows what's staged.
+- **Barge-in ≠ cancel:** interrupting A stops its speech + listens (B keeps
+  working); only an explicit "stop/cancel" aborts B (needs the server-side abort).
+- **Session:** greet on connect; the call rides a fresh voice conversation; hang up
+  ends the call but memory persists; idle-timeout auto-ends.
+- **Security:** `/api/voice-turn` = worker shared-secret (constant-time) +
+  LiveKit-verified user binding + rate limit; token endpoint auth-gated + room
+  derived server-side per user; sensitive core (keys, DB, A→B) stays on Vercel.
+
+## Open questions (mostly resolved — see Design C above)
 - LiveKit project **region** (→ Fly `primary_region` for min round-trip).
 - Is A→B already factored into a reusable lib, or does step 2 extract it first?
 - Dispatch: explicit `RoomConfiguration(agent_name)` in the token vs implicit auto-join?

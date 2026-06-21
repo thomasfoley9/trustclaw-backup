@@ -6,14 +6,27 @@ import {
   RoomContext,
   RoomAudioRenderer,
   useDataChannel,
+  useTranscriptions,
+  useLocalParticipant,
 } from "@livekit/components-react";
 import { showErrorToast } from "~/components/core/toast-notifications";
 
 // A live Agent B tool event forwarded from the LiveKit worker's cockpit channel.
 export interface VoiceCockpitEvent {
   type: "b_tool";
+  // toolCallId from Agent B — stable key so running→done updates in place.
+  id: string;
   name: string;
   status: "running" | "done";
+  // The tool's input args (Composio call payload), shown in the Receipts view.
+  args?: Record<string, unknown>;
+}
+
+// One line of the live call transcript (your speech or Claw's reply).
+export interface VoiceTranscriptEntry {
+  id: string;
+  role: "user" | "assistant";
+  text: string;
 }
 
 interface VoiceCallProps {
@@ -23,6 +36,8 @@ interface VoiceCallProps {
   onEnded: () => void;
   // Live Agent B tool activity → the cockpit pane.
   onCockpitEvent?: (event: VoiceCockpitEvent) => void;
+  // Live STT/TTS transcript of the call → the chat message list.
+  onTranscript?: (entries: VoiceTranscriptEntry[]) => void;
 }
 
 // Real-time voice: connects the browser to the user's LiveKit room (token minted
@@ -30,7 +45,12 @@ interface VoiceCallProps {
 // publishes the mic, and plays the agent's audio. Replaces the browser Web Speech
 // loop on the real-time path. Renders nothing visible itself — audio + a hidden
 // cockpit-data bridge.
-export function VoiceCall({ active, onEnded, onCockpitEvent }: VoiceCallProps) {
+export function VoiceCall({
+  active,
+  onEnded,
+  onCockpitEvent,
+  onTranscript,
+}: VoiceCallProps) {
   const [room] = useState(() => new Room());
   const onEndedRef = useRef(onEnded);
   useEffect(() => {
@@ -41,7 +61,11 @@ export function VoiceCall({ active, onEnded, onCockpitEvent }: VoiceCallProps) {
     if (!active) return;
     let cancelled = false;
 
-    const onDisconnected = () => onEndedRef.current();
+    // Guard against a late 'disconnected' firing after cleanup (room.disconnect
+    // is fire-and-forget), which would call onEnded on an unmounted parent.
+    const onDisconnected = () => {
+      if (!cancelled) onEndedRef.current();
+    };
     room.on("disconnected", onDisconnected);
 
     void (async () => {
@@ -82,8 +106,36 @@ export function VoiceCall({ active, onEnded, onCockpitEvent }: VoiceCallProps) {
     <RoomContext.Provider value={room}>
       <RoomAudioRenderer />
       <CockpitBridge onCockpitEvent={onCockpitEvent} />
+      <TranscriptBridge onTranscript={onTranscript} />
     </RoomContext.Provider>
   );
+}
+
+// Reads LiveKit transcription text streams (agent STT/TTS) and hands them up as
+// {role, text} lines so the chat can render the live conversation. Identity ===
+// the local participant means it's the user speaking; anything else is Claw.
+function TranscriptBridge({
+  onTranscript,
+}: {
+  onTranscript?: (entries: VoiceTranscriptEntry[]) => void;
+}) {
+  const transcriptions = useTranscriptions();
+  const { localParticipant } = useLocalParticipant();
+  const localIdentity = localParticipant?.identity;
+  useEffect(() => {
+    if (!onTranscript) return;
+    onTranscript(
+      transcriptions.map(
+        (t): VoiceTranscriptEntry => ({
+          id: t.streamInfo.id,
+          role:
+            t.participantInfo.identity === localIdentity ? "user" : "assistant",
+          text: t.text,
+        }),
+      ),
+    );
+  }, [transcriptions, localIdentity, onTranscript]);
+  return null;
 }
 
 // Decodes the worker's 'cockpit' data-channel messages (Agent B tool events) and
@@ -99,7 +151,10 @@ function CockpitBridge({
       const parsed = JSON.parse(
         new TextDecoder().decode(msg.payload),
       ) as VoiceCockpitEvent;
-      if (parsed?.type === "b_tool") onCockpitEvent(parsed);
+      // Fall back to the tool name as the key for older events without an id.
+      if (parsed?.type === "b_tool") {
+        onCockpitEvent({ ...parsed, id: parsed.id ?? parsed.name });
+      }
     } catch {
       // ignore malformed cockpit payloads
     }

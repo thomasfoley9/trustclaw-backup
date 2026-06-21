@@ -34,7 +34,11 @@ export const generateSkill = protectedProcedure
         maxOutputTokens: 2_000,
       });
       return object;
-    } catch {
+    } catch (err) {
+      console.error(
+        "[generateSkill] drafting failed",
+        err instanceof Error ? err.message : err,
+      );
       throw new TRPCError({
         code: "INTERNAL_SERVER_ERROR",
         message: "Couldn't draft a skill from that — try rephrasing.",

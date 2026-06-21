@@ -79,6 +79,22 @@ export const updateSettings = protectedProcedure
       }
     }
 
+    // Likewise, don't let a client point activeMemoryBucket at a bucket that
+    // isn't theirs (or doesn't exist) — otherwise the agent could save to /
+    // recall from a slug it shouldn't.
+    if (input.activeMemoryBucket) {
+      const owned = await db.memoryBucket.findFirst({
+        where: { slug: input.activeMemoryBucket, instanceId: instance.id },
+        select: { id: true },
+      });
+      if (!owned) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "That memory bucket doesn't exist.",
+        });
+      }
+    }
+
     const [updated] = await db.$transaction([
       db.composioClawInstance.update({
         where: { userId },

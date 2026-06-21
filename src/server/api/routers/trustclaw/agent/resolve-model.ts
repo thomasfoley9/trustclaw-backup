@@ -138,7 +138,13 @@ export async function resolveAgentModel(
     let apiKey: string | null = null;
     try {
       apiKey = row?.providerApiKey ? decryptSecret(row.providerApiKey) : null;
-    } catch {
+    } catch (err) {
+      // A stored key that won't decrypt (corrupt row / wrong ENCRYPTION_KEY)
+      // shouldn't be silently indistinguishable from "no key set".
+      console.error(
+        `[resolve-model] failed to decrypt provider key for ${modelId}`,
+        err instanceof Error ? err.message : err,
+      );
       apiKey = null;
     }
     // Anthropic custom ids can reuse the instance's Anthropic key.

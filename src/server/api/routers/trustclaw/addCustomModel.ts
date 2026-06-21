@@ -31,6 +31,28 @@ export const addCustomModel = protectedProcedure
       });
     }
 
+    // Only providers resolve-model can actually call — otherwise the row is
+    // stored but fails opaquely at chat time instead of here.
+    const ALLOWED_PROVIDERS = new Set([
+      "openai",
+      "anthropic",
+      "google",
+      "deepseek",
+      "moonshot",
+      "openrouter",
+      "groq",
+      "together",
+      "xai",
+      "fireworks",
+    ]);
+    if (!ALLOWED_PROVIDERS.has(provider)) {
+      throw new TRPCError({
+        code: "BAD_REQUEST",
+        message:
+          "Unsupported provider. Use one of: openai, anthropic, google, deepseek, moonshot, openrouter, groq, together, xai, fireworks.",
+      });
+    }
+
     // Catch obvious paste-into-wrong-field mistakes so a key isn't sent to a
     // provider it doesn't belong to. Lenient: only the clearest cross-provider
     // cases are rejected.

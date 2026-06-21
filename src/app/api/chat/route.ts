@@ -299,7 +299,12 @@ export async function POST(request: Request) {
       })
       .catch(() => undefined);
     await clearStreamingMessage(instanceId).catch(() => undefined);
-    await markRunEnded(conversationId);
+    // Guard the unclaim: a throw here would mask the real error above, and a
+    // silent failure would strand the run flag (blocking the chat until the
+    // 5-min stale timeout). Worst case is bounded, but log it.
+    await markRunEnded(conversationId).catch((err) =>
+      console.error("[chat] markRunEnded after setup failure failed:", err),
+    );
     throw error;
   }
 

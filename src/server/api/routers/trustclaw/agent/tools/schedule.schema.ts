@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { ianaTimezone } from "../../updateSettings.schema";
 
 export const scheduleSchema = z.object({
   action: z
@@ -12,8 +13,7 @@ export const scheduleSchema = z.object({
     .string()
     .optional()
     .describe("The task prompt to run on schedule (required for create)"),
-  timezone: z
-    .string()
+  timezone: ianaTimezone
     .optional()
     .describe("IANA timezone for the schedule (defaults to user's timezone)"),
   jobId: z

@@ -28,6 +28,19 @@ function sse(obj: unknown): Uint8Array {
   return new TextEncoder().encode(`data: ${JSON.stringify(obj)}\n\n`);
 }
 
+// Tool inputs can be huge (file contents, scraped pages). Cap what we forward
+// over the data channel so a single event can't blow the SSE/data-channel limit.
+function clampArgs(input: unknown): Record<string, unknown> {
+  try {
+    if (JSON.stringify(input).length > 8000) {
+      return { _note: "(arguments too large to display)" };
+    }
+    return (input ?? {}) as Record<string, unknown>;
+  } catch {
+    return {};
+  }
+}
+
 export async function POST(request: Request) {
   const secret = env.VOICE_WORKER_SHARED_SECRET;
   const authz = request.headers.get("authorization") ?? "";
@@ -42,9 +55,9 @@ export async function POST(request: Request) {
     conversationId?: unknown;
   } | null;
   const intent = typeof body?.intent === "string" ? body.intent.trim() : "";
-  const userId = typeof body?.userId === "string" ? body.userId : "";
+  const userId = typeof body?.userId === "string" ? body.userId.trim() : "";
   const conversationId =
-    typeof body?.conversationId === "string" ? body.conversationId : "";
+    typeof body?.conversationId === "string" ? body.conversationId.trim() : "";
   if (!intent || !userId || !conversationId) {
     return new Response("Missing intent/userId/conversationId", { status: 400 });
   }
@@ -61,37 +74,61 @@ export async function POST(request: Request) {
   });
   if (!conv) return new Response("Conversation not found", { status: 404 });
 
-  const prep = await prepareAgentRun({
-    instanceId: instance.id,
-    userMessage: intent,
-    source: "web",
-    conversationId,
-  });
-  const { agent, messages } = prep.result;
-
-  // Pass the request signal so a client disconnect (barge-in "cancel") aborts
-  // B's tool loop instead of letting it burn tokens to completion.
-  const result = await agent.stream({
-    prompt: messages,
-    abortSignal: request.signal,
-  });
-
   const stream = new ReadableStream<Uint8Array>({
     async start(controller) {
       const send = (obj: unknown) => controller.enqueue(sse(obj));
       try {
-        const steps = await result.steps;
-        for (const step of steps) {
-          for (let i = 0; i < step.toolCalls.length; i++) {
-            const tc = step.toolCalls[i];
-            if (!tc) continue;
-            send({
-              type: "b_tool",
-              name: tc.toolName,
-              status: step.toolResults[i] != null ? "done" : "running",
-            });
+        // Inside the stream so prep/setup failures (missing key, DB, Composio)
+        // surface as a spoken "that didn't work" instead of an unformatted 500.
+        const prep = await prepareAgentRun({
+          instanceId: instance.id,
+          userMessage: intent,
+          source: "web",
+          conversationId,
+        });
+        const { agent, messages } = prep.result;
+        // Pass the request signal so a client disconnect (barge-in "cancel")
+        // aborts B's tool loop instead of burning tokens to completion.
+        const result = await agent.stream({
+          prompt: messages,
+          abortSignal: request.signal,
+        });
+
+        // Stream B's run live: light up each tool the instant it starts
+        // ("running") and again when it returns ("done") so the cockpit shows
+        // the work as it happens.
+        for await (const part of result.fullStream) {
+          switch (part.type) {
+            case "tool-input-start":
+              send({
+                type: "b_tool",
+                id: part.id,
+                name: part.toolName,
+                status: "running",
+              });
+              break;
+            case "tool-call":
+              send({
+                type: "b_tool",
+                id: part.toolCallId,
+                name: part.toolName,
+                status: "running",
+                args: clampArgs(part.input),
+              });
+              break;
+            case "tool-result":
+            case "tool-error":
+              send({
+                type: "b_tool",
+                id: part.toolCallId,
+                name: part.toolName,
+                status: "done",
+              });
+              break;
           }
         }
+        // result.text is B's final answer (resolves after the stream drains) —
+        // correct across multi-tool runs, unlike hand-accumulating deltas.
         const text = (await result.text).trim();
         send({ type: "result", text });
         send({ type: "done" });
