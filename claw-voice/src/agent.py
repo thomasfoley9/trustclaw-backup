@@ -178,9 +178,13 @@ async def entrypoint(ctx: JobContext):
             "VOICE_WORKER_SHARED_SECRET not set — delegate calls will be rejected"
         )
 
+    # The user's chosen voice (Settings -> Voice) rides in the dispatch
+    # metadata; fall back to a sensible default if it's missing.
+    voice_id = config.get("voiceId") or "avery"
+    logger.info("voice session using voice_id=%s", voice_id)
     session = AgentSession(
         stt=smallestai.STT(),
-        tts=smallestai.TTS(model="lightning_v3.1_pro", voice_id="meher"),
+        tts=smallestai.TTS(model="lightning_v3.1_pro", voice_id=voice_id),
         llm=build_agent_a_llm(config.get("agentAModel")),
         # AgentSession bundles a VAD now; no explicit vad= needed.
     )

@@ -2,6 +2,7 @@ import { AccessToken, AgentDispatchClient } from "livekit-server-sdk";
 import { auth } from "~/server/auth";
 import { db } from "~/server/clients/db";
 import { env } from "~/env";
+import { DEFAULT_VOICE_ID } from "~/server/clients/smallest";
 
 // Mints a short-lived LiveKit room-join JWT for the signed-in user. The room is
 // derived SERVER-SIDE from the user id, so a caller can only ever join their own
@@ -31,6 +32,7 @@ export async function POST(request: Request) {
       agentAModel: true,
       anthropicModel: true,
       activePersonalityId: true,
+      voiceId: true,
     },
   });
   if (!instance) {
@@ -54,6 +56,9 @@ export async function POST(request: Request) {
     agentAModel: instance.agentAModel ?? null,
     // Agent B (worker) model — what /api/voice-turn runs for delegated work.
     agentBModel: instance.anthropicModel,
+    // The user's chosen Smallest voice; the worker's TTS reads this so the
+    // Settings voice picker actually changes how the call sounds.
+    voiceId: instance.voiceId ?? DEFAULT_VOICE_ID,
   });
 
   // Unique room per call (keyed by the fresh conversation) → a clean room with
