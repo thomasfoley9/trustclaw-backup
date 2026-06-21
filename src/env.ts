@@ -63,13 +63,15 @@ export const env = createEnv({
     GOOGLE_CLIENT_ID: z.string().optional(),
     GOOGLE_CLIENT_SECRET: z.string().optional(),
 
-    // Sign-up allowlist (the gate — there is no invite code). Both apply to
-    // BOTH Google and password sign-up. Unset both = open signup.
-    //   ALLOWED_EMAIL_DOMAINS: comma-separated domains, e.g. "composio.dev".
-    //   ALLOWED_EMAILS: comma-separated specific addresses to allow on top of
-    //     the domains ("anyone I tell you").
+    // Sign-up gate. Account creation is allowed if ANY of these match:
+    //   ALLOWED_EMAIL_DOMAINS: comma-separated domains (composio.dev is always
+    //     allowed regardless). Applies to BOTH Google and password sign-up.
+    //   ALLOWED_EMAILS: comma-separated specific addresses ("anyone I tell you").
+    //   SIGNUP_INVITE_CODE: a shared code that lets ANYONE sign up with the
+    //     password form (sent as the x-invite-code header) regardless of email.
     ALLOWED_EMAIL_DOMAINS: z.string().optional(),
     ALLOWED_EMAILS: z.string().optional(),
+    SIGNUP_INVITE_CODE: z.string().optional(),
   },
   client: {
     NEXT_PUBLIC_APP_URL: z.string().url(),
@@ -100,6 +102,7 @@ export const env = createEnv({
     GOOGLE_CLIENT_SECRET: process.env.GOOGLE_CLIENT_SECRET,
     ALLOWED_EMAIL_DOMAINS: process.env.ALLOWED_EMAIL_DOMAINS,
     ALLOWED_EMAILS: process.env.ALLOWED_EMAILS,
+    SIGNUP_INVITE_CODE: process.env.SIGNUP_INVITE_CODE,
 
     // Client URL resolution:
     //  - dev: derive from PORT so `PORT=3001 pnpm dev` just works

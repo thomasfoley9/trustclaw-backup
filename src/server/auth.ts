@@ -1,3 +1,4 @@
+import { timingSafeEqual } from "node:crypto";
 import { betterAuth } from "better-auth";
 import { APIError } from "better-auth/api";
 import { prismaAdapter } from "better-auth/adapters/prisma";
@@ -46,14 +47,14 @@ const redisRateLimitStorage = isRedisConfigured()
     }
   : {};
 
-// Who may CREATE an account. There is NO invite code — this allowlist is the
-// gate, and it's closed by construction: composio.dev is always allowed (this
-// instance's home domain), so even if the env vars below are unset the gate
-// never falls open to the world. Env vars only ADD on top:
-//   ALLOWED_EMAIL_DOMAINS — extra comma-separated domains.
-//   ALLOWED_EMAILS        — extra specific addresses ("anyone I tell you").
-// Enforced in the user.create.before hook, which runs for BOTH password and
-// Google sign-up, so social login can't slip past it.
+// Who may CREATE an account. Allowed if ANY of these match:
+//   - email on an allowed domain (composio.dev is always allowed; extra domains
+//     via ALLOWED_EMAIL_DOMAINS) — applies to BOTH password and Google sign-up.
+//   - email on the explicit ALLOWED_EMAILS list ("anyone I tell you").
+//   - a valid SIGNUP_INVITE_CODE (password form only, via the x-invite-code
+//     header) — lets anyone with the code in regardless of email.
+// Enforced in the user.create.before hook so Google sign-up can't slip past the
+// email gate (OAuth carries no invite-code header).
 const BASE_ALLOWED_DOMAINS = ["composio.dev"];
 
 const ALLOWED_DOMAINS = Array.from(
@@ -85,7 +86,19 @@ function signupRestrictionMessage(): string {
   const extra = ALLOWED_EMAILS.length
     ? " (and specifically-invited addresses)"
     : "";
-  return `Sign-up is restricted to ${domains}${extra}.`;
+  const code = env.SIGNUP_INVITE_CODE ? " — or enter a valid invite code" : "";
+  return `Sign-up is restricted to ${domains}${extra}${code}.`;
+}
+
+// Constant-time check of the shared signup code (x-invite-code header). When a
+// code is configured and matches, anyone may sign up regardless of email.
+function inviteCodeValid(supplied: string): boolean {
+  const expected = env.SIGNUP_INVITE_CODE;
+  if (!expected || !supplied) return false;
+  const a = Buffer.from(supplied);
+  const b = Buffer.from(expected);
+  if (a.length !== b.length) return false;
+  return timingSafeEqual(a, b);
 }
 
 // OAuth provider tokens (Google access/refresh/id) are secrets — encrypt them
@@ -127,13 +140,17 @@ export const auth = betterAuth({
   databaseHooks: {
     user: {
       create: {
-        before: async (user) => {
-          if (!emailAllowed(user.email)) {
-            throw new APIError("FORBIDDEN", {
-              message: signupRestrictionMessage(),
-            });
+        before: async (user, ctx) => {
+          // A valid invite code (password form) OR an allowed email lets the
+          // account through. OAuth (Google) carries no code header, so it falls
+          // back to the email gate.
+          const code = ctx?.headers?.get("x-invite-code")?.trim() ?? "";
+          if (inviteCodeValid(code) || emailAllowed(user.email)) {
+            return { data: user };
           }
-          return { data: user };
+          throw new APIError("FORBIDDEN", {
+            message: signupRestrictionMessage(),
+          });
         },
       },
     },
