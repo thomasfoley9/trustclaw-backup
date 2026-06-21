@@ -44,6 +44,10 @@ export function useVoicePlayback() {
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const urlRef = useRef<string | null>(null);
   const enabledRef = useRef(false);
+  // Monotonic token: bumped on each speak() and on stop(). An in-flight speak()
+  // whose token is superseded bails after each await instead of clobbering the
+  // current call's audio or reviving cancelled/orphaned playback.
+  const genRef = useRef(0);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -72,6 +76,7 @@ export function useVoicePlayback() {
   }, []);
 
   const stop = useCallback(() => {
+    genRef.current++; // invalidate any in-flight speak()
     const audio = audioRef.current;
     if (audio) {
       audio.pause();
@@ -119,6 +124,7 @@ export function useVoicePlayback() {
       const clean = text.trim();
       if (!clean) return;
 
+      const myGen = ++genRef.current;
       setIsPreparing(true);
       const audio = ensureAudio();
       audio.pause();
@@ -132,6 +138,7 @@ export function useVoicePlayback() {
           "/api/voice/brief",
           JSON.stringify({ text: clean }),
         );
+        if (genRef.current !== myGen) return; // superseded / cancelled
         if (briefRes?.ok) {
           const data = (await briefRes.json()) as { brief?: string };
           if (typeof data.brief === "string" && data.brief.trim()) {
@@ -144,6 +151,7 @@ export function useVoicePlayback() {
           "/api/voice/tts",
           JSON.stringify({ text: toSpeak.slice(0, MAX_TTS_CHARS) }),
         );
+        if (genRef.current !== myGen) return; // superseded / cancelled
         if (!res) {
           setIsPreparing(false);
           showErrorToast("Voice service is busy — try again in a moment.");
@@ -163,6 +171,7 @@ export function useVoicePlayback() {
           return;
         }
         const blob = await res.blob();
+        if (genRef.current !== myGen) return; // superseded / cancelled
         const url = URL.createObjectURL(blob);
         urlRef.current = url;
         audio.src = url;
@@ -178,9 +187,12 @@ export function useVoicePlayback() {
         setIsSpeaking(true);
         await audio.play();
       } catch {
-        setIsPreparing(false);
-        setIsSpeaking(false);
-        revoke();
+        // Don't clobber a newer/superseding call's state.
+        if (genRef.current === myGen) {
+          setIsPreparing(false);
+          setIsSpeaking(false);
+          revoke();
+        }
       }
     },
     [ensureAudio, persist, revoke],

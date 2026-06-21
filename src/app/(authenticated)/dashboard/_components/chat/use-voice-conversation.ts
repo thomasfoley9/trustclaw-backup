@@ -50,6 +50,14 @@ export function useVoiceConversation({
   const recognitionRef = useRef<SpeechRecognitionInstance | null>(null);
   const transcriptRef = useRef("");
   const silenceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Deferred-resume timer: scheduled when the loop looks idle, cancelled if it
+  // goes busy again before the next tick — closes the 1-commit window between
+  // the chat going idle and isPreparing flipping true (which would otherwise
+  // blink the mic open every voiced turn).
+  const resumeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Invalidates an in-flight start() preflight (await getUserMedia) if the loop
+  // is stopped/torn down before it resolves.
+  const startTokenRef = useRef(0);
   const onSendRef = useRef(onSend);
   useEffect(() => {
     onSendRef.current = onSend;
@@ -59,6 +67,13 @@ export function useVoiceConversation({
     if (silenceTimer.current) {
       clearTimeout(silenceTimer.current);
       silenceTimer.current = null;
+    }
+  }, []);
+
+  const clearResume = useCallback(() => {
+    if (resumeTimer.current) {
+      clearTimeout(resumeTimer.current);
+      resumeTimer.current = null;
     }
   }, []);
 
@@ -169,6 +184,8 @@ export function useVoiceConversation({
   useEffect(() => {
     if (phaseRef.current === "off") return;
     if (busy) {
+      // A pending resume from a momentary idle blip is now stale — cancel it.
+      clearResume();
       turnRanRef.current = true;
       const target: ConversationPhase = isSpeaking ? "speaking" : "thinking";
       if (phaseRef.current !== target) {
@@ -177,14 +194,25 @@ export function useVoiceConversation({
       }
       return;
     }
-    // Fully idle: resume listening, but only if a turn actually ran.
+    // Fully idle: resume listening, but only if a turn actually ran. Defer to a
+    // macrotask so that the 1-commit gap between the chat going idle and
+    // isPreparing flipping true (speak() sets it from inside an effect, one
+    // commit later) re-asserts busy and cancels this before the mic opens. The
+    // genuine resume paths (tool-only reply, TTS failure, muted voice) have no
+    // such follow-up, so the timer fires and they resume within a tick.
     if (phaseRef.current === "listening") return;
-    if (turnRanRef.current) {
-      turnRanRef.current = false;
-      setPhaseSafe("listening");
-      startRecognition();
+    if (turnRanRef.current && !resumeTimer.current) {
+      resumeTimer.current = setTimeout(() => {
+        resumeTimer.current = null;
+        if (phaseRef.current === "off" || phaseRef.current === "listening") {
+          return;
+        }
+        turnRanRef.current = false;
+        setPhaseSafe("listening");
+        startRecognition();
+      }, 0);
     }
-  }, [busy, isSpeaking, startRecognition, stopRecognition, setPhaseSafe]);
+  }, [busy, isSpeaking, startRecognition, stopRecognition, setPhaseSafe, clearResume]);
 
   // Coarse backstop for anomalies only (e.g. a send that never starts streaming
   // so the loop never goes busy): if we sit in "thinking" while fully idle,
@@ -209,6 +237,7 @@ export function useVoiceConversation({
       );
       return;
     }
+    const token = ++startTokenRef.current;
     // Desktop/Android: SpeechRecognition's implicit permission can silently
     // no-op (no prompt, no error), so force an explicit getUserMedia prompt.
     // iOS needs recognition.start() synchronous in the tap gesture, so skip the
@@ -238,21 +267,32 @@ export function useVoiceConversation({
         return;
       }
     }
+    // The loop was stopped/torn down while the preflight was awaiting — abort.
+    if (startTokenRef.current !== token) return;
     transcriptRef.current = "";
     setPhaseSafe("listening");
     startRecognition();
   }, [isSupported, startRecognition, setPhaseSafe]);
 
   const stop = useCallback(() => {
+    startTokenRef.current++; // invalidate any in-flight start() preflight
+    clearResume();
     stopRecognition();
     transcriptRef.current = "";
     turnRanRef.current = false;
     setPhaseSafe("off");
-  }, [stopRecognition, setPhaseSafe]);
+  }, [stopRecognition, clearResume, setPhaseSafe]);
 
   useEffect(() => {
-    return () => stopRecognition();
-  }, [stopRecognition]);
+    return () => {
+      // Intentional: invalidate any in-flight start() preflight on unmount so it
+      // can't setState / start a recognizer after teardown.
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+      startTokenRef.current++;
+      clearResume();
+      stopRecognition();
+    };
+  }, [stopRecognition, clearResume]);
 
   return { isSupported, phase, active: phase !== "off", start, stop };
 }
