@@ -12,6 +12,18 @@ const SILENT_WAV =
 // The /api/voice/tts route caps text at 5000 chars — trim with margin.
 const MAX_TTS_CHARS = 4800;
 
+// Short spoken fallback used when the brief route is unreachable — never read
+// the whole on-screen reply aloud. Strips light markdown, ~first sentence.
+function shortSpoken(text: string): string {
+  const t = text
+    .replace(/[*_`#>]/g, "")
+    .replace(/\[([^\]]+)\]\([^)]+\)/g, "$1")
+    .replace(/\s+/g, " ")
+    .trim();
+  const sentence = /^.*?[.!?](\s|$)/.exec(t)?.[0]?.trim() ?? t;
+  return sentence.length > 180 ? `${sentence.slice(0, 180).trim()}…` : sentence;
+}
+
 // POST with a small retry on 5xx / network errors — the voice routes are
 // serverless and can cold-start 503 like the rest of the API. Null if all fail.
 async function postRetry(url: string, body: string): Promise<Response | null> {
@@ -132,8 +144,9 @@ export function useVoicePlayback() {
 
       try {
         // 1) Curate the reply into a short spoken brief (the EA layer) — voice
-        // speaks this, not the full on-screen digest. Falls back to the reply.
-        let toSpeak = clean;
+        // speaks this, not the full on-screen digest. Default to a short spoken
+        // version so an unreachable brief route never reads the whole reply.
+        let toSpeak = shortSpoken(clean);
         const briefRes = await postRetry(
           "/api/voice/brief",
           JSON.stringify({ text: clean }),
