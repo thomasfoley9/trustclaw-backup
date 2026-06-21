@@ -246,25 +246,22 @@ export async function prepareAgentRun(
           .replace(/^\*\*Writing Style:\*\*.*$/gm, "")
       : instance.identityPrompt;
 
-  // Incognito chats start fresh: no memory recall, no prior history.
-  const relevantMemories = incognito
-    ? []
-    : await searchMemoriesForContext(instanceId, userMessage, activeBucket);
-
-  // Always-inject buckets (curated product knowledge) are loaded every turn,
-  // regardless of similarity or the active bucket. Skipped in incognito.
-  const productKnowledge = incognito
-    ? []
-    : (
-        await Promise.all(
-          (await getAlwaysInjectBucketSlugs(instanceId)).map((bucket) =>
-            getBucketMemories(instanceId, bucket),
-          ),
-        )
-      ).flat();
-
-  // Enabled skills inject into the system prompt as named capabilities.
-  const skills = incognito ? [] : await getEnabledSkills(instanceId);
+  // Memory recall, always-inject product knowledge, and enabled skills are
+  // independent reads that all feed buildSystemPrompt() — fetch them
+  // concurrently instead of serially. Incognito chats skip all recall.
+  const [relevantMemories, productKnowledge, skills] = await Promise.all([
+    incognito
+      ? Promise.resolve<string[]>([])
+      : searchMemoriesForContext(instanceId, userMessage, activeBucket),
+    incognito
+      ? Promise.resolve<string[]>([])
+      : getAlwaysInjectBucketSlugs(instanceId).then((buckets) =>
+          Promise.all(
+            buckets.map((bucket) => getBucketMemories(instanceId, bucket)),
+          ).then((lists) => lists.flat()),
+        ),
+    incognito ? Promise.resolve([]) : getEnabledSkills(instanceId),
+  ]);
 
   const systemPrompt = sanitizeString(
     buildSystemPrompt({
@@ -416,24 +413,29 @@ export async function prepareAgentRun(
     });
   }
 
-  const { client: composio, composioUserId } =
-    await getComposioForInstance(instanceId);
-  const session = await composio.create(composioUserId, {
-    manageConnections: {
-      waitForConnections: true,
-    },
-  });
-  const composioTools = await session.tools();
+  // The Composio session (key load → connection setup → tool fetch) and the
+  // user's MCP servers load independently, so run them concurrently — this is
+  // ~300-600ms of wall-clock off every turn. MCP per-server failures are
+  // isolated and never block the run; clients stay open for the run and are
+  // closed in onFinish.
+  const [composioTools, mcp] = await Promise.all([
+    (async () => {
+      const { client: composio, composioUserId } =
+        await getComposioForInstance(instanceId);
+      const session = await composio.create(composioUserId, {
+        manageConnections: {
+          waitForConnections: true,
+        },
+      });
+      return session.tools();
+    })(),
+    loadMcpTools(instanceId),
+  ]);
 
   const customTools = createCustomTools(instanceId, userTimezone, {
     activeBucket,
     incognito,
   });
-
-  // Tools from the user's MCP servers (Composio MCP URLs, etc.). Clients stay
-  // open for the run and are closed in onFinish; per-server failures are
-  // isolated and never block the run.
-  const mcp = await loadMcpTools(instanceId);
 
   const allTools: ToolSet = sanitizeToolResults({
     ...composioTools,

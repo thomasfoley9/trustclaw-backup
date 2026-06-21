@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useMemo, memo } from "react";
 import Markdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { Copy, Check } from "lucide-react";
@@ -45,7 +45,7 @@ interface AssistantMessageProps {
   onOpenTerminal: () => void;
 }
 
-export function AssistantMessage({
+function AssistantMessageBase({
   message,
   status,
   onOpenTerminal,
@@ -59,7 +59,9 @@ export function AssistantMessage({
     };
   }, []);
 
-  const segments = segmentParts(message.parts);
+  // Re-segmenting on every parent re-render (frequent during streaming + voice
+  // transcript updates) is wasted work when this message's parts are unchanged.
+  const segments = useMemo(() => segmentParts(message.parts), [message.parts]);
 
   const getFullTextContent = () =>
     segments
@@ -138,3 +140,7 @@ export function AssistantMessage({
     </div>
   );
 }
+
+// Memoized: with a stable onOpenTerminal + per-message status, older messages
+// skip re-rendering (Markdown parse, segmenting) on every streaming tick.
+export const AssistantMessage = memo(AssistantMessageBase);

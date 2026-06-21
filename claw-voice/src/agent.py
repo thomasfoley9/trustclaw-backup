@@ -116,6 +116,7 @@ class ClawAgent(Agent):
 
         logger.info("delegate -> %r", intent)
         result_text = ""
+        got_result = False
         try:
             async with httpx.AsyncClient(timeout=300) as hc:
                 async with hc.stream(
@@ -148,12 +149,16 @@ class ClawAgent(Agent):
                             await self._publish_cockpit(ev)
                         elif kind == "result":
                             result_text = ev.get("text", "")
+                            got_result = True
                         elif kind == "error":
                             return f"That didn't work — {ev.get('message', 'unknown error')}."
         except Exception as e:  # noqa: BLE001 — surface, don't crash the call
             logger.exception("delegate failed")
             return f"Something went sideways: {e}"
-        return result_text or "Done — though I didn't get much back."
+        # Distinguish "the worker finished but sent no result" from a real reply.
+        if not got_result:
+            return "I didn't get anything back from the worker — want me to try again?"
+        return result_text or "Okay, that's done."
 
     async def _publish_cockpit(self, event: dict) -> None:
         """Forward an Agent B tool event to the web cockpit via the data channel.
@@ -213,7 +218,20 @@ async def entrypoint(ctx: JobContext):
     )
     if vad is not None:
         session_kwargs["vad"] = vad
-    session = AgentSession(**session_kwargs)
+    # Tighter endpointing → snappier turn-taking (defaults are min 0.5 / max 3.0).
+    # Conservative values to avoid cutting the user off on natural pauses.
+    # Guarded: if this livekit-agents build doesn't accept turn_handling, fall
+    # back to defaults rather than crashing the worker.
+    try:
+        session = AgentSession(
+            **session_kwargs,
+            turn_handling={"endpointing": {"min_delay": 0.4, "max_delay": 2.5}},
+        )
+    except TypeError:
+        logger.warning(
+            "turn_handling unsupported on this build — using default endpointing"
+        )
+        session = AgentSession(**session_kwargs)
 
     # Warm the pipeline (STT/TTS/LLM streams) WHILE the caller's browser finishes
     # connecting, instead of back-to-back. Explicit dispatch can place the agent

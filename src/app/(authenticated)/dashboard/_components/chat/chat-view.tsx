@@ -313,9 +313,24 @@ export function ChatView({
 
   const handleStopConversation = useCallback(() => {
     stopSpeaking(); // cut any reply still being spoken when the user ends the call
+    clearVoiceOverlay(); // don't leave a stale transcript / action feed behind
     setLiveCallActive(false);
     stopConversationLoop();
-  }, [stopSpeaking, stopConversationLoop]);
+  }, [stopSpeaking, stopConversationLoop, clearVoiceOverlay]);
+
+  // Stable callback so memoized AssistantMessage rows don't re-render on every
+  // streaming/voice tick just because this arrow was recreated.
+  const handleOpenTerminal = useCallback(
+    () => setTerminalOpen(true),
+    [setTerminalOpen],
+  );
+
+  // Clear the overlay when a call ends — including a failed/aborted setup — so a
+  // stale transcript / action feed doesn't linger into the next session.
+  const handleVoiceEnded = useCallback(() => {
+    clearVoiceOverlay();
+    setLiveCallActive(false);
+  }, [clearVoiceOverlay]);
 
   // Call-button state reflects either path.
   const callActive = conversationActive || liveCallActive;
@@ -382,7 +397,7 @@ export function ChatView({
                         status={
                           message.id === lastMessage?.id ? status : "ready"
                         }
-                        onOpenTerminal={() => setTerminalOpen(true)}
+                        onOpenTerminal={handleOpenTerminal}
                       />
                     )}
                   </ErrorBoundary>
@@ -428,7 +443,7 @@ export function ChatView({
         />
         <VoiceCall
           active={liveCallActive}
-          onEnded={() => setLiveCallActive(false)}
+          onEnded={handleVoiceEnded}
           onCockpitEvent={handleCockpitEvent}
           onTranscript={handleTranscript}
         />

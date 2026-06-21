@@ -98,6 +98,9 @@ export async function POST(request: Request) {
         // ("running") and again when it returns ("done") so the cockpit shows
         // the work as it happens.
         for await (const part of result.fullStream) {
+          // Barge-in / disconnect: stop forwarding immediately rather than
+          // waiting for the abort to propagate through the SDK.
+          if (request.signal.aborted) break;
           switch (part.type) {
             case "tool-input-start":
               send({
@@ -127,6 +130,9 @@ export async function POST(request: Request) {
               break;
           }
         }
+        // Caller bailed — don't wait on result.text or emit into a dead stream
+        // (the finally still closes the controller).
+        if (request.signal.aborted) return;
         // result.text is B's final answer (resolves after the stream drains) —
         // correct across multi-tool runs, unlike hand-accumulating deltas.
         const text = (await result.text).trim();

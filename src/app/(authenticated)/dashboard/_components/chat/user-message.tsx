@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useMemo, memo } from "react";
 import { Copy, Check, FileText } from "lucide-react";
 import type { UIMessage } from "@ai-sdk/react";
 
@@ -40,7 +40,7 @@ function extractAttachments(message: UIMessage): RenderedAttachment[] {
   return out;
 }
 
-export function UserMessage({ message }: UserMessageProps) {
+function UserMessageBase({ message }: UserMessageProps) {
   const [copied, setCopied] = useState(false);
   const copyTimeoutRef = useRef<ReturnType<typeof setTimeout>>(null);
 
@@ -55,7 +55,7 @@ export function UserMessage({ message }: UserMessageProps) {
     .map((p) => p.text)
     .join("\n");
 
-  const fileAttachments = extractAttachments(message);
+  const fileAttachments = useMemo(() => extractAttachments(message), [message]);
 
   const handleCopy = () => {
     void navigator.clipboard.writeText(textContent);
@@ -111,3 +111,7 @@ export function UserMessage({ message }: UserMessageProps) {
     </div>
   );
 }
+
+// Memoized: user messages never change once sent, so they shouldn't re-render
+// (or re-extract attachments) on every streaming/voice update to the list.
+export const UserMessage = memo(UserMessageBase);
