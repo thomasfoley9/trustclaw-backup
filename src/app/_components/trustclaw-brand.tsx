@@ -32,7 +32,7 @@ export function TrustClawBrand({ size = "md", logoLink }: TrustClawBrandProps) {
         <span
           className={`${s.text} text-gradient font-heading truncate font-bold`}
         >
-          RivianClaw
+          Claw
         </span>
         <span
           className={`${s.by} ${s.tagline} text-muted-foreground truncate font-medium`}

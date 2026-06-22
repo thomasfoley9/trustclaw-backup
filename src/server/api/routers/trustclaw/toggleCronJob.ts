@@ -18,7 +18,7 @@ export const toggleCronJob = protectedProcedure
       if (!instance) {
         throw new TRPCError({
           code: "NOT_FOUND",
-          message: "RivianClaw by Composio instance not found",
+          message: "Claw by Composio instance not found",
         });
       }
 

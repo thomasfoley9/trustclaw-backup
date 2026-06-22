@@ -135,7 +135,7 @@ export function HeroSection() {
             className="max-w-2xl text-base text-muted-foreground md:text-lg lg:text-xl"
             delay={0.2}
           >
-            RivianClaw is a 24/7 AI assistant with 1000+ tools via{" "}
+            Claw is a 24/7 AI assistant with 1000+ tools via{" "}
             <strong>OAuth</strong> and <strong>sandboxed execution</strong>.
             Built on the ideas behind OpenClaw, rebuilt from scratch for
             security.

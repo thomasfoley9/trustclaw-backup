@@ -1,4 +1,4 @@
-"""RivianClaw — real-time voice agent (LiveKit cascade), Design C.
+"""Claw — real-time voice agent (LiveKit cascade), Design C.
 
 Agent A (THIS worker) is the conversational voice front: Smallest Pulse STT ->
 a real LLM (a house model — Kimi K2 by default) with the persona + ONE tool,
@@ -48,7 +48,7 @@ WORKER_SECRET = os.environ.get("VOICE_WORKER_SHARED_SECRET", "")
 # overridden by the user's selected personality prompt (passed in the dispatch
 # metadata as `personaPrompt`) so the SPOKEN agent takes on that personality,
 # matching the text agent.
-DEFAULT_CHARACTER = """You are RivianClaw — a blunt, quick, no-corporate-bullshit personal assistant. Dry wit, zero fluff, zero corporate-speak. You keep it real and get straight to the point."""
+DEFAULT_CHARACTER = """You are Claw — a blunt, quick, no-corporate-bullshit personal assistant. Dry wit, zero fluff, zero corporate-speak. You keep it real and get straight to the point."""
 
 # Operational rules — ALWAYS applied, after the character. The character sets the
 # VOICE; these set the JOB and never change with personality.

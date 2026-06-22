@@ -5,7 +5,6 @@ import { Bricolage_Grotesque, IBM_Plex_Mono, Inter } from "next/font/google";
 import { Toaster } from "sonner";
 import { TRPCReactProvider } from "~/clients/trpc";
 import { ThemeProvider } from "~/components/core/theme-provider";
-import { RIVIAN_DEMO } from "~/lib/demo-flag";
 
 const primary = Inter({
   subsets: ["latin"],
@@ -24,20 +23,15 @@ const heading = Bricolage_Grotesque({
 });
 
 export const metadata: Metadata = {
-  title: "RivianClaw",
-  // Favicon follows the demo skin: Rivian mark during the demo, the
-  // Thomas-the-train mascot otherwise. Toggled by RIVIAN_DEMO.
-  icons: RIVIAN_DEMO
-    ? [
-        { rel: "icon", url: "/rivian-icon.svg", type: "image/svg+xml" },
-        { rel: "icon", url: "/rivian-favicon.ico", sizes: "any" },
-        { rel: "apple-touch-icon", url: "/rivian-apple-icon.png" },
-      ]
-    : [
-        { rel: "icon", url: "/icon.svg", type: "image/svg+xml" },
-        { rel: "icon", url: "/favicon.ico", sizes: "any" },
-        { rel: "apple-touch-icon", url: "/apple-icon.png" },
-      ],
+  title: "Claw",
+  // Neutral default favicon for the shared app. The per-prospect demo landings
+  // (/ford, /gm, …) override this with their own brand mark via route metadata
+  // in src/app/[brand]/page.tsx.
+  icons: [
+    { rel: "icon", url: "/icon.svg", type: "image/svg+xml" },
+    { rel: "icon", url: "/favicon.ico", sizes: "any" },
+    { rel: "apple-touch-icon", url: "/apple-icon.png" },
+  ],
 };
 
 // Without this, mobile browsers render at ~980px desktop width and ignore

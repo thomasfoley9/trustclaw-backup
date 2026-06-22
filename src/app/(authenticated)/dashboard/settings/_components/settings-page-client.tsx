@@ -41,12 +41,12 @@ export function SettingsPageClient() {
     return (
       <div className="mx-auto w-full max-w-2xl p-4 md:p-6">
         <div className="text-center">
-          <p className="text-muted-foreground">No RivianClaw instance found.</p>
+          <p className="text-muted-foreground">No Claw instance found.</p>
           <Link
             href="/dashboard"
             className="text-primary mt-2 inline-block hover:underline"
           >
-            Go to RivianClaw
+            Go to Claw
           </Link>
         </div>
       </div>
