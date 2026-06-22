@@ -96,7 +96,13 @@ export async function POST(request: Request) {
 
         // Stream B's run live: light up each tool the instant it starts
         // ("running") and again when it returns ("done") so the cockpit shows
-        // the work as it happens.
+        // the work as it happens. We ALSO tally B's real tool outcomes here so
+        // the result carries a deterministic execution receipt — Agent A anchors
+        // its "done / not done" to this, never to B's (or its own) prose, which
+        // is what stops A fabricating a completed action.
+        let toolsSucceeded = 0;
+        let toolsErrored = 0;
+        const toolNames = new Set<string>();
         for await (const part of result.fullStream) {
           // Barge-in / disconnect: stop forwarding immediately rather than
           // waiting for the abort to propagate through the SDK.
@@ -111,6 +117,7 @@ export async function POST(request: Request) {
               });
               break;
             case "tool-call":
+              toolNames.add(part.toolName);
               send({
                 type: "b_tool",
                 id: part.toolCallId,
@@ -120,7 +127,16 @@ export async function POST(request: Request) {
               });
               break;
             case "tool-result":
+              toolsSucceeded += 1;
+              send({
+                type: "b_tool",
+                id: part.toolCallId,
+                name: part.toolName,
+                status: "done",
+              });
+              break;
             case "tool-error":
+              toolsErrored += 1;
               send({
                 type: "b_tool",
                 id: part.toolCallId,
@@ -136,7 +152,24 @@ export async function POST(request: Request) {
         // result.text is B's final answer (resolves after the stream drains) —
         // correct across multi-tool runs, unlike hand-accumulating deltas.
         const text = (await result.text).trim();
-        send({ type: "result", text });
+        // Deterministic receipt of what B ACTUALLY did this turn:
+        //   executed  - at least one tool returned successfully (real work happened)
+        //   failed    - tools were attempted but only errored
+        //   no_action - B ran no tools at all (it only talked / drafted / needs input)
+        const status =
+          toolsErrored > 0 && toolsSucceeded === 0
+            ? "failed"
+            : toolsSucceeded > 0
+              ? "executed"
+              : "no_action";
+        send({
+          type: "result",
+          text,
+          status,
+          toolsSucceeded,
+          toolsErrored,
+          tools: [...toolNames],
+        });
         send({ type: "done" });
       } catch (err) {
         send({

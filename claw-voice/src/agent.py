@@ -26,6 +26,9 @@ from livekit.agents import (
     Agent,
     AgentServer,
     AgentSession,
+    AudioConfig,
+    BackgroundAudioPlayer,
+    BuiltinAudioClip,
     JobContext,
     RunContext,
     function_tool,
@@ -46,9 +49,20 @@ WORKER_SECRET = os.environ.get("VOICE_WORKER_SHARED_SECRET", "")
 
 PERSONA = """You are the voice of Thomas Claw — a blunt, quick, no-corporate-bullshit personal assistant. You're talking out loud on a call, so keep replies short, natural, and conversational; never read long lists or raw data aloud.
 
-You have ONE tool, `delegate`. Use it for ANYTHING that touches the user's real accounts or tools — email, calendar, Slack, the CRM, files, web lookups, sending or changing anything. Pass a clear, self-contained `intent`. For plain conversation, questions about yourself, or quick acknowledgements, just answer directly — do NOT delegate.
+You have ONE tool, `delegate`, which hands a task to the worker that actually does things (email, calendar, Slack, the CRM, files, web lookups, sending/scheduling/changing anything). The worker remembers the whole call, so treat it as your hands.
 
-When you delegate, say a short natural line first so they're not left in silence ("on it — checking now"). When the result comes back, summarize it in one or two spoken sentences, in character. If something needs sending or saving (an email, a CRM write), read back what's staged and ask them to confirm before it goes out."""
+WHEN TO DELEGATE — anything that touches the user's real accounts, data, or the outside world. This includes the follow-ups:
+- The first request ("check my email", "schedule lunch with Sam Friday").
+- Their ANSWER to a question you asked, their CONFIRMATION ("yes", "send it", "go ahead"), an EDIT ("make it 3pm instead"), or a follow-up that continues the task. These are NOT small talk — they move real work forward, so you MUST delegate them. Pass what they decided (e.g. "User confirmed — send the email to Sam we drafted" or "Change the meeting to 3pm").
+
+WHEN TO ANSWER DIRECTLY — only pure conversation with no task behind it: greetings, thanks, "how are you", who you are. That's it.
+
+HOW TO DELEGATE:
+- Pass a clear, self-contained `intent` that carries EVERY detail the user gave — names, dates, times, the actual message content, which account/tool. Don't make the worker guess; don't drop specifics.
+- Before you delegate, say a short natural line so they're not in silence ("on it — one sec"). If the task is HEAVY — pulling email AND calendar, several lookups, a full briefing, anything that takes real work — say so up front: "give me a few seconds to pull all that together." A heavy task runs for a bit; set that expectation so the wait feels normal, not broken or frozen.
+- When the result comes back, give it in one or two spoken sentences, in character.
+
+IRON RULE — never say something was done, sent, scheduled, found, replied, or changed unless a `delegate` call actually came back saying so. If you didn't delegate, nothing happened — do not pretend it did. If a delegate result contains a `[SYSTEM: ...]` note, that is the ground truth about what really happened — obey it exactly, over your own assumptions. For anything that sends or is hard to undo, you may read back what's about to happen and get a quick "yes" first — but the instant they say yes, delegate it so it truly executes."""
 
 
 def build_agent_a_llm(agent_a_model: str | None) -> openai.LLM:
@@ -83,7 +97,7 @@ def build_agent_a_llm(agent_a_model: str | None) -> openai.LLM:
 
 
 class ClawAgent(Agent):
-    def __init__(self, config: dict, room=None) -> None:
+    def __init__(self, config: dict, room=None, bg_audio=None) -> None:
         super().__init__(instructions=PERSONA)
         self._user_id = config.get("userId", "")
         self._conversation_id = config.get("conversationId", "")
@@ -91,18 +105,57 @@ class ClawAgent(Agent):
         # events. Storing it avoids reaching into ctx.session._room (private, and
         # not guaranteed bound when delegate() streams).
         self._room = room
+        # BackgroundAudioPlayer used to play hold music during long delegate()
+        # calls so the caller isn't left in silence. May be None (best-effort).
+        self._bg_audio = bg_audio
 
     @function_tool
     async def delegate(self, ctx: RunContext, intent: str) -> str:
         """Delegate real work to the worker agent. Use for anything involving the
         user's email, calendar, Slack, CRM, files, web, or sending/changing
-        anything. `intent` is a clear, self-contained description of the task."""
+        anything — INCLUDING the user's confirmations, answers, and edits that
+        continue a task already in motion ("yes, send it" / "make it 3pm"). The
+        worker remembers the whole call, so pass a clear, self-contained `intent`
+        with every detail (names, dates, message content)."""
+        logger.info("delegate -> %r", intent)
+        # Fill the silence with hold music while Agent B works (heavy tasks run
+        # 30-60s). Deterministic: started here, stopped in the finally on EVERY
+        # exit path — success, error, or barge-in cancel. The framework auto-ducks
+        # it under A's spoken filler + final reply. Best-effort: a music hiccup
+        # must never block the real work.
+        hold = None
+        if self._bg_audio is not None:
+            try:
+                hold = self._bg_audio.play(
+                    AudioConfig(BuiltinAudioClip.HOLD_MUSIC, volume=0.5),
+                    loop=True,
+                )
+            except Exception:  # noqa: BLE001 — ambience is best-effort
+                logger.warning("hold music start skipped", exc_info=True)
+        try:
+            return await self._run_delegate(intent)
+        finally:
+            if hold is not None:
+                try:
+                    hold.stop()
+                except Exception:  # noqa: BLE001
+                    logger.warning("hold music stop skipped", exc_info=True)
+
+    async def _run_delegate(self, intent: str) -> str:
+        """The actual handoff to Agent B: POST the intent, stream its tool events
+        to the cockpit, and return the receipt-anchored result. delegate() wraps
+        this with hold music."""
         import httpx  # local import keeps cold start lean
 
-        logger.info("delegate -> %r", intent)
         result_text = ""
+        result_status = "no_action"
+        result_tools: list[str] = []
         try:
-            async with httpx.AsyncClient(timeout=300) as hc:
+            # Voice-appropriate timeout: a heavy briefing should finish well
+            # under this; capping it (vs 300s) means a genuinely stuck task fails
+            # in reasonable time instead of dragging the call toward a
+            # shutdown-kill.
+            async with httpx.AsyncClient(timeout=120) as hc:
                 async with hc.stream(
                     "POST",
                     VOICE_TURN_URL,
@@ -133,12 +186,53 @@ class ClawAgent(Agent):
                             await self._publish_cockpit(ev)
                         elif kind == "result":
                             result_text = ev.get("text", "")
+                            result_status = ev.get("status", "no_action")
+                            result_tools = ev.get("tools", []) or []
                         elif kind == "error":
                             return f"That didn't work — {ev.get('message', 'unknown error')}."
+        except asyncio.CancelledError:
+            # The call ended or the user barged in mid-task. Re-raise so the
+            # session shuts down promptly instead of this in-flight request
+            # blocking aclose() until the drain timeout force-kills the process
+            # (the `aclose timed out` -> `process killed` chain in the logs).
+            logger.info("delegate cancelled (call ended or interrupted)")
+            raise
         except Exception as e:  # noqa: BLE001 — surface, don't crash the call
             logger.exception("delegate failed")
             return f"Something went sideways: {e}"
-        return result_text or "Done — though I didn't get much back."
+        # The worker's deterministic execution receipt (status computed from B's
+        # REAL tool outcomes, not its prose) is A's ONLY source of truth about
+        # success. Logged on both planes so "handoff happened but nothing got
+        # done" is diagnosable.
+        logger.info(
+            "delegate result: status=%s tools=%s (%d chars)",
+            result_status,
+            result_tools,
+            len(result_text),
+        )
+        if result_status == "failed":
+            # Tools were attempted but only errored — the task did NOT complete.
+            return (
+                "[SYSTEM: The worker hit tool errors and did NOT complete the "
+                "task. Tell the user plainly it didn't go through — do not claim "
+                "it's done.]\n\n" + (result_text or "")
+            )
+        if result_status == "no_action":
+            # B ran no tools — it only looked something up or drafted. Block any
+            # "it's sent/done" claim; this is the anti-fabrication guardrail.
+            base = result_text or "I haven't actually done that yet."
+            return (
+                base + "\n\n[SYSTEM: The worker took NO action this turn — it "
+                "only gathered info or drafted a response. Do NOT tell the user "
+                "anything was sent, scheduled, saved, or changed. If an action "
+                "still needs to happen, delegate it explicitly.]"
+            )
+        # executed: at least one tool returned successfully, so result_text
+        # reflects real work that happened.
+        return result_text or (
+            "The worker ran its tools but didn't summarize — tell the user it's "
+            "handled and offer to confirm the details."
+        )
 
     async def _publish_cockpit(self, event: dict) -> None:
         """Forward an Agent B tool event to the web cockpit via the data channel.
@@ -193,8 +287,21 @@ async def entrypoint(ctx: JobContext):
         # AgentSession bundles a VAD now; no explicit vad= needed.
     )
 
-    # Hand the room to the agent so delegate() can publish cockpit events.
-    await session.start(agent=ClawAgent(config, ctx.room), room=ctx.room)
+    # Hold-music player: delegate() plays HOLD_MUSIC through this while Agent B
+    # works, so the caller isn't left in 30-60s of silence. Handed to the agent
+    # so the tool can start/stop it; started after the session so the room track
+    # is live.
+    bg_audio = BackgroundAudioPlayer()
+
+    # Hand the room + hold-music player to the agent so delegate() can publish
+    # cockpit events and fill the wait with music.
+    await session.start(
+        agent=ClawAgent(config, ctx.room, bg_audio), room=ctx.room
+    )
+    try:
+        await bg_audio.start(room=ctx.room, agent_session=session)
+    except Exception:  # noqa: BLE001 — ambience is best-effort, never block the call
+        logger.warning("background audio player failed to start", exc_info=True)
 
     # Explicit dispatch can place the agent in the room before the user finishes
     # connecting — wait for them so the greeting isn't spoken into an empty room.
