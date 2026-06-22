@@ -25,8 +25,16 @@ export const BRANDS = {
 
 export type BrandKey = keyof typeof BRANDS;
 
-export const BRAND_KEYS = Object.keys(BRANDS) as BrandKey[];
+// string[] (not BrandKey[]) — these only feed route params, which are strings,
+// so no cast is needed to stay honest about what Object.keys actually returns.
+export const BRAND_KEYS = Object.keys(BRANDS);
+
+// Real runtime-checked narrowing, the only sanctioned escape from `string` to a
+// known key — so getBrand indexes BRANDS without an `as` cast.
+export function isBrandKey(key: string): key is BrandKey {
+  return Object.prototype.hasOwnProperty.call(BRANDS, key);
+}
 
 export function getBrand(key: string): Brand | null {
-  return (BRANDS as Record<string, Brand>)[key] ?? null;
+  return isBrandKey(key) ? BRANDS[key] : null;
 }

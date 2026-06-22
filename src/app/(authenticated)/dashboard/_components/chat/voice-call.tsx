@@ -10,8 +10,27 @@ import {
   useLocalParticipant,
 } from "@livekit/components-react";
 import { Volume2 } from "lucide-react";
+import { z } from "zod";
 import { showErrorToast } from "~/components/core/toast-notifications";
 import { useHoldMusic } from "./use-hold-music";
+
+// Runtime-validated shape of the /api/livekit-token response. Parsed (not cast)
+// so a malformed/error body fails closed instead of flowing into room.connect.
+const tokenResponseSchema = z.object({
+  serverUrl: z.string().url(),
+  token: z.string().min(1),
+});
+
+// Runtime-validated shape of an inbound 'cockpit' data-channel message (untrusted
+// bytes from the worker). `id` is optional on the wire; we always fill it from
+// `name` before forwarding, so the public VoiceCockpitEvent keeps `id` required.
+const cockpitMessageSchema = z.object({
+  type: z.literal("b_tool"),
+  id: z.string().optional(),
+  name: z.string(),
+  status: z.enum(["running", "done"]),
+  args: z.record(z.unknown()).optional(),
+});
 
 // A live Agent B tool event forwarded from the LiveKit worker's cockpit channel.
 export interface VoiceCockpitEvent {
@@ -105,10 +124,9 @@ export function VoiceCall({
           if (!cancelled) onEndedRef.current();
           return;
         }
-        const data = (await res.json()) as {
-          serverUrl: string;
-          token: string;
-        };
+        // Parse, don't cast: a missing/malformed body throws here and is caught
+        // by the surrounding try/catch (toast + onEnded), so it fails closed.
+        const data = tokenResponseSchema.parse(await res.json());
         if (cancelled) return;
 
         // Split the two failure modes so the surfaced error is precise: the room
@@ -327,15 +345,18 @@ function CockpitBridge({
   useDataChannel("cockpit", (msg) => {
     if (!onCockpitEvent) return;
     try {
-      const parsed = JSON.parse(
-        new TextDecoder().decode(msg.payload),
-      ) as VoiceCockpitEvent;
-      // Fall back to the tool name as the key for older events without an id.
-      if (parsed?.type === "b_tool") {
-        onCockpitEvent({ ...parsed, id: parsed.id ?? parsed.name });
+      // safeParse, don't cast: an unknown shape (e.g. a status other than
+      // running/done, which would otherwise silently mis-drive the hold-music
+      // state) is simply not forwarded. Fall back to the tool name as the key
+      // for events without an id.
+      const result = cockpitMessageSchema.safeParse(
+        JSON.parse(new TextDecoder().decode(msg.payload)),
+      );
+      if (result.success) {
+        onCockpitEvent({ ...result.data, id: result.data.id ?? result.data.name });
       }
     } catch {
-      // ignore malformed cockpit payloads
+      // ignore malformed (non-JSON) cockpit payloads
     }
   });
   return null;
