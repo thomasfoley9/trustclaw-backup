@@ -4,7 +4,7 @@ import Link from "next/link";
 import { Mail, CalendarDays, MessageSquare, Zap } from "lucide-react";
 
 // Reversible Rivian demo skin for the LANDING PAGE ONLY (the app + onboarding
-// stay ThomasClaw). Toggled by RIVIAN_DEMO in ~/lib/demo-flag. The "RIVIAN"
+// stay RivianClaw). Toggled by RIVIAN_DEMO in ~/lib/demo-flag. The "RIVIAN"
 // wordmark is recreated in type + Rivian Compass Yellow on a dark cinematic
 // field — not Rivian's official trademarked assets.
 const YELLOW = "#FED813";
@@ -36,7 +36,7 @@ export function RivianLanding() {
         <div className="flex items-center gap-3">
           <span className="text-lg font-semibold tracking-[0.4em] text-white">RIVIAN</span>
           <span className="h-4 w-px bg-white/25" />
-          <span className="text-sm tracking-wide text-white/65">ThomasClaw</span>
+          <span className="text-sm tracking-wide text-white/65">RivianClaw</span>
         </div>
         <Link
           href="/login"
@@ -58,7 +58,7 @@ export function RivianLanding() {
           <br className="hidden sm:block" /> experience worth your time.
         </h1>
         <p className="mt-7 max-w-2xl text-lg text-white/60 sm:text-xl">
-          Meet <span className="text-white">ThomasClaw</span> — the AI that doesn&apos;t just
+          Meet <span className="text-white">RivianClaw</span> — the AI that doesn&apos;t just
           answer, it <span style={{ color: YELLOW }}>drives</span>. Your inbox, your calendar,
           your busywork: handled, hands-free.
         </p>
@@ -97,7 +97,7 @@ export function RivianLanding() {
 
       <footer className="relative z-10 mx-auto max-w-6xl px-6 pb-10">
         <div className="flex flex-col items-center justify-between gap-3 border-t border-white/10 pt-6 text-xs text-white/40 sm:flex-row">
-          <span className="tracking-[0.3em] uppercase">ThomasClaw — by Rivian</span>
+          <span className="tracking-[0.3em] uppercase">RivianClaw — by Rivian</span>
           <span>The drive that does the work.</span>
         </div>
       </footer>

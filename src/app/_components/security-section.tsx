@@ -6,19 +6,19 @@ const RISKS = [
     label: "UNTRUSTED SKILLS",
     description:
       "5,700+ unvetted community skills on ClawHub. Malicious ones were found within weeks.",
-    answer: "Thomas Claw runs on Composio's managed tool surface instead.",
+    answer: "RivianClaw runs on Composio's managed tool surface instead.",
   },
   {
     label: "EXPOSED CREDENTIALS",
     description:
       "API keys stored in plaintext on your machine. 900+ instances found leaking tokens.",
-    answer: "Thomas Claw never gives the agent a raw key.",
+    answer: "RivianClaw never gives the agent a raw key.",
   },
   {
     label: "UNSAFE CODE EXECUTION",
     description:
       "Scripts run locally with your permissions. One prompt injection from an email can trigger destructive commands.",
-    answer: "Thomas Claw sandboxes all execution remotely.",
+    answer: "RivianClaw sandboxes all execution remotely.",
   },
 ] as const;
 

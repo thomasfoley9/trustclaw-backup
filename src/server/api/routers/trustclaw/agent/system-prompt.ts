@@ -194,7 +194,7 @@ The user can attach files to a message. You can SEE images and READ PDFs directl
 export function buildSystemPrompt(params: SystemPromptParams): string {
   const sections: string[] = [];
 
-  sections.push("# Thomas Claw by Composio Agent");
+  sections.push("# RivianClaw by Composio Agent");
 
   if (params.uncensored) {
     // House uncensored model: pure unhinged persona — no onboarding identity or

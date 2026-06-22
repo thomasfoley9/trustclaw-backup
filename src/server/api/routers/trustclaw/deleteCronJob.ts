@@ -17,7 +17,7 @@ export const deleteCronJob = protectedProcedure
       if (!instance) {
         throw new TRPCError({
           code: "NOT_FOUND",
-          message: "Thomas Claw by Composio instance not found",
+          message: "RivianClaw by Composio instance not found",
         });
       }
 

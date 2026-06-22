@@ -24,7 +24,7 @@ const heading = Bricolage_Grotesque({
 });
 
 export const metadata: Metadata = {
-  title: "Thomas Claw",
+  title: "RivianClaw",
   // Favicon follows the demo skin: Rivian mark during the demo, the
   // Thomas-the-train mascot otherwise. Toggled by RIVIAN_DEMO.
   icons: RIVIAN_DEMO

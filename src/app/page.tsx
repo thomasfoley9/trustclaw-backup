@@ -5,7 +5,7 @@ import { RIVIAN_DEMO } from "~/lib/demo-flag";
 const jsonLd = {
   "@context": "https://schema.org",
   "@type": "SoftwareApplication",
-  name: "Thomas Claw",
+  name: "RivianClaw",
   description:
     "Made By Sales People....it probably sucks and your data is now being sold on Temu.",
   applicationCategory: "Productivity",

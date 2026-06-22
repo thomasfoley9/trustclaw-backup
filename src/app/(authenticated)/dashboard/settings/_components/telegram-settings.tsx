@@ -81,7 +81,7 @@ export function TelegramSettings() {
       <CardHeader>
         <CardTitle>Telegram</CardTitle>
         <CardDescription>
-          Chat with Thomas Claw from Telegram - messages sync with the
+          Chat with RivianClaw from Telegram - messages sync with the
           dashboard
         </CardDescription>
       </CardHeader>
@@ -109,7 +109,7 @@ export function TelegramSettings() {
                 </Button>
               }
               title="Unlink Telegram"
-              description="This will disconnect Telegram from your Thomas Claw instance. You can re-link it later."
+              description="This will disconnect Telegram from your RivianClaw instance. You can re-link it later."
               confirmLabel="Unlink"
               onConfirm={() => void unlinkTelegram.mutateAsync()}
               isPending={unlinkTelegram.isPending}
