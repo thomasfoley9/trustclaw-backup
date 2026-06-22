@@ -24,7 +24,13 @@ const heading = Bricolage_Grotesque({
 
 export const metadata: Metadata = {
   title: "Thomas Claw",
-  icons: [{ rel: "icon", url: "/favicon.ico" }],
+  icons: [
+    // The Thomas-the-train mascot. SVG for crisp modern tabs, .ico as the
+    // universal fallback (now also the train), PNG for Apple touch icons.
+    { rel: "icon", url: "/icon.svg", type: "image/svg+xml" },
+    { rel: "icon", url: "/favicon.ico", sizes: "any" },
+    { rel: "apple-touch-icon", url: "/apple-icon.png" },
+  ],
 };
 
 // Without this, mobile browsers render at ~980px desktop width and ignore

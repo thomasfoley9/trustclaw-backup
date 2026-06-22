@@ -1,0 +1,52 @@
+<svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Thomas Claw">
+  <rect width="200" height="200" rx="44" fill="#ffffff"/>
+  <!-- steam puffs -->
+  <circle cx="100" cy="26" r="9" fill="#e8edf5"/>
+  <circle cx="118" cy="16" r="6" fill="#e8edf5"/>
+  <circle cx="84" cy="14" r="5" fill="#e8edf5"/>
+  <!-- funnel -->
+  <path d="M82 56 L86 40 L114 40 L118 56 Z" fill="#1f2a44" stroke="#0f1830" stroke-width="3" stroke-linejoin="round"/>
+  <rect x="80" y="52" width="40" height="8" rx="4" fill="#2b3a5e" stroke="#0f1830" stroke-width="3"/>
+  <!-- dome -->
+  <path d="M128 58 q10 -14 22 0 Z" fill="#facc15" stroke="#0f1830" stroke-width="3" stroke-linejoin="round"/>
+  <!-- boiler / face plate -->
+  <rect x="34" y="58" width="132" height="108" rx="30" fill="#2f6fed" stroke="#0f1830" stroke-width="4"/>
+  <circle cx="100" cy="116" r="46" fill="#cfe0ff" stroke="#0f1830" stroke-width="4"/>
+  <!-- rivets -->
+  <g fill="#7aa2f0">
+    <circle cx="100" cy="72" r="2.5"/>
+    <circle cx="128" cy="80" r="2.5"/>
+    <circle cx="142" cy="104" r="2.5"/>
+    <circle cx="142" cy="130" r="2.5"/>
+    <circle cx="128" cy="152" r="2.5"/>
+    <circle cx="72" cy="80" r="2.5"/>
+    <circle cx="58" cy="104" r="2.5"/>
+    <circle cx="58" cy="130" r="2.5"/>
+    <circle cx="72" cy="152" r="2.5"/>
+  </g>
+  <!-- lamp -->
+  <circle cx="100" cy="78" r="7" fill="#fde68a" stroke="#0f1830" stroke-width="3"/>
+  <!-- eyes -->
+  <circle cx="84" cy="110" r="12" fill="#ffffff" stroke="#0f1830" stroke-width="3"/>
+  <circle cx="116" cy="110" r="12" fill="#ffffff" stroke="#0f1830" stroke-width="3"/>
+  <circle cx="86" cy="112" r="5" fill="#0f1830"/>
+  <circle cx="114" cy="112" r="5" fill="#0f1830"/>
+  <circle cx="88" cy="109" r="1.6" fill="#ffffff"/>
+  <circle cx="116" cy="109" r="1.6" fill="#ffffff"/>
+  <!-- cheeks -->
+  <circle cx="70" cy="128" r="6" fill="#f9a8d4" opacity="0.85"/>
+  <circle cx="130" cy="128" r="6" fill="#f9a8d4" opacity="0.85"/>
+  <!-- smile -->
+  <path d="M82 136 Q100 152 118 136" fill="none" stroke="#0f1830" stroke-width="4" stroke-linecap="round"/>
+  <!-- buffer beam -->
+  <rect x="40" y="166" width="120" height="14" rx="5" fill="#e23b3b" stroke="#0f1830" stroke-width="4"/>
+  <circle cx="52" cy="173" r="6" fill="#d1d5db" stroke="#0f1830" stroke-width="3"/>
+  <circle cx="148" cy="173" r="6" fill="#d1d5db" stroke="#0f1830" stroke-width="3"/>
+  <!-- wheels -->
+  <circle cx="74" cy="184" r="12" fill="#1f2a44" stroke="#0f1830" stroke-width="4"/>
+  <circle cx="126" cy="184" r="12" fill="#1f2a44" stroke="#0f1830" stroke-width="4"/>
+  <circle cx="74" cy="184" r="4" fill="#e23b3b"/>
+  <circle cx="126" cy="184" r="4" fill="#e23b3b"/>
+  <!-- sparkle -->
+  <path d="M150 64 l2 5 5 2 -5 2 -2 5 -2 -5 -5 -2 5 -2 z" fill="#a78bfa"/>
+</svg>
