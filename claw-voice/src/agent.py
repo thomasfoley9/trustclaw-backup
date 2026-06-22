@@ -115,7 +115,7 @@ def build_agent_a_llm(agent_a_model: str | None) -> openai.LLM:
 
 
 class ClawAgent(Agent):
-    def __init__(self, config: dict, room=None) -> None:
+    def __init__(self, config: dict, room=None, bg_audio=None) -> None:
         # Instructions carry the active personality's voice (or default Claw) so
         # the SPOKEN agent matches the user's selected personality.
         super().__init__(instructions=build_instructions(config))
@@ -125,6 +125,9 @@ class ClawAgent(Agent):
         # events. Storing it avoids reaching into ctx.session._room (private, and
         # not guaranteed bound when delegate() streams).
         self._room = room
+        # BackgroundAudioPlayer for hold music, played manually for the duration
+        # of delegate() so it reliably spans the whole wait.
+        self._bg_audio = bg_audio
 
     @function_tool
     async def delegate(self, ctx: RunContext, intent: str) -> str:
@@ -135,7 +138,30 @@ class ClawAgent(Agent):
         worker remembers the whole call, so pass a clear, self-contained `intent`
         with every detail (names, dates, message content)."""
         logger.info("delegate -> %r", intent)
-        return await self._run_delegate(intent)
+        # Manually play hold music for the WHOLE handoff. We do this explicitly
+        # (rather than the session's thinking_sound) because the spoken "please
+        # hold" line flips the agent out of the "thinking" state, so thinking_sound
+        # wouldn't span the tool call. Low volume + fade_out so it hands off
+        # gently to Claw's voice. Stopped in finally on every exit path.
+        hold = None
+        if self._bg_audio is not None:
+            try:
+                hold = self._bg_audio.play(
+                    AudioConfig(
+                        BuiltinAudioClip.HOLD_MUSIC, volume=0.35, fade_out=0.5
+                    ),
+                    loop=True,
+                )
+            except Exception:  # noqa: BLE001 — music is best-effort
+                logger.warning("hold music start skipped", exc_info=True)
+        try:
+            return await self._run_delegate(intent)
+        finally:
+            if hold is not None:
+                try:
+                    hold.stop()
+                except Exception:  # noqa: BLE001
+                    logger.warning("hold music stop skipped", exc_info=True)
 
     async def _run_delegate(self, intent: str) -> str:
         """The actual handoff to Agent B: POST the intent, stream its tool events
@@ -283,17 +309,17 @@ async def entrypoint(ctx: JobContext):
         # AgentSession bundles a VAD now; no explicit vad= needed.
     )
 
-    # Hold music: registered as the session's `thinking_sound`, so the framework
-    # plays it automatically whenever Agent A is in the "thinking" state — which
-    # spans the entire delegate() tool call — and AUTO-DUCKS it under Claw's voice
-    # and STOPS it the instant Claw starts speaking. (Replaces the earlier manual
-    # play/stop, which wasn't tied to the speech state and so talked over Claw.)
-    bg_audio = BackgroundAudioPlayer(
-        thinking_sound=AudioConfig(BuiltinAudioClip.HOLD_MUSIC, volume=0.4),
-    )
+    # Hold-music player. delegate() plays HOLD_MUSIC through this manually for the
+    # full duration of the handoff — reliable coverage of the whole wait, which
+    # the session's thinking_sound couldn't guarantee once a spoken "please hold"
+    # line dropped the agent out of the "thinking" state mid-turn.
+    bg_audio = BackgroundAudioPlayer()
 
-    # Hand the room to the agent so delegate() can publish cockpit events.
-    await session.start(agent=ClawAgent(config, ctx.room), room=ctx.room)
+    # Hand the room + player to the agent so delegate() can publish cockpit
+    # events and play the hold music.
+    await session.start(
+        agent=ClawAgent(config, ctx.room, bg_audio), room=ctx.room
+    )
     try:
         await bg_audio.start(room=ctx.room, agent_session=session)
     except Exception:  # noqa: BLE001 — ambience is best-effort, never block the call
