@@ -309,17 +309,15 @@ async def entrypoint(ctx: JobContext):
     except Exception:  # noqa: BLE001 — API unavailable; greet immediately
         logger.info("wait_for_participant unavailable", exc_info=True)
 
-    # Greet IN CHARACTER: generate_reply runs the LLM with the agent's
-    # instructions (which now carry the active personality), so Gordon Ramsay
-    # greets like Ramsay, Alfred like Alfred, etc. — instead of a fixed line.
+    # Greet with a FIXED line via say() — TTS only, NO LLM round-trip. The old
+    # generate_reply greeting cost ~5s (a full Kimi call + TTS) before the first
+    # word was even heard; say() speaks in ~1s. The active personality still
+    # fully governs the real conversation — only this one hello is fixed, a fair
+    # trade for cutting ~5s off every call's perceived start. It stays
+    # interruptible, so the user can talk over it the instant they're ready.
     try:
-        await session.generate_reply(
-            instructions=(
-                "Greet the user in ONE short line, fully in character, and ask "
-                "what they need. No menus, no lists of what you can do."
-            )
-        )
-    except Exception:  # noqa: BLE001 — a TTS/LLM hiccup shouldn't kill the session
+        await session.say("Hey — what do you need?")
+    except Exception:  # noqa: BLE001 — a TTS hiccup shouldn't kill the session
         logger.warning("greeting failed", exc_info=True)
 
 
