@@ -45,6 +45,11 @@ import {
   PERSONALITY_AVATARS,
 } from "~/app/_components/personality-avatar";
 import { DEFAULT_AVATAR_KEY } from "~/app/_components/personality-avatars-data";
+import {
+  STARTER_PERSONALITIES,
+  buildPersonaPrompt,
+  type StarterPersonality,
+} from "~/server/api/routers/trustclaw/personalities";
 import type { RouterOutputs } from "~/clients/trpc";
 
 type Personality =
@@ -96,6 +101,23 @@ export function PersonalitySettings() {
     setAvatarKey(personality.avatarKey ?? DEFAULT_AVATAR_KEY);
     setPrompt(personality.prompt);
     setDialogOpen(true);
+  };
+
+  // Prefill the create form from a starter template. Everything stays editable —
+  // this just seeds name/avatar/prompt. Names are unique per instance, so
+  // de-dupe against existing ones up front ("Dad" -> "Dad 2") to avoid a save
+  // failure. buildPersonaPrompt() wraps the voice with the shared guardrails.
+  const applyTemplate = (t: StarterPersonality) => {
+    const taken = new Set(
+      (data?.personalities ?? []).map((p) => p.name.trim().toLowerCase()),
+    );
+    let candidate: string = t.name;
+    for (let i = 2; taken.has(candidate.toLowerCase()) && i < 100; i++) {
+      candidate = `${t.name} ${i}`;
+    }
+    setName(candidate);
+    setAvatarKey(t.avatarKey);
+    setPrompt(buildPersonaPrompt(t.voice));
   };
 
   const handleSave = async () => {
@@ -256,7 +278,38 @@ export function PersonalitySettings() {
               always enforced regardless of personality.
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-3">
+          <div className="max-h-[70vh] space-y-3 overflow-y-auto pr-1">
+            {!editing && (
+              <div className="space-y-1.5">
+                <p className="text-muted-foreground text-xs font-medium">
+                  Start from a template{" "}
+                  <span className="font-normal">(optional — edit anything after)</span>
+                </p>
+                <div className="flex gap-2 overflow-x-auto pb-1">
+                  {STARTER_PERSONALITIES.map((t) => (
+                    <button
+                      key={t.key}
+                      type="button"
+                      title={t.blurb}
+                      onClick={() => applyTemplate(t)}
+                      className="border-border hover:border-primary/50 hover:bg-accent flex w-28 shrink-0 flex-col items-center gap-1 rounded-md border p-2 text-center transition-colors"
+                    >
+                      <PersonalityAvatar
+                        avatarKey={t.avatarKey}
+                        size={32}
+                        fallback={false}
+                      />
+                      <span className="text-foreground text-xs leading-tight font-medium">
+                        {t.name}
+                      </span>
+                      <span className="text-muted-foreground line-clamp-2 text-[10px] leading-tight">
+                        {t.blurb}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
             <div className="flex items-center gap-3">
               <PersonalityAvatar avatarKey={avatarKey} size={44} />
               <Input
