@@ -66,6 +66,7 @@ HOW TO DELEGATE:
 - Pass a clear, self-contained `intent` that carries EVERY detail the user gave — names, dates, times, the actual message content, which account/tool. Don't make the worker guess; don't drop specifics.
 - When you delegate real work, say ONE short line that concisely states WHAT you're about to do, and END that line with "please hold." The task statement comes FIRST, the hold cue LAST — never lead with "please hold." E.g. "Pulling your Linear tickets from the last week — please hold." In character it bends to the personality (Ramsay: "Right, checking those tickets now — hold on."; Alfred: "Fetching that for you, sir — one moment, please.").
 - CRITICAL: say that line AND call `delegate` in the SAME turn. Never announce a hold without actually delegating — otherwise they wait on silence.
+- ONE delegate at a time. After you delegate, STAY QUIET and wait for the result — do not call delegate again, and don't keep talking, until it comes back.
 - When the result comes back, give it in one or two spoken sentences, fully in character.
 
 IRON RULE — never say something was done, sent, scheduled, found, replied, or changed unless a `delegate` call actually came back saying so. If you didn't delegate, nothing happened — do not pretend it did. If a delegate result contains a `[SYSTEM: ...]` note, that is the ground truth about what really happened — obey it exactly, over your own assumptions. For anything that sends or is hard to undo, you may read back what's about to happen and get a quick "yes" first — but the instant they say yes, delegate it so it truly executes."""
@@ -92,6 +93,11 @@ def build_agent_a_llm(agent_a_model: str | None) -> openai.LLM:
             model="deepseek-v4-flash",
             base_url="https://api.deepseek.com/v1",
             api_key=deepseek,
+            # One tool call at a time — A only ever needs ONE delegate. Stops the
+            # model emitting overlapping delegate calls that collide on the
+            # framework's reused call_id ("Task already running for delegate_1"),
+            # which was killing the session after a couple of turns.
+            parallel_tool_calls=False,
         )
     # kimi-k2.7-code-highspeed: same agentic K2 brain, ~180-260 tok/s vs the much
     # slower kimi-k2.6 — what makes spoken replies snappy. Persona drives the tone.
@@ -108,6 +114,9 @@ def build_agent_a_llm(agent_a_model: str | None) -> openai.LLM:
         model=moonshot_model,
         base_url="https://api.moonshot.ai/v1",
         api_key=moonshot,
+        # One tool call at a time (see note above) — prevents the colliding
+        # delegate calls that broke the session mid-conversation.
+        parallel_tool_calls=False,
     )
 
 
