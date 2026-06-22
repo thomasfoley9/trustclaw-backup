@@ -47,7 +47,15 @@ VOICE_TURN_URL = os.environ.get(
 )
 WORKER_SECRET = os.environ.get("VOICE_WORKER_SHARED_SECRET", "")
 
-PERSONA = """You are the voice of Thomas Claw — a blunt, quick, no-corporate-bullshit personal assistant. You're talking out loud on a call, so keep replies short, natural, and conversational; never read long lists or raw data aloud.
+# The agent's CHARACTER (voice/tone). Default when no personality is active;
+# overridden by the user's selected personality prompt (passed in the dispatch
+# metadata as `personaPrompt`) so the SPOKEN agent takes on that personality,
+# matching the text agent.
+DEFAULT_CHARACTER = """You are Thomas Claw — a blunt, quick, no-corporate-bullshit personal assistant. Dry wit, zero fluff, zero corporate-speak. You keep it real and get straight to the point."""
+
+# Operational rules — ALWAYS applied, after the character. The character sets the
+# VOICE; these set the JOB and never change with personality.
+VOICE_FRONT_RULES = """You're talking out loud on a voice call, so keep replies short, natural, and conversational; never read long lists or raw data aloud. Stay fully in the character and voice described above — that voice is who you are on this call, in every reply.
 
 You have ONE tool, `delegate`, which hands a task to the worker that actually does things (email, calendar, Slack, the CRM, files, web lookups, sending/scheduling/changing anything). The worker remembers the whole call, so treat it as your hands.
 
@@ -59,10 +67,19 @@ WHEN TO ANSWER DIRECTLY — only pure conversation with no task behind it: greet
 
 HOW TO DELEGATE:
 - Pass a clear, self-contained `intent` that carries EVERY detail the user gave — names, dates, times, the actual message content, which account/tool. Don't make the worker guess; don't drop specifics.
-- Before you delegate, say a short natural line so they're not in silence ("on it — one sec"). If the task is HEAVY — pulling email AND calendar, several lookups, a full briefing, anything that takes real work — say so up front: "give me a few seconds to pull all that together." A heavy task runs for a bit; set that expectation so the wait feels normal, not broken or frozen.
-- When the result comes back, give it in one or two spoken sentences, in character.
+- Delegate right away — don't narrate that you're about to work or say "one sec." Soft hold music automatically fills the silence while the worker runs, so just hand off and wait for the result.
+- When the result comes back, give it in one or two spoken sentences, fully in character.
 
 IRON RULE — never say something was done, sent, scheduled, found, replied, or changed unless a `delegate` call actually came back saying so. If you didn't delegate, nothing happened — do not pretend it did. If a delegate result contains a `[SYSTEM: ...]` note, that is the ground truth about what really happened — obey it exactly, over your own assumptions. For anything that sends or is hard to undo, you may read back what's about to happen and get a quick "yes" first — but the instant they say yes, delegate it so it truly executes."""
+
+
+def build_instructions(config: dict) -> str:
+    """Agent A's instructions = the active personality's voice (or the default
+    Claw character) + the constant voice-front operational rules. Forwarding the
+    user's selected personality here is what makes the SPOKEN agent take on that
+    personality, exactly like the text agent does."""
+    character = config.get("personaPrompt") or DEFAULT_CHARACTER
+    return f"{str(character).strip()}\n\n{VOICE_FRONT_RULES}"
 
 
 def build_agent_a_llm(agent_a_model: str | None) -> openai.LLM:
@@ -97,17 +114,16 @@ def build_agent_a_llm(agent_a_model: str | None) -> openai.LLM:
 
 
 class ClawAgent(Agent):
-    def __init__(self, config: dict, room=None, bg_audio=None) -> None:
-        super().__init__(instructions=PERSONA)
+    def __init__(self, config: dict, room=None) -> None:
+        # Instructions carry the active personality's voice (or default Claw) so
+        # the SPOKEN agent matches the user's selected personality.
+        super().__init__(instructions=build_instructions(config))
         self._user_id = config.get("userId", "")
         self._conversation_id = config.get("conversationId", "")
         # The live room, handed in by the entrypoint — used to publish cockpit
         # events. Storing it avoids reaching into ctx.session._room (private, and
         # not guaranteed bound when delegate() streams).
         self._room = room
-        # BackgroundAudioPlayer used to play hold music during long delegate()
-        # calls so the caller isn't left in silence. May be None (best-effort).
-        self._bg_audio = bg_audio
 
     @function_tool
     async def delegate(self, ctx: RunContext, intent: str) -> str:
@@ -118,33 +134,12 @@ class ClawAgent(Agent):
         worker remembers the whole call, so pass a clear, self-contained `intent`
         with every detail (names, dates, message content)."""
         logger.info("delegate -> %r", intent)
-        # Fill the silence with hold music while Agent B works (heavy tasks run
-        # 30-60s). Deterministic: started here, stopped in the finally on EVERY
-        # exit path — success, error, or barge-in cancel. The framework auto-ducks
-        # it under A's spoken filler + final reply. Best-effort: a music hiccup
-        # must never block the real work.
-        hold = None
-        if self._bg_audio is not None:
-            try:
-                hold = self._bg_audio.play(
-                    AudioConfig(BuiltinAudioClip.HOLD_MUSIC, volume=0.5),
-                    loop=True,
-                )
-            except Exception:  # noqa: BLE001 — ambience is best-effort
-                logger.warning("hold music start skipped", exc_info=True)
-        try:
-            return await self._run_delegate(intent)
-        finally:
-            if hold is not None:
-                try:
-                    hold.stop()
-                except Exception:  # noqa: BLE001
-                    logger.warning("hold music stop skipped", exc_info=True)
+        return await self._run_delegate(intent)
 
     async def _run_delegate(self, intent: str) -> str:
         """The actual handoff to Agent B: POST the intent, stream its tool events
-        to the cockpit, and return the receipt-anchored result. delegate() wraps
-        this with hold music."""
+        to the cockpit, and return the receipt-anchored result. Hold music plays
+        automatically during this call via the session's thinking_sound."""
         import httpx  # local import keeps cold start lean
 
         result_text = ""
@@ -287,17 +282,17 @@ async def entrypoint(ctx: JobContext):
         # AgentSession bundles a VAD now; no explicit vad= needed.
     )
 
-    # Hold-music player: delegate() plays HOLD_MUSIC through this while Agent B
-    # works, so the caller isn't left in 30-60s of silence. Handed to the agent
-    # so the tool can start/stop it; started after the session so the room track
-    # is live.
-    bg_audio = BackgroundAudioPlayer()
-
-    # Hand the room + hold-music player to the agent so delegate() can publish
-    # cockpit events and fill the wait with music.
-    await session.start(
-        agent=ClawAgent(config, ctx.room, bg_audio), room=ctx.room
+    # Hold music: registered as the session's `thinking_sound`, so the framework
+    # plays it automatically whenever Agent A is in the "thinking" state — which
+    # spans the entire delegate() tool call — and AUTO-DUCKS it under Claw's voice
+    # and STOPS it the instant Claw starts speaking. (Replaces the earlier manual
+    # play/stop, which wasn't tied to the speech state and so talked over Claw.)
+    bg_audio = BackgroundAudioPlayer(
+        thinking_sound=AudioConfig(BuiltinAudioClip.HOLD_MUSIC, volume=0.4),
     )
+
+    # Hand the room to the agent so delegate() can publish cockpit events.
+    await session.start(agent=ClawAgent(config, ctx.room), room=ctx.room)
     try:
         await bg_audio.start(room=ctx.room, agent_session=session)
     except Exception:  # noqa: BLE001 — ambience is best-effort, never block the call
@@ -315,9 +310,17 @@ async def entrypoint(ctx: JobContext):
     except Exception:  # noqa: BLE001 — API unavailable; greet immediately
         logger.info("wait_for_participant unavailable", exc_info=True)
 
+    # Greet IN CHARACTER: generate_reply runs the LLM with the agent's
+    # instructions (which now carry the active personality), so Gordon Ramsay
+    # greets like Ramsay, Alfred like Alfred, etc. — instead of a fixed line.
     try:
-        await session.say("Hey — Thomas Claw here. What do you need?")
-    except Exception:  # noqa: BLE001 — a TTS hiccup shouldn't kill the session
+        await session.generate_reply(
+            instructions=(
+                "Greet the user in ONE short line, fully in character, and ask "
+                "what they need. No menus, no lists of what you can do."
+            )
+        )
+    except Exception:  # noqa: BLE001 — a TTS/LLM hiccup shouldn't kill the session
         logger.warning("greeting failed", exc_info=True)
 
 

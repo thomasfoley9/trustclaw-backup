@@ -47,11 +47,26 @@ export async function POST(request: Request) {
     select: { id: true },
   });
 
+  // The active personality's prompt drives Agent A's SPOKEN voice — without it,
+  // the voice front falls back to the default Claw character while the text
+  // agent uses the personality. Forward it in the dispatch metadata so voice
+  // matches text.
+  const activePersonality = instance.activePersonalityId
+    ? await db.personality.findFirst({
+        where: { id: instance.activePersonalityId, instanceId: instance.id },
+        select: { name: true, prompt: true },
+      })
+    : null;
+
   const sessionConfig = JSON.stringify({
     userId,
     instanceId: instance.id,
     conversationId: conversation.id,
     personaId: instance.activePersonalityId ?? null,
+    personaName: activePersonality?.name ?? null,
+    // Full personality prompt — Agent A adopts this as its spoken character so
+    // the voice matches the personality the user picked (same as text chat).
+    personaPrompt: activePersonality?.prompt ?? null,
     // Agent A (voice front) model; null -> the worker uses its house default.
     agentAModel: instance.agentAModel ?? null,
     // Agent B (worker) model — what /api/voice-turn runs for delegated work.
