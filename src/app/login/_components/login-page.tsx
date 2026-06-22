@@ -20,6 +20,8 @@ import {
 interface LoginPageProps {
   firstTime?: boolean;
   googleEnabled?: boolean;
+  // When false (SIGNUP_RESTRICTED), the invite-code field is shown. Open by default.
+  signupOpen?: boolean;
 }
 
 function GoogleIcon() {
@@ -36,6 +38,7 @@ function GoogleIcon() {
 export function LoginPage({
   firstTime = false,
   googleEnabled = false,
+  signupOpen = true,
 }: LoginPageProps) {
   const router = useRouter();
   const [pending, setPending] = useState(false);
@@ -245,21 +248,23 @@ export function LoginPage({
                     onChange={(e) => setRegPassword(e.target.value)}
                   />
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="reg-invite">
-                    Invite code{" "}
-                    <span className="text-muted-foreground font-normal">
-                      (if you have one)
-                    </span>
-                  </Label>
-                  <Input
-                    id="reg-invite"
-                    type="text"
-                    autoComplete="off"
-                    value={regInviteCode}
-                    onChange={(e) => setRegInviteCode(e.target.value)}
-                  />
-                </div>
+                {!signupOpen && (
+                  <div className="space-y-2">
+                    <Label htmlFor="reg-invite">
+                      Invite code{" "}
+                      <span className="text-muted-foreground font-normal">
+                        (if you have one)
+                      </span>
+                    </Label>
+                    <Input
+                      id="reg-invite"
+                      type="text"
+                      autoComplete="off"
+                      value={regInviteCode}
+                      onChange={(e) => setRegInviteCode(e.target.value)}
+                    />
+                  </div>
+                )}
                 <Button type="submit" className="w-full" disabled={pending}>
                   {pending ? "Creating account..." : "Create account"}
                 </Button>

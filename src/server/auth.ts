@@ -55,6 +55,10 @@ const redisRateLimitStorage = isRedisConfigured()
 //     header) — lets anyone with the code in regardless of email.
 // Enforced in the user.create.before hook so Google sign-up can't slip past the
 // email gate (OAuth carries no invite-code header).
+// Registration is OPEN to everyone unless SIGNUP_RESTRICTED="true", in which
+// case the gate below (allowed domains / emails / invite code) applies.
+const signupRestricted = env.SIGNUP_RESTRICTED === "true";
+
 const BASE_ALLOWED_DOMAINS = ["composio.dev"];
 
 const ALLOWED_DOMAINS = Array.from(
@@ -141,9 +145,13 @@ export const auth = betterAuth({
     user: {
       create: {
         before: async (user, ctx) => {
-          // A valid invite code (password form) OR an allowed email lets the
-          // account through. OAuth (Google) carries no code header, so it falls
-          // back to the email gate.
+          // Open registration: anyone may create an account. Only when
+          // SIGNUP_RESTRICTED is set do we fall back to the gate (a valid invite
+          // code on the password form, OR an allowed email — OAuth carries no
+          // code header so it relies on the email gate).
+          if (!signupRestricted) {
+            return { data: user };
+          }
           const code = ctx?.headers?.get("x-invite-code")?.trim() ?? "";
           if (inviteCodeValid(code) || emailAllowed(user.email)) {
             return { data: user };

@@ -33,6 +33,13 @@ export default async function Page() {
   }
 
   const googleEnabled = !!(env.GOOGLE_CLIENT_ID && env.GOOGLE_CLIENT_SECRET);
+  const signupOpen = env.SIGNUP_RESTRICTED !== "true";
 
-  return <LoginPage firstTime={firstTime} googleEnabled={googleEnabled} />;
+  return (
+    <LoginPage
+      firstTime={firstTime}
+      googleEnabled={googleEnabled}
+      signupOpen={signupOpen}
+    />
+  );
 }

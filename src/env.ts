@@ -72,6 +72,9 @@ export const env = createEnv({
     ALLOWED_EMAIL_DOMAINS: z.string().optional(),
     ALLOWED_EMAILS: z.string().optional(),
     SIGNUP_INVITE_CODE: z.string().optional(),
+    // Registration is OPEN to everyone by default. Set SIGNUP_RESTRICTED="true"
+    // to re-gate sign-up behind the allowed domains / emails / invite code.
+    SIGNUP_RESTRICTED: z.enum(["true", "false"]).optional(),
   },
   client: {
     NEXT_PUBLIC_APP_URL: z.string().url(),
@@ -103,6 +106,7 @@ export const env = createEnv({
     ALLOWED_EMAIL_DOMAINS: process.env.ALLOWED_EMAIL_DOMAINS,
     ALLOWED_EMAILS: process.env.ALLOWED_EMAILS,
     SIGNUP_INVITE_CODE: process.env.SIGNUP_INVITE_CODE,
+    SIGNUP_RESTRICTED: process.env.SIGNUP_RESTRICTED,
 
     // Client URL resolution:
     //  - dev: derive from PORT so `PORT=3001 pnpm dev` just works
