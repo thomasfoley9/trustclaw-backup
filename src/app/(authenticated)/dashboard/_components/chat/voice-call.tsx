@@ -55,26 +55,46 @@ export function VoiceCall({
   onCockpitEvent,
   onTranscript,
 }: VoiceCallProps) {
-  const [room] = useState(() => new Room());
+  // A fresh Room is created per call (in the connect effect) and held here so
+  // the RoomContext + audio renderer can read it. Reusing ONE Room across
+  // start/stop cycles let a new connect() race a prior teardown on the same
+  // object — the source of duplicate / overlapping sessions on re-click. Null
+  // between calls.
+  const [room, setRoom] = useState<Room | null>(null);
   const onEndedRef = useRef(onEnded);
   useEffect(() => {
     onEndedRef.current = onEnded;
   }, [onEnded]);
 
   useEffect(() => {
-    if (!active) return;
+    if (!active) {
+      setRoom(null);
+      return;
+    }
+    // One clean Room object for the lifetime of THIS call. Disconnected and
+    // discarded on teardown so the next call starts from a pristine object.
+    const liveRoom = new Room();
+    setRoom(liveRoom);
     let cancelled = false;
+    // Abort an in-flight token request on teardown so a quick start->stop can't
+    // leave the server having minted a token + dispatched an Agent A for a call
+    // the client already abandoned (the orphaned-session path the fresh Room
+    // alone doesn't cover, since the dispatch is a server side effect).
+    const tokenAbort = new AbortController();
 
     // Guard against a late 'disconnected' firing after cleanup (room.disconnect
     // is fire-and-forget), which would call onEnded on an unmounted parent.
     const onDisconnected = () => {
       if (!cancelled) onEndedRef.current();
     };
-    room.on("disconnected", onDisconnected);
+    liveRoom.on("disconnected", onDisconnected);
 
     void (async () => {
       try {
-        const res = await fetch("/api/livekit-token", { method: "POST" });
+        const res = await fetch("/api/livekit-token", {
+          method: "POST",
+          signal: tokenAbort.signal,
+        });
         if (!res.ok) {
           showErrorToast(
             res.status === 412
@@ -94,7 +114,7 @@ export function VoiceCall({
         // connection (network / WebRTC) vs. the mic grant (getUserMedia — the
         // usual mobile/iOS culprit, which needs HTTPS + a permission grant).
         try {
-          await room.connect(data.serverUrl, data.token);
+          await liveRoom.connect(data.serverUrl, data.token);
         } catch (err) {
           const detail =
             err instanceof Error ? `${err.name}: ${err.message}` : String(err);
@@ -108,7 +128,7 @@ export function VoiceCall({
         if (cancelled) return;
 
         try {
-          await room.localParticipant.setMicrophoneEnabled(true);
+          await liveRoom.localParticipant.setMicrophoneEnabled(true);
         } catch (err) {
           const name = err instanceof Error ? err.name : "";
           const detail =
@@ -128,8 +148,11 @@ export function VoiceCall({
         // Unlock audio playback. Mobile browsers (and Safari) block autoplay
         // until a gesture-initiated startAudio, so the agent's voice wouldn't be
         // heard otherwise. Best-effort — RoomAudioRenderer also handles it.
-        void room.startAudio().catch(() => undefined);
+        void liveRoom.startAudio().catch(() => undefined);
       } catch (err) {
+        // An aborted token fetch is an intentional teardown, not a failure —
+        // stay silent and let the cleanup path own it.
+        if (tokenAbort.signal.aborted) return;
         const detail =
           err instanceof Error ? `${err.name}: ${err.message}` : String(err);
         console.error("[voice] call setup failed —", detail);
@@ -140,20 +163,24 @@ export function VoiceCall({
 
     return () => {
       cancelled = true;
-      room.off("disconnected", onDisconnected);
-      void room.disconnect();
+      tokenAbort.abort();
+      liveRoom.off("disconnected", onDisconnected);
+      void liveRoom.disconnect();
+      // No setRoom(null) here: the next effect pass handles it (the !active
+      // branch nulls it; a re-activate replaces it), avoiding a null flap that
+      // would briefly tear down the audio renderer + data bridges.
     };
-  }, [active, room]);
+  }, [active]);
 
   // Reflect the mute button onto the published mic track. The connect effect
   // enables the mic on join (unmuted); this responds to later toggles. Guarded
   // on connection state so it never races the initial connect.
   useEffect(() => {
-    if (!active || room.state !== ConnectionState.Connected) return;
+    if (room?.state !== ConnectionState.Connected) return;
     void room.localParticipant
       .setMicrophoneEnabled(!muted)
       .catch((err) => console.error("[voice] mute toggle failed —", err));
-  }, [muted, active, room]);
+  }, [muted, room]);
 
   // Mobile/Safari (and often desktop Chrome) block audio autoplay until a user
   // gesture. The after-connect startAudio() runs outside the tap, so it can be
@@ -163,7 +190,7 @@ export function VoiceCall({
   // browser doesn't emit AudioPlaybackStatusChanged.
   const [needsAudioUnlock, setNeedsAudioUnlock] = useState(false);
   useEffect(() => {
-    if (!active) return;
+    if (!room) return;
     const sync = () => setNeedsAudioUnlock(!room.canPlaybackAudio);
     room.on(RoomEvent.AudioPlaybackStatusChanged, sync);
     room.on(RoomEvent.TrackSubscribed, sync);
@@ -178,9 +205,9 @@ export function VoiceCall({
       room.off(RoomEvent.TrackSubscribed, sync);
       room.off(RoomEvent.Connected, sync);
     };
-  }, [active, room]);
+  }, [room]);
 
-  if (!active) return null;
+  if (!active || !room) return null;
 
   return (
     <RoomContext.Provider value={room}>

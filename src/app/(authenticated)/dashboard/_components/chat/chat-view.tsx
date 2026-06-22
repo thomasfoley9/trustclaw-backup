@@ -295,6 +295,11 @@ export function ChatView({
   const handleStartConversation = useCallback(() => {
     voiceUnlock(); // prime audio within this gesture so replies can autoplay
     if (liveKitConfigured) {
+      // Re-entry guard: a live call is already up (or mid-connect, since
+      // liveCallActive flips true synchronously here). Without this, a second
+      // trigger would mint a new token + dispatch a second agent — the
+      // duplicate-session bug. Toggling OFF goes through onStopConversation.
+      if (liveCallActive) return;
       clearVoiceOverlay(); // start each call with a fresh transcript + action feed
       setLiveCallMuted(false); // each call starts unmuted
       setTerminalOpen(true); // surface the Live pane so actions are visible
@@ -306,6 +311,7 @@ export function ChatView({
   }, [
     voiceUnlock,
     liveKitConfigured,
+    liveCallActive,
     voiceEnabled,
     toggleVoice,
     startConversationLoop,
