@@ -5,6 +5,7 @@ import { Bricolage_Grotesque, IBM_Plex_Mono, Inter } from "next/font/google";
 import { Toaster } from "sonner";
 import { TRPCReactProvider } from "~/clients/trpc";
 import { ThemeProvider } from "~/components/core/theme-provider";
+import { RIVIAN_DEMO } from "~/lib/demo-flag";
 
 const primary = Inter({
   subsets: ["latin"],
@@ -24,13 +25,19 @@ const heading = Bricolage_Grotesque({
 
 export const metadata: Metadata = {
   title: "Thomas Claw",
-  icons: [
-    // The Thomas-the-train mascot. SVG for crisp modern tabs, .ico as the
-    // universal fallback (now also the train), PNG for Apple touch icons.
-    { rel: "icon", url: "/icon.svg", type: "image/svg+xml" },
-    { rel: "icon", url: "/favicon.ico", sizes: "any" },
-    { rel: "apple-touch-icon", url: "/apple-icon.png" },
-  ],
+  // Favicon follows the demo skin: Rivian mark during the demo, the
+  // Thomas-the-train mascot otherwise. Toggled by RIVIAN_DEMO.
+  icons: RIVIAN_DEMO
+    ? [
+        { rel: "icon", url: "/rivian-icon.svg", type: "image/svg+xml" },
+        { rel: "icon", url: "/rivian-favicon.ico", sizes: "any" },
+        { rel: "apple-touch-icon", url: "/rivian-apple-icon.png" },
+      ]
+    : [
+        { rel: "icon", url: "/icon.svg", type: "image/svg+xml" },
+        { rel: "icon", url: "/favicon.ico", sizes: "any" },
+        { rel: "apple-touch-icon", url: "/apple-icon.png" },
+      ],
 };
 
 // Without this, mobile browsers render at ~980px desktop width and ignore

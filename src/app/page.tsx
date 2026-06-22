@@ -1,4 +1,6 @@
 import { LandingPage } from "./_components/landing-page";
+import { RivianLanding } from "./_components/rivian-landing";
+import { RIVIAN_DEMO } from "~/lib/demo-flag";
 
 const jsonLd = {
   "@context": "https://schema.org",
@@ -23,7 +25,7 @@ export default async function Page() {
   return (
     <>
       <script type="application/ld+json">{JSON.stringify(jsonLd)}</script>
-      <LandingPage />
+      {RIVIAN_DEMO ? <RivianLanding /> : <LandingPage />}
     </>
   );
 }
