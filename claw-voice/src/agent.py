@@ -26,9 +26,6 @@ from livekit.agents import (
     Agent,
     AgentServer,
     AgentSession,
-    AudioConfig,
-    BackgroundAudioPlayer,
-    BuiltinAudioClip,
     JobContext,
     RunContext,
     function_tool,
@@ -67,8 +64,8 @@ WHEN TO ANSWER DIRECTLY — only pure conversation with no task behind it: greet
 
 HOW TO DELEGATE:
 - Pass a clear, self-contained `intent` that carries EVERY detail the user gave — names, dates, times, the actual message content, which account/tool. Don't make the worker guess; don't drop specifics.
-- When you delegate real work, FIRST give ONE short line that acknowledges the task and tells them to hold — in your own voice. Default: "On it — please hold." In character it bends to your personality (e.g. Ramsay: "Right, hold on."; Alfred: "One moment, sir."; the hype bestie: "ok hold up, gimme a sec"). The point is a clear "hold" cue, because soft hold music plays while the worker runs.
-- CRITICAL: say that hold line AND call `delegate` in the SAME turn. Never announce a hold without actually delegating — otherwise they wait on silence.
+- When you delegate real work, say ONE short line that concisely states WHAT you're about to do, and END that line with "please hold." The task statement comes FIRST, the hold cue LAST — never lead with "please hold." E.g. "Pulling your Linear tickets from the last week — please hold." In character it bends to the personality (Ramsay: "Right, checking those tickets now — hold on."; Alfred: "Fetching that for you, sir — one moment, please.").
+- CRITICAL: say that line AND call `delegate` in the SAME turn. Never announce a hold without actually delegating — otherwise they wait on silence.
 - When the result comes back, give it in one or two spoken sentences, fully in character.
 
 IRON RULE — never say something was done, sent, scheduled, found, replied, or changed unless a `delegate` call actually came back saying so. If you didn't delegate, nothing happened — do not pretend it did. If a delegate result contains a `[SYSTEM: ...]` note, that is the ground truth about what really happened — obey it exactly, over your own assumptions. For anything that sends or is hard to undo, you may read back what's about to happen and get a quick "yes" first — but the instant they say yes, delegate it so it truly executes."""
@@ -115,7 +112,7 @@ def build_agent_a_llm(agent_a_model: str | None) -> openai.LLM:
 
 
 class ClawAgent(Agent):
-    def __init__(self, config: dict, room=None, bg_audio=None) -> None:
+    def __init__(self, config: dict, room=None) -> None:
         # Instructions carry the active personality's voice (or default Claw) so
         # the SPOKEN agent matches the user's selected personality.
         super().__init__(instructions=build_instructions(config))
@@ -125,9 +122,6 @@ class ClawAgent(Agent):
         # events. Storing it avoids reaching into ctx.session._room (private, and
         # not guaranteed bound when delegate() streams).
         self._room = room
-        # BackgroundAudioPlayer for hold music, played manually for the duration
-        # of delegate() so it reliably spans the whole wait.
-        self._bg_audio = bg_audio
 
     @function_tool
     async def delegate(self, ctx: RunContext, intent: str) -> str:
@@ -138,35 +132,11 @@ class ClawAgent(Agent):
         worker remembers the whole call, so pass a clear, self-contained `intent`
         with every detail (names, dates, message content)."""
         logger.info("delegate -> %r", intent)
-        # Manually play hold music for the WHOLE handoff. We do this explicitly
-        # (rather than the session's thinking_sound) because the spoken "please
-        # hold" line flips the agent out of the "thinking" state, so thinking_sound
-        # wouldn't span the tool call. Low volume + fade_out so it hands off
-        # gently to Claw's voice. Stopped in finally on every exit path.
-        hold = None
-        if self._bg_audio is not None:
-            try:
-                hold = self._bg_audio.play(
-                    AudioConfig(
-                        BuiltinAudioClip.HOLD_MUSIC, volume=0.35, fade_out=0.5
-                    ),
-                    loop=True,
-                )
-            except Exception:  # noqa: BLE001 — music is best-effort
-                logger.warning("hold music start skipped", exc_info=True)
-        try:
-            return await self._run_delegate(intent)
-        finally:
-            if hold is not None:
-                try:
-                    hold.stop()
-                except Exception:  # noqa: BLE001
-                    logger.warning("hold music stop skipped", exc_info=True)
+        return await self._run_delegate(intent)
 
     async def _run_delegate(self, intent: str) -> str:
         """The actual handoff to Agent B: POST the intent, stream its tool events
-        to the cockpit, and return the receipt-anchored result. Hold music plays
-        automatically during this call via the session's thinking_sound."""
+        to the cockpit, and return the receipt-anchored result."""
         import httpx  # local import keeps cold start lean
 
         result_text = ""
@@ -309,21 +279,14 @@ async def entrypoint(ctx: JobContext):
         # AgentSession bundles a VAD now; no explicit vad= needed.
     )
 
-    # Hold-music player. delegate() plays HOLD_MUSIC through this manually for the
-    # full duration of the handoff — reliable coverage of the whole wait, which
-    # the session's thinking_sound couldn't guarantee once a spoken "please hold"
-    # line dropped the agent out of the "thinking" state mid-turn.
-    bg_audio = BackgroundAudioPlayer()
+    # NOTE: server-side hold music (BackgroundAudioPlayer) was removed — it
+    # publishes a SECOND audio track, which mobile browsers won't reliably play
+    # and which destabilized the mic after a couple of turns. Hold music will
+    # return client-side (a local <audio> loop), which plays on mobile and never
+    # touches the WebRTC mic.
 
-    # Hand the room + player to the agent so delegate() can publish cockpit
-    # events and play the hold music.
-    await session.start(
-        agent=ClawAgent(config, ctx.room, bg_audio), room=ctx.room
-    )
-    try:
-        await bg_audio.start(room=ctx.room, agent_session=session)
-    except Exception:  # noqa: BLE001 — ambience is best-effort, never block the call
-        logger.warning("background audio player failed to start", exc_info=True)
+    # Hand the room to the agent so delegate() can publish cockpit events.
+    await session.start(agent=ClawAgent(config, ctx.room), room=ctx.room)
 
     # Explicit dispatch can place the agent in the room before the user finishes
     # connecting — wait for them so the greeting isn't spoken into an empty room.
