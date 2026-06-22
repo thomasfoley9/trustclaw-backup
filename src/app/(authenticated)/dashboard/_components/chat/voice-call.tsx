@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Room, ConnectionState, RoomEvent } from "livekit-client";
 import {
   RoomContext,
@@ -11,6 +11,7 @@ import {
 } from "@livekit/components-react";
 import { Volume2 } from "lucide-react";
 import { showErrorToast } from "~/components/core/toast-notifications";
+import { useHoldMusic } from "./use-hold-music";
 
 // A live Agent B tool event forwarded from the LiveKit worker's cockpit channel.
 export interface VoiceCockpitEvent {
@@ -182,6 +183,62 @@ export function VoiceCall({
       .catch((err) => console.error("[voice] mute toggle failed —", err));
   }, [muted, room]);
 
+  // Hold music: a browser-played loop (mobile-safe, see use-hold-music) that runs
+  // while Agent B is actually doing work — keyed off the SAME cockpit b_tool
+  // running/done events the receipts pane uses, so it's deterministic and never
+  // overlaps the agent's voice (B stays silent while its tools run, then speaks
+  // the result once they're done). This is what fills the gap after "please hold".
+  const holdMusic = useHoldMusic();
+  const runningToolsRef = useRef<Set<string>>(new Set());
+  const stopGraceRef = useRef<number | null>(null);
+
+  const clearStopGrace = useCallback(() => {
+    if (stopGraceRef.current !== null) {
+      window.clearTimeout(stopGraceRef.current);
+      stopGraceRef.current = null;
+    }
+  }, []);
+
+  // Decode cockpit events for the music, then forward them up to the parent.
+  const handleCockpitEvent = useCallback(
+    (event: VoiceCockpitEvent) => {
+      const running = runningToolsRef.current;
+      if (event.status === "running") running.add(event.id);
+      else running.delete(event.id);
+      if (running.size > 0) {
+        clearStopGrace();
+        holdMusic.start();
+      } else {
+        // Short grace so the loop doesn't flicker between back-to-back tools in
+        // one delegate; if another tool starts first, the grace is cancelled.
+        stopGraceRef.current ??= window.setTimeout(() => {
+          stopGraceRef.current = null;
+          holdMusic.stop();
+        }, 700);
+      }
+      onCockpitEvent?.(event);
+    },
+    [holdMusic, clearStopGrace, onCockpitEvent],
+  );
+
+  // Hard-stop the music whenever the call ends (no lingering loop between calls).
+  useEffect(() => {
+    if (active) return;
+    clearStopGrace();
+    runningToolsRef.current.clear();
+    holdMusic.stop();
+  }, [active, holdMusic, clearStopGrace]);
+
+  // Prime the AudioContext on the first user tap of the call — mobile blocks
+  // audio created outside a gesture, and the music's start() fires later off a
+  // data event, not a tap. The tap-to-enable-sound button primes it too.
+  useEffect(() => {
+    if (!active) return;
+    const primeOnce = () => holdMusic.prime();
+    window.addEventListener("pointerdown", primeOnce, { once: true });
+    return () => window.removeEventListener("pointerdown", primeOnce);
+  }, [active, holdMusic]);
+
   // Mobile/Safari (and often desktop Chrome) block audio autoplay until a user
   // gesture. The after-connect startAudio() runs outside the tap, so it can be
   // blocked — surface a tap-to-enable button that calls startAudio inside a real
@@ -212,12 +269,13 @@ export function VoiceCall({
   return (
     <RoomContext.Provider value={room}>
       <RoomAudioRenderer />
-      <CockpitBridge onCockpitEvent={onCockpitEvent} />
+      <CockpitBridge onCockpitEvent={handleCockpitEvent} />
       <TranscriptBridge onTranscript={onTranscript} />
       {needsAudioUnlock && (
         <button
           type="button"
           onClick={() => {
+            holdMusic.prime();
             void room
               .startAudio()
               .finally(() => setNeedsAudioUnlock(!room.canPlaybackAudio));
