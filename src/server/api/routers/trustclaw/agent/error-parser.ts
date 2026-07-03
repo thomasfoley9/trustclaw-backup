@@ -1,3 +1,4 @@
+import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 
 const composioApiErrorSchema = z
@@ -46,6 +47,13 @@ function providerMessageFromBody(body: string): string | null {
 }
 
 export function parseAgentError(error: unknown): string {
+  // Our own precondition errors ("Set your Composio API key in Settings",
+  // "Add your Anthropic API key first") are written for display - pass them
+  // through instead of flattening to the generic fallback.
+  if (error instanceof TRPCError && error.message) {
+    return error.message;
+  }
+
   const raw = error instanceof Error ? error.message : String(error);
 
   // OpenAI-compatible providers (house models + BYO custom models) put the real

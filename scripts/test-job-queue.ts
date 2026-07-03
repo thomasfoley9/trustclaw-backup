@@ -61,24 +61,15 @@ async function main() {
 
   // === Test A2: cron jobs share the queue, discriminated by kind (no worker) ===
   await queue.obliterate({ force: true });
-  const cronId = await enqueueCronJob("inv-xyz", {
-    jobs: [
-      {
-        id: "cj1",
-        instanceId: "inst-A",
-        expression: "* * * * *",
-        prompt: "do the thing",
-        timezone: "UTC",
-        lockedBy: "inv-xyz",
-        telegramChatId: null,
-      },
-    ],
+  const cronId = await enqueueCronJob("cron:inv-xyz:cj1", {
+    jobId: "cj1",
     invocationId: "inv-xyz",
+    trigger: "schedule",
   });
   const cronJob = await queue.getJob(cronId);
   assert(cronJob, "cron job should exist");
   assert(cronJob.data.kind === "cron", "enqueueCronJob tags kind=cron");
-  assert.equal(cronJob.data.jobs.length, 1, "cron payload carries its jobs");
+  assert.equal(cronJob.data.jobId, "cj1", "cron payload carries its job id");
   assert.equal(cronJob.data.invocationId, "inv-xyz");
   console.log("PASS A2 - cron job enqueues with the kind discriminator");
 

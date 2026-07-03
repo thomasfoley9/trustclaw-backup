@@ -7,8 +7,10 @@ import { deleteInstance } from "./deleteInstance";
 import { linkTelegram } from "./linkTelegram";
 import { unlinkTelegram } from "./unlinkTelegram";
 import { getCronJobs } from "./getCronJobs";
+import { getCronRuns } from "./getCronRuns";
 import { toggleCronJob } from "./toggleCronJob";
 import { deleteCronJob } from "./deleteCronJob";
+import { runCronJobNow } from "./runCronJobNow";
 import { getHistory } from "./getHistory";
 import { getStreamingMessage } from "./getStreamingMessage";
 import { getMemories } from "./getMemories";
@@ -62,8 +64,10 @@ export const trustclawRouter = router({
   linkTelegram,
   unlinkTelegram,
   getCronJobs,
+  getCronRuns,
   toggleCronJob,
   deleteCronJob,
+  runCronJobNow,
   getHistory,
   getStreamingMessage,
   getMemories,

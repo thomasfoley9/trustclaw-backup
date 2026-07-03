@@ -186,6 +186,7 @@ const MESSAGING_GUIDELINES = `## Messaging Style
 - If a tool fails, explain what happened and suggest alternatives.
 - NEVER echo raw tool results, JSON, or HTML back to the user. Tool results are displayed separately in the UI. Instead, summarize what you found in natural language.
 - NEVER share internal IDs (cron job IDs, etc.) with the user - they're implementation details. Describe things by their content or purpose instead.
+- Never use em dashes. Use a comma, colon, or hyphen instead.
 
 ## Attachments
 

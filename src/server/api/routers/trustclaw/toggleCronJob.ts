@@ -1,6 +1,10 @@
 import { TRPCError } from "@trpc/server";
 import { protectedProcedure } from "~/server/api/trpc";
 import { db } from "~/server/clients/db";
+import {
+  scheduleNextFire,
+  cancelScheduledFire,
+} from "~/server/clients/qstash";
 import { toggleCronJobInput } from "./toggleCronJob.schema";
 import { computeNextRunAt } from "./agent/tools/cron-utils";
 
@@ -9,7 +13,7 @@ export const toggleCronJob = protectedProcedure
   .mutation(async ({ ctx, input }) => {
     const userId = ctx.session.user.id;
 
-    return db.$transaction(async (tx) => {
+    const updated = await db.$transaction(async (tx) => {
       const instance = await tx.composioClawInstance.findUnique({
         where: { userId },
         select: { id: true },
@@ -42,7 +46,10 @@ export const toggleCronJob = protectedProcedure
         data: {
           enabled: input.enabled,
           nextRunAt,
-          ...(input.enabled ? {} : { lockedAt: null, lockedBy: null }),
+          // Re-enabling is a fresh start for the failure streak.
+          ...(input.enabled
+            ? { consecutiveFailures: 0, lastError: null }
+            : { lockedAt: null, lockedBy: null }),
         },
         select: {
           id: true,
@@ -53,4 +60,14 @@ export const toggleCronJob = protectedProcedure
 
       return updated;
     });
+
+    // Sync the QStash one-shot AFTER the transaction commits (external HTTP
+    // has no place inside a DB transaction). No-ops when QStash is off.
+    if (updated.enabled) {
+      await scheduleNextFire(updated.id, updated.nextRunAt);
+    } else {
+      await cancelScheduledFire(updated.id);
+    }
+
+    return updated;
   });

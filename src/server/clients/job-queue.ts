@@ -2,7 +2,6 @@ import { Queue, Worker, type Job, type Processor } from "bullmq";
 import Redis from "ioredis";
 import { env } from "~/env";
 import type { MessageSource } from "~/server/api/routers/trustclaw/agent/setup";
-import type { CronJobRow } from "~/app/api/cron/trustclaw/execute/route.schema";
 
 // BullMQ requires its Redis connections to use `maxRetriesPerRequest: null` -
 // its blocking commands (BRPOPLPUSH etc.) must not be torn down by ioredis's
@@ -39,11 +38,12 @@ export interface AgentJobData {
   // worker re-fetches and decrypts the user's keys job-scoped (see plan §5A).
 }
 
-/** A batch of due cron jobs for one instance, with their fencing context. */
+/** One due cron job with its fencing context (one queue entry per job). */
 export interface CronJobData {
   kind: "cron";
-  jobs: CronJobRow[];
+  jobId: string;
   invocationId: string;
+  trigger?: "schedule" | "manual";
   nowOverride?: string;
 }
 
@@ -113,8 +113,9 @@ export function enqueueAgentJob(
 }
 
 /**
- * Enqueue a batch of due cron jobs. `jobId` should be the dispatch's
- * invocationId so a retried dispatch dedupes to a single run.
+ * Enqueue one due cron job. `jobId` (the queue key) should be
+ * `cron:{invocationId}:{cronJobId}` so a retried dispatch dedupes to a
+ * single run.
  */
 export function enqueueCronJob(
   jobId: string,

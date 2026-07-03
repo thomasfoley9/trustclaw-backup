@@ -28,6 +28,7 @@ export const getCronJobs = protectedProcedure
         nextRunAt: true,
         lockedAt: true,
         lastError: true,
+        consecutiveFailures: true,
       },
       // id tiebreak: nextRunAt is null for every disabled job, and cursor
       // paging over a non-unique sort key can skip or duplicate rows.

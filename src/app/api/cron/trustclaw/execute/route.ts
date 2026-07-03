@@ -1,15 +1,13 @@
 import { timingSafeEqual } from "node:crypto";
 import { after, NextResponse } from "next/server";
-import { Prisma } from "~/generated/prisma/client";
-import { z } from "zod";
 import { env } from "~/env";
 import { db } from "~/server/clients/db";
-import { runCronJobs } from "~/server/cron/run-cron-jobs";
+import { runSingleCronJob } from "~/server/cron/run-single-job";
 import {
   enqueueCronJob,
   isWorkerQueueEnabled,
 } from "~/server/clients/job-queue";
-import { executeJobInput, cronJobRow } from "./route.schema";
+import { executeJobInput } from "./route.schema";
 
 // Constant-time compare so the bearer check can't leak CRON_SECRET via timing.
 function safeEqual(a: string, b: string): boolean {
@@ -19,27 +17,7 @@ function safeEqual(a: string, b: string): boolean {
   return timingSafeEqual(ab, bb);
 }
 
-async function loadJobsFromDb(jobIds: string[]) {
-  const rows = z.array(cronJobRow).parse(
-    await db.$queryRaw`
-      SELECT
-        cj.id,
-        cj."instanceId",
-        cj.expression,
-        cj.prompt,
-        cj.timezone,
-        cj."lockedBy",
-        ci."telegramChatId"
-      FROM composio_claw_cron_job cj
-      JOIN composio_claw_instance ci ON cj."instanceId" = ci.id
-      WHERE cj.id IN (${Prisma.join(jobIds)})
-    `,
-  );
-
-  return rows;
-}
-
-export const maxDuration = 60;
+export const maxDuration = 300;
 
 export async function POST(request: Request) {
   // Bearer-auth via CRON_SECRET (auto-injected by Vercel for cron-triggered
@@ -71,39 +49,44 @@ export async function POST(request: Request) {
     );
   }
 
-  const { jobIds, invocationId, nowOverride } = parsed.data;
+  const { jobId, invocationId, trigger, nowOverride } = parsed.data;
 
-  const jobs = await loadJobsFromDb(jobIds);
-
-  if (jobs.length === 0) {
-    return NextResponse.json({ error: "No jobs found" }, { status: 404 });
+  // Validate the fencing token before accepting - a stale dispatch whose lock
+  // was reclaimed by a newer invocation must not run.
+  const job = await db.cronJob.findUnique({
+    where: { id: jobId },
+    select: { lockedBy: true },
+  });
+  if (!job) {
+    return NextResponse.json({ error: "Job not found" }, { status: 404 });
   }
-
-  // Filter to jobs with valid fencing tokens
-  const validJobs = jobs.filter((job) => job.lockedBy === invocationId);
-
-  if (validJobs.length === 0) {
+  if (job.lockedBy !== invocationId) {
     return NextResponse.json(
-      { error: "Fencing token mismatch for all jobs" },
+      { error: "Fencing token mismatch" },
       { status: 403 },
     );
   }
 
   if (isWorkerQueueEnabled()) {
     // Hand off to the standalone worker (no Vercel duration ceiling). The
-    // invocationId is the idempotency key, so a retried dispatch dedupes to a
-    // single run. The worker re-runs the exact same runCronJobs() logic.
-    await enqueueCronJob(`cron:${invocationId}`, {
-      jobs: validJobs,
+    // invocationId+jobId pair is the idempotency key, so a retried dispatch
+    // dedupes to a single run.
+    await enqueueCronJob(`cron:${invocationId}:${jobId}`, {
+      jobId,
       invocationId,
+      trigger,
       ...(nowOverride ? { nowOverride } : {}),
     });
   } else {
-    after(runCronJobs(validJobs, invocationId, nowOverride));
+    after(
+      runSingleCronJob({
+        jobId,
+        invocationId,
+        trigger,
+        nowOverride,
+      }),
+    );
   }
 
-  return NextResponse.json(
-    { status: "accepted", jobCount: validJobs.length },
-    { status: 202 },
-  );
+  return NextResponse.json({ status: "accepted", jobId }, { status: 202 });
 }

@@ -1,6 +1,10 @@
 import { zodSchema } from "ai";
 import type { Tool } from "ai";
 import { db } from "~/server/clients/db";
+import {
+  scheduleNextFire,
+  cancelScheduledFire,
+} from "~/server/clients/qstash";
 import { computeNextRunAt, validateCronExpression } from "./cron-utils";
 import { scheduleSchema, type ScheduleInput } from "./schedule.schema";
 
@@ -45,6 +49,9 @@ export function createScheduleTool(
                 nextRunAt: true,
               },
             });
+
+            // Push scheduling (no-op when QStash is off; the sweeper covers it).
+            await scheduleNextFire(job.id, job.nextRunAt);
 
             return {
               created: true,
@@ -97,6 +104,7 @@ export function createScheduleTool(
             return { error: "Job not found" };
           }
 
+          await cancelScheduledFire(jobId).catch(() => undefined);
           await db.cronJob.delete({ where: { id: jobId } });
 
           return { deleted: true, jobId };

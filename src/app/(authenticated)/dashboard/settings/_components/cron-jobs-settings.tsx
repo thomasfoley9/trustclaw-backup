@@ -1,7 +1,15 @@
 "use client";
 
+import { useState } from "react";
 import moment from "moment";
-import { Calendar, Clock, Loader2, Trash2 } from "lucide-react";
+import {
+  Calendar,
+  Clock,
+  History,
+  Loader2,
+  Play,
+  Trash2,
+} from "lucide-react";
 import { trpc } from "~/clients/trpc";
 import { Button } from "~/components/ui/button";
 import { Switch } from "~/components/ui/switch";
@@ -13,6 +21,11 @@ import {
   trpcToastOnError,
 } from "~/components/core/toast-notifications";
 import { VirtualizedList } from "~/components/core/virtualized-list";
+import { CronRunHistory } from "./cron-run-history";
+
+// Mirrors AUTO_PAUSE_THRESHOLD in ~/server/cron/run-single-job (not imported:
+// that module pulls the whole server runtime into the client bundle).
+const AUTO_PAUSE_THRESHOLD = 3;
 
 function formatCronExpression(expression: string): string {
   const parts = expression.split(" ");
@@ -43,17 +56,28 @@ function formatCronExpression(expression: string): string {
 }
 
 function formatDate(date: Date | null): string {
-  if (!date) return "\u2014";
+  if (!date) return "-";
   return moment(date).format("MMM D, h:mm A");
 }
 
 export function CronJobsSettings() {
   const utils = trpc.useUtils();
+  const [expandedJobId, setExpandedJobId] = useState<string | null>(null);
 
   const { data, isLoading, hasNextPage, fetchNextPage, isFetchingNextPage } =
     trpc.trustclaw.getCronJobs.useInfiniteQuery(
       { limit: 20 },
-      { getNextPageParam: (lastPage) => lastPage.nextCursor },
+      {
+        getNextPageParam: (lastPage) => lastPage.nextCursor,
+        // While any job is mid-run, poll so the Running badge clears and
+        // nextRunAt refreshes when the run finishes.
+        refetchInterval: (query) =>
+          query.state.data?.pages.some((page) =>
+            page.items.some((item) => item.lockedAt !== null),
+          )
+            ? 5000
+            : false,
+      },
     );
 
   const cronJobs = data?.pages.flatMap((page) => page.items) ?? [];
@@ -99,6 +123,17 @@ export function CronJobsSettings() {
     onError: trpcToastOnError,
   });
 
+  const runCronJobNow = trpc.trustclaw.runCronJobNow.useMutation({
+    onSuccess: (_data, vars) => {
+      showSuccessToast("Run started");
+      // Open the history panel so the new run is visible as it progresses.
+      setExpandedJobId(vars.jobId);
+      void utils.trustclaw.getCronJobs.invalidate();
+      void utils.trustclaw.getCronRuns.invalidate({ jobId: vars.jobId });
+    },
+    onError: trpcToastOnError,
+  });
+
   return (
     <Card>
       <CardHeader>
@@ -122,54 +157,115 @@ export function CronJobsSettings() {
         ) : (
           <VirtualizedList
             items={cronJobs}
-            renderItem={(job) => (
-              <div className="flex flex-col gap-3 rounded-lg border border-border p-4 sm:flex-row sm:items-center sm:justify-between">
-                <div className="min-w-0 flex-1 space-y-1">
-                  <p className="truncate text-sm font-medium">{job.prompt}</p>
-                  <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-                    <span className="flex items-center gap-1">
-                      <Clock className="h-3 w-3" />
-                      {formatCronExpression(job.expression)}
-                    </span>
-                    {job.nextRunAt && (
-                      <span>Next: {formatDate(job.nextRunAt)}</span>
-                    )}
-                    {!job.enabled && (
-                      <Badge variant="secondary">Paused</Badge>
-                    )}
-                  </div>
-                </div>
-                <div className="flex items-center gap-2 self-end sm:self-center">
-                  <Switch
-                    checked={job.enabled}
-                    aria-label={job.enabled ? "Disable schedule" : "Enable schedule"}
-                    onCheckedChange={(checked) =>
-                      void toggleCronJob.mutateAsync({
-                        jobId: job.id,
-                        enabled: checked,
-                      })
-                    }
-                  />
-                  <AlertDialog
-                    trigger={
+            renderItem={(job) => {
+              const isRunning = job.lockedAt !== null;
+              const isAutoPaused =
+                !job.enabled && job.consecutiveFailures >= AUTO_PAUSE_THRESHOLD;
+              const isStartingRun =
+                runCronJobNow.isPending &&
+                runCronJobNow.variables?.jobId === job.id;
+              const isExpanded = expandedJobId === job.id;
+
+              return (
+                <div className="flex flex-col gap-3 rounded-lg border border-border p-4">
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                    <div className="min-w-0 flex-1 space-y-1">
+                      <p className="truncate text-sm font-medium">{job.prompt}</p>
+                      <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                        <span className="flex items-center gap-1">
+                          <Clock className="h-3 w-3" />
+                          {formatCronExpression(job.expression)}
+                        </span>
+                        {job.nextRunAt && (
+                          <span>Next: {formatDate(job.nextRunAt)}</span>
+                        )}
+                        {isRunning && (
+                          <Badge variant="secondary" className="gap-1">
+                            <Loader2 className="h-3 w-3 animate-spin" />
+                            Running
+                          </Badge>
+                        )}
+                        {isAutoPaused ? (
+                          <Badge variant="destructive">Auto-paused</Badge>
+                        ) : !job.enabled ? (
+                          <Badge variant="secondary">Paused</Badge>
+                        ) : job.lastError ? (
+                          <Badge variant="destructive">
+                            Failing ({job.consecutiveFailures})
+                          </Badge>
+                        ) : null}
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 self-end sm:self-center">
                       <Button
                         variant="ghost"
                         size="sm"
-                        className="text-destructive hover:text-destructive"
-                        disabled={deleteCronJob.isPending}
+                        aria-label="Run now"
+                        title="Run now"
+                        disabled={isRunning || isStartingRun}
+                        onClick={() =>
+                          void runCronJobNow.mutateAsync({ jobId: job.id })
+                        }
                       >
-                        <Trash2 className="h-4 w-4" />
+                        {isStartingRun ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <Play className="h-4 w-4" />
+                        )}
                       </Button>
-                    }
-                    title="Delete Cron Job"
-                    description={`This will permanently delete the scheduled task: "${job.prompt}"`}
-                    confirmLabel="Delete"
-                    onConfirm={() => void deleteCronJob.mutateAsync({ jobId: job.id })}
-                    isPending={deleteCronJob.isPending}
-                  />
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        aria-label={
+                          isExpanded ? "Hide run history" : "Show run history"
+                        }
+                        title="Run history"
+                        aria-expanded={isExpanded}
+                        className={isExpanded ? "bg-accent" : undefined}
+                        onClick={() =>
+                          setExpandedJobId(isExpanded ? null : job.id)
+                        }
+                      >
+                        <History className="h-4 w-4" />
+                      </Button>
+                      <Switch
+                        checked={job.enabled}
+                        aria-label={job.enabled ? "Disable schedule" : "Enable schedule"}
+                        onCheckedChange={(checked) =>
+                          void toggleCronJob.mutateAsync({
+                            jobId: job.id,
+                            enabled: checked,
+                          })
+                        }
+                      />
+                      <AlertDialog
+                        trigger={
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            aria-label="Delete cron job"
+                            className="text-destructive hover:text-destructive"
+                            disabled={deleteCronJob.isPending}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        }
+                        title="Delete Cron Job"
+                        description={`This will permanently delete the scheduled task: "${job.prompt}"`}
+                        confirmLabel="Delete"
+                        onConfirm={() => void deleteCronJob.mutateAsync({ jobId: job.id })}
+                        isPending={deleteCronJob.isPending}
+                      />
+                    </div>
+                  </div>
+                  {isExpanded && (
+                    <div className="border-t border-border pt-3">
+                      <CronRunHistory jobId={job.id} />
+                    </div>
+                  )}
                 </div>
-              </div>
-            )}
+              );
+            }}
             estimateSize={100}
             className="max-h-64 md:max-h-96"
             onEndReached={() => {

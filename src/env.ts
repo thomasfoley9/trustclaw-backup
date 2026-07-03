@@ -33,6 +33,14 @@ export const env = createEnv({
     // prod is unchanged until the worker is deployed and this is set to "true".
     WORKER_QUEUE_ENABLED: z.enum(["true", "false"]).optional(),
 
+    // QStash push scheduling (optional). When set, each cron job's next fire
+    // is a precise QStash one-shot message instead of waiting for the daily
+    // sweeper; the sweeper stays on as the self-healing backstop. Signing keys
+    // authenticate inbound QStash deliveries.
+    QSTASH_TOKEN: z.string().optional(),
+    QSTASH_CURRENT_SIGNING_KEY: z.string().optional(),
+    QSTASH_NEXT_SIGNING_KEY: z.string().optional(),
+
     // Owner-funded keys for the "house" models (Kimi K2, DeepSeek) - free to
     // every user, billed to the owner. Each house model prefers its native key
     // (DeepSeek / Moonshot) and falls back to the shared OpenRouter key. All
@@ -92,6 +100,9 @@ export const env = createEnv({
     DATABASE_URL: process.env.DATABASE_URL,
     REDIS_URL: process.env.REDIS_URL,
     WORKER_QUEUE_ENABLED: process.env.WORKER_QUEUE_ENABLED,
+    QSTASH_TOKEN: process.env.QSTASH_TOKEN,
+    QSTASH_CURRENT_SIGNING_KEY: process.env.QSTASH_CURRENT_SIGNING_KEY,
+    QSTASH_NEXT_SIGNING_KEY: process.env.QSTASH_NEXT_SIGNING_KEY,
     OPENROUTER_API_KEY: process.env.OPENROUTER_API_KEY,
     DEEPSEEK_API_KEY: process.env.DEEPSEEK_API_KEY,
     MOONSHOT_API_KEY: process.env.MOONSHOT_API_KEY,

@@ -1,21 +1,21 @@
 import { z } from "zod";
 
 export const executeJobInput = z.object({
-  jobIds: z.array(z.string()).min(1),
+  jobId: z.string(),
   invocationId: z.string(),
+  trigger: z.enum(["schedule", "manual"]).default("schedule"),
   nowOverride: z.string().datetime().optional(),
 });
 
 export type ExecuteJobInput = z.infer<typeof executeJobInput>;
 
-export const cronJobRow = z.object({
-  id: z.string(),
-  instanceId: z.string(),
-  expression: z.string(),
-  prompt: z.string(),
-  timezone: z.string(),
-  lockedBy: z.string().nullable(),
-  telegramChatId: z.string().nullable(),
+// Payload handed to the standalone worker queue - everything the worker needs
+// to run one job without re-querying at dispatch time.
+export const cronWorkerPayload = z.object({
+  jobId: z.string(),
+  invocationId: z.string(),
+  trigger: z.enum(["schedule", "manual"]).optional(),
+  nowOverride: z.string().datetime().optional(),
 });
 
-export type CronJobRow = z.infer<typeof cronJobRow>;
+export type CronWorkerPayload = z.infer<typeof cronWorkerPayload>;
