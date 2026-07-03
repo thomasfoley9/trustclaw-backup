@@ -464,6 +464,7 @@ export function ChatInput({
             <Button
               variant="default"
               size="icon"
+              aria-label="Stop response"
               className="size-10 shrink-0 rounded-2xl"
               onClick={handleStop}
             >
@@ -473,6 +474,7 @@ export function ChatInput({
             <Button
               variant="default"
               size="icon"
+              aria-label="Send message"
               className={cn(
                 "bg-accent-gradient size-10 shrink-0 rounded-2xl border-0 text-white shadow-md transition-transform hover:scale-105",
                 !canSend && "opacity-50 hover:scale-100",

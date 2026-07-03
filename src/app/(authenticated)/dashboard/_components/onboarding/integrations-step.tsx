@@ -126,7 +126,9 @@ export function IntegrationsStep({
         <p className="text-sm font-medium">
           {connectedCount === total
             ? `${connectedCount}/${total} tools connected, good job!`
-            : `${connectedCount}/${total} tools connected, connect another!`}
+            : connectedCount === 0
+              ? `Connect your first tool below`
+              : `${connectedCount}/${total} tools connected, connect another!`}
         </p>
       </motion.div>
 
@@ -162,11 +164,18 @@ export function IntegrationsStep({
                   <Check className="h-4 w-4" />
                   Connected
                 </div>
-              ) : isPending ? (
-                <div className="text-muted-foreground ml-3 flex items-center gap-1.5 text-sm">
+              ) : isPending && integration.redirectUrl ? (
+                <button
+                  type="button"
+                  onClick={() =>
+                    handleConnect(integration.toolkit, integration.redirectUrl!)
+                  }
+                  className="text-muted-foreground hover:text-foreground ml-3 flex min-h-[44px] shrink-0 items-center gap-1.5 text-sm"
+                  title="Reopen the connection window"
+                >
                   <Loader2 className="h-4 w-4 animate-spin" />
-                  Waiting...
-                </div>
+                  Waiting... reopen
+                </button>
               ) : integration.redirectUrl ? (
                 <Button
                   variant="outline"

@@ -454,6 +454,7 @@ export function ChatView({
               variant="outline"
               size="icon"
               onClick={() => scrollToBottom("smooth")}
+              aria-label="Scroll to latest"
               className="absolute bottom-4 left-1/2 size-10 -translate-x-1/2 rounded-full shadow-md"
             >
               <ArrowDown className="size-4" />

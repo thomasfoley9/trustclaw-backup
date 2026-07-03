@@ -59,10 +59,36 @@ export function CronJobsSettings() {
   const cronJobs = data?.pages.flatMap((page) => page.items) ?? [];
 
   const toggleCronJob = trpc.trustclaw.toggleCronJob.useMutation({
-    onSuccess: () => {
+    // Optimistic: flip the switch immediately, roll back if the write fails.
+    // Without this the toggle only moves after invalidate+refetch, which
+    // reads as broken on a slow connection.
+    onMutate: async ({ jobId, enabled }) => {
+      await utils.trustclaw.getCronJobs.cancel();
+      const prev = utils.trustclaw.getCronJobs.getInfiniteData({ limit: 20 });
+      utils.trustclaw.getCronJobs.setInfiniteData({ limit: 20 }, (old) =>
+        old
+          ? {
+              ...old,
+              pages: old.pages.map((page) => ({
+                ...page,
+                items: page.items.map((item) =>
+                  item.id === jobId ? { ...item, enabled } : item,
+                ),
+              })),
+            }
+          : old,
+      );
+      return { prev };
+    },
+    onError: (error, _vars, ctx) => {
+      if (ctx?.prev) {
+        utils.trustclaw.getCronJobs.setInfiniteData({ limit: 20 }, ctx.prev);
+      }
+      trpcToastOnError(error);
+    },
+    onSettled: () => {
       void utils.trustclaw.getCronJobs.invalidate();
     },
-    onError: trpcToastOnError,
   });
 
   const deleteCronJob = trpc.trustclaw.deleteCronJob.useMutation({
@@ -116,13 +142,13 @@ export function CronJobsSettings() {
                 <div className="flex items-center gap-2 self-end sm:self-center">
                   <Switch
                     checked={job.enabled}
+                    aria-label={job.enabled ? "Disable schedule" : "Enable schedule"}
                     onCheckedChange={(checked) =>
                       void toggleCronJob.mutateAsync({
                         jobId: job.id,
                         enabled: checked,
                       })
                     }
-                    disabled={toggleCronJob.isPending}
                   />
                   <AlertDialog
                     trigger={

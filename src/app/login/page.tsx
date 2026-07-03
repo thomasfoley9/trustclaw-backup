@@ -18,11 +18,13 @@ export default async function Page({
     session = await auth.api.getSession({ headers: await headers() });
   } catch {
     return (
-      <ErrorDisplay
-        message="We're having trouble reaching our servers. Please check your connection and try again."
-        retryText="Refresh Page"
-        onRetry="refresh"
-      />
+      <div className="flex min-h-svh items-center justify-center">
+        <ErrorDisplay
+          message="We're having trouble reaching our servers. Please check your connection and try again."
+          retryText="Refresh Page"
+          onRetry="refresh"
+        />
+      </div>
     );
   }
 

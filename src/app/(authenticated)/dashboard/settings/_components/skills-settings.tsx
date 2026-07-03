@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Plus, Pencil, Trash2, Sparkles, Wrench, X } from "lucide-react";
+import { Plus, Pencil, Trash2, Sparkles, Wrench, X, Loader2 } from "lucide-react";
 import { trpc } from "~/clients/trpc";
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
@@ -385,6 +385,7 @@ export function SkillsSettings() {
               Cancel
             </Button>
             <Button onClick={() => void handleSave()} disabled={!canSave || saving}>
+              {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               {editingId ? "Save" : "Create"}
             </Button>
           </DialogFooter>

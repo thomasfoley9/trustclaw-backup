@@ -43,20 +43,28 @@ export function ResetPasswordForm() {
         return;
       }
       showSuccessToast("Password updated - please log in");
+      // Stay pending through the redirect so the button doesn't flip back.
       router.push("/login");
-    } finally {
+    } catch {
+      showErrorToast(
+        "Couldn't reach the server - check your connection and try again.",
+      );
       setPending(false);
     }
   };
 
   return (
-    <div className="bg-background flex min-h-screen flex-col items-center justify-center">
-      <div className="mx-auto w-full max-w-sm px-4">
+    <div className="bg-background relative flex min-h-screen flex-col items-center justify-center overflow-hidden px-4">
+      <div
+        className="ambient-glow pointer-events-none absolute inset-0"
+        aria-hidden
+      />
+      <div className="relative mx-auto w-full max-w-sm">
         <div className="mb-8 flex justify-center">
           <TrustClawBrand size="lg" logoLink="/" />
         </div>
 
-        <div className="bg-card rounded-lg border p-6 shadow-sm">
+        <div className="glass elevated rounded-2xl p-6 sm:p-7">
           <h1 className="text-lg font-semibold">Set a new password</h1>
 
           {invalidLink ? (

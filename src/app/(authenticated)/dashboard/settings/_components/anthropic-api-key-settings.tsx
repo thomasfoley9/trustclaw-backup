@@ -122,6 +122,12 @@ export function AnthropicApiKeySettings() {
                 placeholder="sk-ant-…"
                 value={apiKey}
                 onChange={(e) => setApiKey(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && canSave) {
+                    e.preventDefault();
+                    void setKey.mutateAsync({ apiKey: apiKey.trim() });
+                  }
+                }}
                 disabled={isBusy}
               />
               <p className="text-muted-foreground text-xs">

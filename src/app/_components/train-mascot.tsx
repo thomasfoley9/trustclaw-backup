@@ -26,21 +26,21 @@ export function TrainMascot({
           cx="100"
           cy="26"
           r="9"
-          fill="#e8edf5"
+          fill="#e8edf5" stroke="#cbd5e1" strokeWidth="1.5"
           className="animate-[float_4s_ease-in-out_infinite]"
         />
         <circle
           cx="118"
           cy="16"
           r="6"
-          fill="#e8edf5"
+          fill="#e8edf5" stroke="#cbd5e1" strokeWidth="1.5"
           className="animate-[float_3.4s_ease-in-out_infinite]"
         />
         <circle
           cx="84"
           cy="14"
           r="5"
-          fill="#e8edf5"
+          fill="#e8edf5" stroke="#cbd5e1" strokeWidth="1.5"
           className="animate-[float_3.8s_ease-in-out_infinite]"
         />
       </g>

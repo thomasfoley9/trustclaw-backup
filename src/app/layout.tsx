@@ -24,6 +24,8 @@ const heading = Bricolage_Grotesque({
 
 export const metadata: Metadata = {
   title: "Claw",
+  description:
+    "Your always-on AI agent that reads and sends email, runs on a schedule, remembers everything, and works across 500+ tools - all from one chat.",
   // Neutral default favicon for the shared app. The per-prospect demo landings
   // (/ford, /gm, …) override this with their own brand mark via route metadata
   // in src/app/[brand]/page.tsx.

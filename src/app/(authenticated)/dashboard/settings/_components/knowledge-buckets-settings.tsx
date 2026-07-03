@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Pencil, Plus, Trash2, FolderTree } from "lucide-react";
+import { Pencil, Plus, Trash2, FolderTree, Loader2 } from "lucide-react";
 import { trpc } from "~/clients/trpc";
 import { Button } from "~/components/ui/button";
 import { Badge } from "~/components/ui/badge";
@@ -261,6 +261,7 @@ export function KnowledgeBucketsSettings() {
               onClick={() => void handleSave()}
               disabled={!canSave || saving}
             >
+              {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               {editing ? "Save" : "Create"}
             </Button>
           </DialogFooter>

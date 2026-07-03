@@ -81,8 +81,13 @@ export function ToolInvocation({ toolCall, onClick }: ToolInvocationProps) {
 
   const startTimeRef = useRef(Date.now());
   const [elapsed, setElapsed] = useState(0);
+  // A tool that is ALREADY complete on first render is historical (loaded from
+  // the DB) - we never saw it run, so showing a duration would be a fabricated
+  // "1s". Only time tools we actually watch start running.
+  const bornCompleteRef = useRef(!isRunning);
 
   useEffect(() => {
+    if (bornCompleteRef.current) return;
     if (!isRunning) {
       setElapsed(
         Math.max(1, Math.round((Date.now() - startTimeRef.current) / 1000)),

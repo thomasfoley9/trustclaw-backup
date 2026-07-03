@@ -58,8 +58,8 @@ export function TerminalLogEntry({ log }: { log: TerminalLogEntryData }) {
       className="border-b border-border/50 py-3 font-mono text-xs transition-all last:border-0"
     >
       <div className="flex w-full items-center gap-2 text-left">
-        <span className="text-muted-foreground/60">{">"}</span>
-        <span className="text-sm font-semibold text-foreground/90">
+        <span className="text-muted-foreground/60 shrink-0">{">"}</span>
+        <span className="text-foreground/90 min-w-0 truncate text-sm font-semibold">
           {log.toolName}
         </span>
         <span

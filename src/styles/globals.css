@@ -233,6 +233,12 @@
     @apply bg-background text-foreground;
   }
 
+  /* On-brand text selection everywhere (inputs already set their own). */
+  ::selection {
+    background: var(--primary);
+    color: var(--primary-foreground);
+  }
+
   /* Themed scrollbars */
   ::-webkit-scrollbar {
     width: 8px;
@@ -302,8 +308,15 @@
     border: 1px solid var(--border);
   }
 
-  /* Soft, premium depth (works against the dark canvas). */
+  /* Soft, premium depth. The heavy black shadow reads as a dirty halo on the
+     light canvas, so light mode gets a much lighter one. */
   .elevated {
+    box-shadow:
+      0 1px 0 0 oklch(0 0 0 / 0.04) inset,
+      0 12px 30px -18px oklch(0 0 0 / 0.18),
+      0 2px 8px -6px oklch(0 0 0 / 0.12);
+  }
+  .dark .elevated {
     box-shadow:
       0 1px 0 0 oklch(1 0 0 / 0.05) inset,
       0 12px 34px -18px oklch(0 0 0 / 0.7),

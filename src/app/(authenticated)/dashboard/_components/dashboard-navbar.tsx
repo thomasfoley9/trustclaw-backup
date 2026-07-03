@@ -69,45 +69,51 @@ export function DashboardNavbar() {
 
         <Tooltip>
           <TooltipTrigger asChild>
-            <Link href="/dashboard">
-              <Button
-                variant="ghost"
-                size="icon"
-                className={`h-10 w-10 ${isChat ? "bg-primary/15 text-primary" : ""}`}
-              >
+            <Button
+              asChild
+              variant="ghost"
+              size="icon"
+              aria-label="Chat"
+              className={`h-10 w-10 ${isChat ? "bg-primary/15 text-primary" : ""}`}
+            >
+              <Link href="/dashboard">
                 <MessageCircle className="h-4 w-4" />
-              </Button>
-            </Link>
+              </Link>
+            </Button>
           </TooltipTrigger>
           <TooltipContent>Chat</TooltipContent>
         </Tooltip>
 
         <Tooltip>
           <TooltipTrigger asChild>
-            <Link href="/dashboard/toolkits">
-              <Button
-                variant="ghost"
-                size="icon"
-                className={`h-10 w-10 ${isToolkits ? "bg-primary/15 text-primary" : ""}`}
-              >
+            <Button
+              asChild
+              variant="ghost"
+              size="icon"
+              aria-label="Toolkits"
+              className={`h-10 w-10 ${isToolkits ? "bg-primary/15 text-primary" : ""}`}
+            >
+              <Link href="/dashboard/toolkits">
                 <Puzzle className="h-4 w-4" />
-              </Button>
-            </Link>
+              </Link>
+            </Button>
           </TooltipTrigger>
           <TooltipContent>Toolkits</TooltipContent>
         </Tooltip>
 
         <Tooltip>
           <TooltipTrigger asChild>
-            <Link href="/dashboard/settings">
-              <Button
-                variant="ghost"
-                size="icon"
-                className={`h-10 w-10 ${isSettings ? "bg-primary/15 text-primary" : ""}`}
-              >
+            <Button
+              asChild
+              variant="ghost"
+              size="icon"
+              aria-label="Settings"
+              className={`h-10 w-10 ${isSettings ? "bg-primary/15 text-primary" : ""}`}
+            >
+              <Link href="/dashboard/settings">
                 <Settings className="h-4 w-4" />
-              </Button>
-            </Link>
+              </Link>
+            </Button>
           </TooltipTrigger>
           <TooltipContent>Settings</TooltipContent>
         </Tooltip>
@@ -118,6 +124,7 @@ export function DashboardNavbar() {
               <Button
                 variant="ghost"
                 size="icon"
+                aria-label={terminalOpen ? "Hide activity panel" : "Show activity panel"}
                 className={`hidden h-10 w-10 md:inline-flex ${terminalOpen ? "bg-primary/15 text-primary" : ""}`}
                 onClick={handleToggleTerminal}
               >
@@ -142,6 +149,7 @@ export function DashboardNavbar() {
             <Button
               variant="ghost"
               size="icon"
+              aria-label="Log out"
               className="h-10 w-10"
               onClick={() => handleLogout()}
             >

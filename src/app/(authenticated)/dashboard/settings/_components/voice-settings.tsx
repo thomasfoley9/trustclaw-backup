@@ -120,8 +120,8 @@ export function VoiceSettings() {
           Voice
         </CardTitle>
         <CardDescription>
-          Choose a voice for the assistant and manage your voice API key for
-          spoken replies.
+          Choose a voice for the assistant. Read-aloud replies use your own
+          Smallest.ai key, or the shared voice if you don&apos;t add one.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -176,10 +176,16 @@ export function VoiceSettings() {
                 placeholder="sk_…"
                 value={apiKey}
                 onChange={(e) => setApiKey(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && canSave) {
+                    e.preventDefault();
+                    void setKey.mutateAsync({ apiKey: apiKey.trim() });
+                  }
+                }}
                 disabled={isBusy}
               />
               <p className="text-muted-foreground text-xs">
-                We validate the key before saving it.
+                We validate the key with Smallest.ai before saving it.
               </p>
             </div>
             <div className="flex gap-2">

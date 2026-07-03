@@ -29,19 +29,27 @@ export function ForgotPasswordForm() {
       // Always show success regardless of whether the account exists, so we
       // don't leak which emails are registered.
       setSent(true);
+    } catch {
+      showErrorToast(
+        "Couldn't reach the server - check your connection and try again.",
+      );
     } finally {
       setPending(false);
     }
   };
 
   return (
-    <div className="bg-background flex min-h-screen flex-col items-center justify-center">
-      <div className="mx-auto w-full max-w-sm px-4">
+    <div className="bg-background relative flex min-h-screen flex-col items-center justify-center overflow-hidden px-4">
+      <div
+        className="ambient-glow pointer-events-none absolute inset-0"
+        aria-hidden
+      />
+      <div className="relative mx-auto w-full max-w-sm">
         <div className="mb-8 flex justify-center">
           <TrustClawBrand size="lg" logoLink="/" />
         </div>
 
-        <div className="bg-card rounded-lg border p-6 shadow-sm">
+        <div className="glass elevated rounded-2xl p-6 sm:p-7">
           <h1 className="text-lg font-semibold">Reset your password</h1>
 
           {sent ? (
@@ -52,7 +60,8 @@ export function ForgotPasswordForm() {
               </p>
               <p className="text-muted-foreground text-xs">
                 This instance doesn&apos;t send email yet - the reset link is
-                printed in the server logs. Open it to set a new password.
+                written to the server logs. Open it to set a new password, or
+                ask whoever runs this instance to grab it for you.
               </p>
               <Link href="/login" className="text-primary text-sm hover:underline">
                 Back to login

@@ -21,6 +21,7 @@ export async function generateMetadata({
   if (!brand) return {};
   return {
     title: `Claw - by ${brand.name}`,
+    description: `An always-on AI agent for ${brand.name} - reads and sends email, runs on a schedule, remembers everything, and works across 500+ tools.`,
     icons: [
       { rel: "icon", url: `/${brand.key}-icon.svg`, type: "image/svg+xml" },
       { rel: "icon", url: `/${brand.key}-favicon.ico`, sizes: "any" },

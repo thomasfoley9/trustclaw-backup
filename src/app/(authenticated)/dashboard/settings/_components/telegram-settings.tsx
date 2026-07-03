@@ -147,9 +147,18 @@ export function TelegramSettings() {
                 )}
               </Button>
             </div>
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <Loader2 className="h-4 w-4 animate-spin" />
-              Waiting for Telegram link...
+            <div className="text-muted-foreground flex items-center justify-between gap-2 text-sm">
+              <span className="flex items-center gap-2">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Waiting for Telegram link...
+              </span>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => linkTelegram.reset()}
+              >
+                Cancel
+              </Button>
             </div>
           </div>
         ) : (

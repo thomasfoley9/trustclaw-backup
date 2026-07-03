@@ -59,10 +59,18 @@ export function useChatHook({ initialMessages, streamId, conversationId }: {
     },
     onError: (error) => {
       // Surface send failures (409 busy, 429 throttled, model errors) - the
-      // optimistic user bubble otherwise vanishes silently on reload.
-      showErrorToast(
-        error?.message?.slice(0, 200) ?? "Message failed - try again",
-      );
+      // optimistic user bubble otherwise vanishes silently on reload. Map the
+      // common statuses to plain sentences; fall back to the raw text.
+      const raw = error?.message ?? "";
+      let message = raw.slice(0, 200) || "Message failed - try again";
+      if (/still answering|409/i.test(raw)) {
+        message = "This chat is still answering - wait for it to finish.";
+      } else if (/too many|rate|429/i.test(raw)) {
+        message = "You're sending messages too fast - give it a moment.";
+      } else if (/api key|precondition/i.test(raw)) {
+        message = "Add your Anthropic API key in Settings to start chatting.";
+      }
+      showErrorToast(message);
       void utils.trustclaw.getHistory.invalidate();
     },
   });

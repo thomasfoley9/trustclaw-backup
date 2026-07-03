@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Check, Pencil, Plus, Trash2, Drama } from "lucide-react";
+import { Check, Pencil, Plus, Trash2, Drama, Loader2 } from "lucide-react";
 import { trpc } from "~/clients/trpc";
 import { Button } from "~/components/ui/button";
 import { Badge } from "~/components/ui/badge";
@@ -356,6 +356,7 @@ export function PersonalitySettings() {
               Cancel
             </Button>
             <Button onClick={() => void handleSave()} disabled={!canSave || saving}>
+              {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               {editing ? "Save" : "Create"}
             </Button>
           </DialogFooter>

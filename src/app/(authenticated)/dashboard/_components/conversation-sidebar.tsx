@@ -157,7 +157,7 @@ export function ConversationSidebarContent({
               : "text-muted-foreground hover:bg-accent/50",
           )}
         >
-          Cron
+          Scheduled
         </button>
       </div>
 

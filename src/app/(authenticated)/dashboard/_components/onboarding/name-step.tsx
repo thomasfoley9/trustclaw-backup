@@ -23,6 +23,12 @@ export function NameStep({ value, onChange, onNext }: NameStepProps) {
         <Input
           value={value}
           onChange={(e) => onChange(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" && canContinue) {
+              e.preventDefault();
+              onNext();
+            }
+          }}
           placeholder="Luna, Jarvis, Buddy..."
           maxLength={30}
           className="min-h-[44px]"
