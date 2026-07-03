@@ -165,6 +165,7 @@ export function KnowledgeBucketsSettings() {
                     size="icon"
                     variant="ghost"
                     className="h-8 w-8"
+                    aria-label={`Edit ${bucket.label}`}
                     onClick={() => openEdit(bucket)}
                   >
                     <Pencil className="h-4 w-4" />
@@ -176,6 +177,7 @@ export function KnowledgeBucketsSettings() {
                           size="icon"
                           variant="ghost"
                           className="text-destructive h-8 w-8"
+                          aria-label={`Delete ${bucket.label}`}
                         >
                           <Trash2 className="h-4 w-4" />
                         </Button>

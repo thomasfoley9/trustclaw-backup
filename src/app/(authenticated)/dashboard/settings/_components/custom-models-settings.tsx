@@ -140,6 +140,11 @@ export function CustomModelsSettings() {
                 onChange={(e) => setModelId(e.target.value)}
                 disabled={isBusy}
               />
+              {modelId.trim() && !canAdd && (
+                <p className="text-muted-foreground text-xs">
+                  Use provider/model format, e.g. openai/gpt-4o.
+                </p>
+              )}
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="cm-label">Label (optional)</Label>

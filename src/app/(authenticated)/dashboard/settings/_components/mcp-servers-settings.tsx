@@ -118,6 +118,11 @@ export function McpServersSettings() {
                 onChange={(e) => setUrl(e.target.value)}
                 disabled={add.isPending}
               />
+              {url.trim() && !url.trim().startsWith("https://") && (
+                <p className="text-muted-foreground text-xs">
+                  The URL must start with https://
+                </p>
+              )}
             </div>
           </div>
           <Button

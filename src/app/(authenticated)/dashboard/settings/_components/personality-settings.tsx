@@ -220,6 +220,7 @@ export function PersonalitySettings() {
                       size="icon"
                       variant="ghost"
                       className="h-8 w-8"
+                      aria-label={`Edit ${personality.name}`}
                       onClick={() => openEdit(personality)}
                     >
                       <Pencil className="h-4 w-4" />
@@ -230,6 +231,7 @@ export function PersonalitySettings() {
                           size="icon"
                           variant="ghost"
                           className="text-destructive h-8 w-8"
+                          aria-label={`Delete ${personality.name}`}
                         >
                           <Trash2 className="h-4 w-4" />
                         </Button>

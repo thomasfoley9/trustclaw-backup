@@ -197,6 +197,7 @@ export function SkillsSettings() {
                     size="icon"
                     variant="ghost"
                     className="h-8 w-8"
+                    aria-label={`Edit ${s.name}`}
                     onClick={() => openEdit(s)}
                   >
                     <Pencil className="h-4 w-4" />
@@ -207,6 +208,7 @@ export function SkillsSettings() {
                         size="icon"
                         variant="ghost"
                         className="text-destructive h-8 w-8"
+                        aria-label={`Delete ${s.name}`}
                       >
                         <Trash2 className="h-4 w-4" />
                       </Button>
