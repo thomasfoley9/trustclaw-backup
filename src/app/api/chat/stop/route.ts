@@ -44,7 +44,7 @@ export async function POST(request: Request) {
   // beats silently discarding it.
   await markRunEnded(owned.id);
   if (aborted) {
-    await clearStreamingMessage(instance.id).catch(() => undefined);
+    await clearStreamingMessage(instance.id, owned.id).catch(() => undefined);
     await db.message
       .deleteMany({
         where: {

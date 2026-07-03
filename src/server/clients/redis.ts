@@ -51,30 +51,66 @@ export function getRedisPublisher(): Redis | null {
 const STREAMING_KEY_TTL = 600; // 10 minutes
 
 // ─── Streaming Message Tracker ──────────────────────────────────────────────
+//
+// Keyed by (instance, conversation): an instance can have several concurrent
+// runs (web x3, telegram, cron), and a single instance-wide pointer let any
+// run clobber another's resume pointer — killing cross-window reattach and
+// leaking one conversation's stream into another's view.
+
+// Delete only when the stored value is the caller's streamId — a plain DEL
+// could race a newer run's SET and destroy its pointer.
+const COMPARE_AND_DELETE_LUA = `
+if redis.call('GET', KEYS[1]) == ARGV[1] then
+  return redis.call('DEL', KEYS[1])
+end
+return 0
+`;
+
+function streamingKey(instanceId: string, conversationId: string): string {
+  return `streaming:${instanceId}:${conversationId}`;
+}
 
 export async function setStreamingMessage(
   instanceId: string,
+  conversationId: string,
   streamId: string,
 ): Promise<void> {
   const r = getRedis();
   if (!r) return;
-  await r.set(`streaming:${instanceId}`, streamId, "EX", STREAMING_KEY_TTL);
+  await r.set(
+    streamingKey(instanceId, conversationId),
+    streamId,
+    "EX",
+    STREAMING_KEY_TTL,
+  );
 }
 
 export async function getStreamingMessage(
   instanceId: string,
+  conversationId: string,
 ): Promise<string | null> {
   const r = getRedis();
   if (!r) return null;
-  return r.get(`streaming:${instanceId}`);
+  return r.get(streamingKey(instanceId, conversationId));
 }
 
 export async function clearStreamingMessage(
   instanceId: string,
+  conversationId: string,
+  expectedStreamId?: string,
 ): Promise<void> {
   const r = getRedis();
   if (!r) return;
-  await r.del(`streaming:${instanceId}`);
+  if (expectedStreamId) {
+    await r.eval(
+      COMPARE_AND_DELETE_LUA,
+      1,
+      streamingKey(instanceId, conversationId),
+      expectedStreamId,
+    );
+    return;
+  }
+  await r.del(streamingKey(instanceId, conversationId));
 }
 
 // ─── Telegram Deduplication ─────────────────────────────────────────────────

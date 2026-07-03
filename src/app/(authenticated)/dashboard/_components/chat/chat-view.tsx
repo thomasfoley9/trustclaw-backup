@@ -192,13 +192,20 @@ export function ChatView({
   // Background runs persist their reply via getHistory, not the local stream.
   // When refreshed history is ahead of the seeded chat state (run finished
   // while viewing, or switched back mid-run), adopt it - but never while a
-  // local stream is writing.
+  // local stream is writing. "Ahead" is decided by the newest row's id, not
+  // list lengths: a new reply can push the oldest row out of the page window
+  // (same length, different content), which a length compare never adopts —
+  // the reply then simply never appears. A stale refetch can't fire this: its
+  // newest id is already in the local list.
   useEffect(() => {
     if (isStreaming) return;
-    if (initialMessages.length > messages.length) {
+    const lastInitial = initialMessages[initialMessages.length - 1];
+    if (!lastInitial) return;
+    const hasNewestRow = messages.some((m) => m.id === lastInitial.id);
+    if (!hasNewestRow || initialMessages.length > messages.length) {
       setMessages(initialMessages);
     }
-  }, [initialMessages, isStreaming, messages.length, setMessages]);
+  }, [initialMessages, isStreaming, messages, setMessages]);
 
   // Keep pinned to the bottom: once on first paint, then on every new message
   // / streaming chunk as long as the user is already near the bottom.

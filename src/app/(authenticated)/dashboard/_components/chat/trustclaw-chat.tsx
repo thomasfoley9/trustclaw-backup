@@ -19,9 +19,10 @@ export function TrustClawChat() {
   );
 
   const streamingQuery = trpc.trustclaw.getStreamingMessage.useQuery(
-    undefined,
+    { conversationId: activeConversationId ?? "" },
     {
       refetchOnWindowFocus: "always",
+      enabled: !!activeConversationId,
     },
   );
 

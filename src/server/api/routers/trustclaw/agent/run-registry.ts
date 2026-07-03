@@ -19,7 +19,8 @@ const controllers = new Map<string, AbortController>();
 // claims race-safe: exactly one wins.
 export async function tryClaimRun(
   conversationId: string,
-): Promise<AbortController | null> {
+): Promise<{ controller: AbortController; claimedAt: Date } | null> {
+  const claimedAt = new Date();
   const claimed = await db.conversation.updateMany({
     where: {
       id: conversationId,
@@ -28,21 +29,32 @@ export async function tryClaimRun(
         { activeRunStartedAt: { lt: new Date(Date.now() - RUN_STALE_MS) } },
       ],
     },
-    data: { activeRunStartedAt: new Date() },
+    data: { activeRunStartedAt: claimedAt },
   });
   if (claimed.count === 0) {
     return null;
   }
   const controller = new AbortController();
   controllers.set(conversationId, controller);
-  return controller;
+  return { controller, claimedAt };
 }
 
-export async function markRunEnded(conversationId: string): Promise<void> {
+// With claimedAt, only THIS run's claim is released: a run that outlived
+// RUN_STALE_MS (its slot legitimately re-claimed by a successor) can no longer
+// clear the successor's flag on its way out and open the door to a third
+// concurrent run. Without claimedAt (chat/stop), the clear is unconditional by
+// design — stop must always release.
+export async function markRunEnded(
+  conversationId: string,
+  claimedAt?: Date,
+): Promise<void> {
   controllers.delete(conversationId);
   await db.conversation
-    .update({
-      where: { id: conversationId },
+    .updateMany({
+      where: {
+        id: conversationId,
+        ...(claimedAt ? { activeRunStartedAt: claimedAt } : {}),
+      },
       data: { activeRunStartedAt: null },
     })
     .catch((err) => {

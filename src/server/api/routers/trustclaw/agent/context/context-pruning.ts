@@ -20,7 +20,22 @@ interface PruneResult {
 
 function estimateMessageChars(msg: ReconstructedMessage): number {
   if (msg.role === "user") {
-    return msg.content.length;
+    // Array form = content parts (text + file). `.length` on the array is the
+    // PART COUNT (a 200K-char inline attachment would measure as ~1), so sum
+    // the actual text; file parts are estimated from their data length.
+    if (typeof msg.content === "string") {
+      return msg.content.length;
+    }
+    let chars = 0;
+    for (const part of msg.content) {
+      if (part.type === "text") {
+        chars += part.text.length;
+      } else if (part.type === "file" || part.type === "image") {
+        const data = "data" in part ? part.data : undefined;
+        chars += typeof data === "string" ? data.length : 1_000;
+      }
+    }
+    return chars;
   }
   if (msg.role === "assistant") {
     if (typeof msg.content === "string") {

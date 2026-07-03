@@ -29,7 +29,6 @@ import {
   type CompactionSettings,
 } from "./context/token-estimation";
 import { stripToolResultEchoes } from "./strip-tool-echoes";
-import { clearStreamingMessage } from "~/server/clients/redis";
 import type { ReconstructedMessage } from "./types";
 
 type MessageSource = "web" | "telegram" | "cron";
@@ -88,6 +87,10 @@ interface PrepareAgentRunResult {
   // Resolves to Agent A's narration (the concise chat bubble) once B finishes.
   // The route injects it into the live stream; onFinish also persists it.
   narrationPromise: Promise<string>;
+  // Tears down the run's MCP clients. onFinish closes them on a normal finish,
+  // but aborted runs (Stop) and zero-step provider errors never reach onFinish
+  // — callers MUST also invoke this from their own cleanup (it's idempotent).
+  closeMcp: () => Promise<void>;
 }
 
 type PrepareResult = { status: "ready"; result: PrepareAgentRunResult };
@@ -507,9 +510,14 @@ export async function prepareAgentRun(
         const toolNames: string[] = [];
 
         for (const step of steps) {
-          for (let i = 0; i < step.toolCalls.length; i++) {
-            const tc = step.toolCalls[i]!;
-            const tr = step.toolResults[i];
+          for (const tc of step.toolCalls) {
+            // Match by toolCallId, never by index: toolResults excludes
+            // tool-ERROR parts, so with calls [A, B] where A errored, index
+            // pairing would persist A with B's output — and that corrupted
+            // transcript feeds back into the model on every later turn.
+            const tr = step.toolResults.find(
+              (r) => r.toolCallId === tc.toolCallId,
+            );
             const tcInput = toPlainRecordSafe(tc.input);
             const tcResult = tr ? toPlainRecordSafe(tr.output) : null;
 
@@ -558,8 +566,15 @@ export async function prepareAgentRun(
           },
         });
 
-        // Fire-and-forget post-response tasks
-        const totalContextTokens = inputTokens + outputTokens;
+        // Fire-and-forget post-response tasks.
+        // Context size = the FINAL step's usage (its inputTokens already span
+        // the whole context). totalUsage sums every step, so a 5-step tool turn
+        // would count the context 5x over and fire compaction/memory-flush on
+        // conversations nowhere near the window.
+        const lastStep = steps[steps.length - 1];
+        const totalContextTokens =
+          (lastStep?.usage.inputTokens ?? inputTokens) +
+          (lastStep?.usage.outputTokens ?? outputTokens);
         const settings: CompactionSettings = {
           contextWindow,
           ...DEFAULT_COMPACTION_SETTINGS,
@@ -597,12 +612,10 @@ export async function prepareAgentRun(
         // no-op; if it threw first, unblock the waiting stream with B's text
         // instead of forcing it to wait out the race timeout.
         resolveNarration(executorText);
-        await clearStreamingMessage(instanceId).catch((error) =>
-          console.error(
-            "[agent/onFinish] clearStreamingMessage failed:",
-            error,
-          ),
-        );
+        // NOTE: the resumable-stream pointer is cleared by the web chat route
+        // (which owns the streamId) — clearing it here clobbered a live web
+        // stream's pointer whenever a telegram/cron run on the same instance
+        // finished first.
         await mcp.close().catch((error) =>
           console.error("[agent/onFinish] mcp close failed:", error),
         );
@@ -617,6 +630,7 @@ export async function prepareAgentRun(
       messages: prunedMessages,
       conversationId,
       narrationPromise,
+      closeMcp: () => mcp.close(),
     },
   };
 }

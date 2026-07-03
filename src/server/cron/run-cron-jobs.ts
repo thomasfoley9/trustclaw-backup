@@ -69,9 +69,16 @@ export async function runCronJobs(
       dedicatedConversationTitle: "Scheduled tasks",
     });
 
-    const { agent, messages } = prepareResult.result;
+    const { agent, messages, closeMcp } = prepareResult.result;
 
-    const result = await agent.generate({ prompt: messages });
+    let result;
+    try {
+      result = await agent.generate({ prompt: messages });
+    } finally {
+      // Zero-step provider errors never reach onFinish's mcp.close —
+      // idempotent, so double-close on the happy path is fine.
+      await closeMcp().catch(() => undefined);
+    }
 
     // Release all job locks in a single query (each gets its own nextRunAt)
     await releaseJobLocks(jobs, invocationId, now);

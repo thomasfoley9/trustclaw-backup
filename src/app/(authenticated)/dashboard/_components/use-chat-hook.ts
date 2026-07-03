@@ -30,10 +30,17 @@ export function useChatHook({ initialMessages, streamId, conversationId }: {
       // switch elsewhere can't reroute an in-flight message.
       body: { conversationId },
       prepareReconnectToStreamRequest: () => {
-        return { api: `/api/chat?streamId=${streamId}` };
+        return {
+          api: `/api/chat?streamId=${streamId}&conversationId=${conversationId}`,
+        };
       },
     });
   }, [streamId, conversationId]);
+
+  // Resume is a MOUNT decision: flipping it true mid-run (a focus refetch
+  // returning the streamId while the local POST stream is live) started a
+  // second concurrent reader replaying the same chunks into the message list.
+  const resumeOnMountRef = useRef(streamId !== null);
 
   const chat = useChat({
     // Per-conversation id so each chat has its own client store. With a shared
@@ -41,11 +48,14 @@ export function useChatHook({ initialMessages, streamId, conversationId }: {
     // their inputs — so you couldn't start a second job while one was running.
     id: `chat-${conversationId}`,
     transport,
-    resume: streamId !== null,
+    resume: resumeOnMountRef.current,
     onFinish: () => {
       void utils.trustclaw.getHistory.invalidate();
       // Refresh the sidebar so a new session's auto-title + ordering update.
       void utils.trustclaw.getConversations.invalidate();
+      // Drop the finished run's resume pointer from the cache so a
+      // conversation switch doesn't try to resume a dead stream.
+      void utils.trustclaw.getStreamingMessage.invalidate();
     },
     onError: (error) => {
       // Surface send failures (409 busy, 429 throttled, model errors) - the

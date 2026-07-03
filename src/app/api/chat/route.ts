@@ -252,13 +252,15 @@ export async function POST(request: Request) {
   // the background and persists its result via onFinish. Explicit stop comes
   // through /api/chat/stop, which aborts this controller. The claim is atomic:
   // concurrent sends to the same session can't start two runs.
-  const runController = await tryClaimRun(conversationId);
-  if (!runController) {
+  const claim = await tryClaimRun(conversationId);
+  if (!claim) {
     return new Response(
       "This chat is still answering - wait for it to finish",
       { status: 409 },
     );
   }
+  const { controller: runController, claimedAt } = claim;
+  let closeMcp: () => Promise<void> = () => Promise.resolve();
   try {
     const prepareResult = await prepareAgentRun({
       instanceId,
@@ -270,8 +272,9 @@ export async function POST(request: Request) {
 
     const { agent, messages } = prepareResult.result;
     narrationPromise = prepareResult.result.narrationPromise;
+    closeMcp = prepareResult.result.closeMcp;
 
-    await setStreamingMessage(instanceId, streamId);
+    await setStreamingMessage(instanceId, conversationId, streamId);
 
     // agent.stream() returns streamText() result - supports toUIMessageStreamResponse
     result = await agent.stream({
@@ -298,11 +301,16 @@ export async function POST(request: Request) {
         },
       })
       .catch(() => undefined);
-    await clearStreamingMessage(instanceId).catch(() => undefined);
+    // Setup failures after the MCP clients opened (e.g. the provider rejected
+    // the call) never reach onFinish — close them here or they leak.
+    await closeMcp().catch(() => undefined);
+    await clearStreamingMessage(instanceId, conversationId, streamId).catch(
+      () => undefined,
+    );
     // Guard the unclaim: a throw here would mask the real error above, and a
     // silent failure would strand the run flag (blocking the chat until the
     // 5-min stale timeout). Worst case is bounded, but log it.
-    await markRunEnded(conversationId).catch((err) =>
+    await markRunEnded(conversationId, claimedAt).catch((err) =>
       console.error("[chat] markRunEnded after setup failure failed:", err),
     );
     throw error;
@@ -356,8 +364,13 @@ export async function POST(request: Request) {
           })
           .catch(() => undefined);
       }
-      await clearStreamingMessage(instanceId).catch(() => undefined);
-      await markRunEnded(conversationId);
+      // Abort and zero-step failures never reach onFinish's mcp.close —
+      // idempotent, so double-close on the happy path is fine.
+      await closeMcp().catch(() => undefined);
+      await clearStreamingMessage(instanceId, conversationId, streamId).catch(
+        () => undefined,
+      );
+      await markRunEnded(conversationId, claimedAt);
     }
   });
 
@@ -399,23 +412,28 @@ export async function GET(request: Request) {
   const { instanceId } = authResult;
   const url = new URL(request.url);
   const streamId = url.searchParams.get("streamId");
+  const conversationId = url.searchParams.get("conversationId");
 
-  if (!streamId) {
-    return new Response("Missing streamId", { status: 400 });
+  if (!streamId || !conversationId) {
+    return new Response("Missing streamId/conversationId", { status: 400 });
   }
 
-  const activeStreamId = await getStreamingMessage(instanceId);
+  const activeStreamId = await getStreamingMessage(instanceId, conversationId);
   if (activeStreamId !== streamId) {
-    return new Response("Stream not found or not yours", { status: 404 });
+    // A stale/finished pointer is "nothing to resume", not an error — a 404
+    // here made the SDK's reconnect throw a spurious toast on idle chats.
+    return new Response(null, { status: 204 });
   }
 
   const streamContext = getStreamContext();
+  // 204 is a null-body status — passing a body string makes the Response
+  // constructor itself throw (500) instead of returning "nothing to resume".
   if (!streamContext) {
-    return new Response("Stream resumption not available", { status: 204 });
+    return new Response(null, { status: 204 });
   }
   const stream = await streamContext.resumeExistingStream(streamId);
   if (!stream) {
-    return new Response("Stream already completed", { status: 204 });
+    return new Response(null, { status: 204 });
   }
 
   return new Response(stream.pipeThrough(new TextEncoderStream()), {

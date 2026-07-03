@@ -1,6 +1,7 @@
 import { timingSafeEqual } from "crypto";
 import { after, NextResponse } from "next/server";
 import { env } from "~/env";
+import { Prisma } from "~/generated/prisma/client";
 import { db } from "~/server/clients/db";
 import { sendTelegramMessage, sendChatAction } from "~/server/clients/telegram";
 import { prepareAgentRun } from "~/server/api/routers/trustclaw/agent/setup";
@@ -127,18 +128,37 @@ async function handleStartCommand(chatId: string, text: string): Promise<void> {
     return;
   }
 
-  const { count } = await db.composioClawInstance.updateMany({
-    where: {
-      telegramLinkToken: token,
-      telegramChatId: null,
-      telegramLinkTokenExpiresAt: { gt: new Date() },
-    },
-    data: {
-      telegramChatId: chatId,
-      telegramLinkToken: null,
-      telegramLinkTokenExpiresAt: null,
-    },
-  });
+  let count = 0;
+  try {
+    ({ count } = await db.composioClawInstance.updateMany({
+      where: {
+        telegramLinkToken: token,
+        telegramChatId: null,
+        telegramLinkTokenExpiresAt: { gt: new Date() },
+      },
+      data: {
+        telegramChatId: chatId,
+        telegramLinkToken: null,
+        telegramLinkTokenExpiresAt: null,
+      },
+    }));
+  } catch (err) {
+    // telegramChatId is @unique: linking a chat that's already bound to a
+    // DIFFERENT instance violates the constraint (P2002). Without this catch
+    // the webhook 500s, the user gets no reply, and the Telegram retry is
+    // swallowed by the update_id dedup.
+    if (
+      err instanceof Prisma.PrismaClientKnownRequestError &&
+      err.code === "P2002"
+    ) {
+      await sendTelegramMessage(
+        chatId,
+        "This Telegram chat is already linked to another Claw account. Unlink it there first, then try again.",
+      );
+      return;
+    }
+    throw err;
+  }
 
   if (count === 0) {
     await sendTelegramMessage(
@@ -188,7 +208,7 @@ async function handleRegularMessage(
     dedicatedConversationTitle: "Telegram",
   });
 
-  const { agent, messages } = prepareResult.result;
+  const { agent, messages, closeMcp } = prepareResult.result;
 
   let accumulatedText = "";
   const abortController = new AbortController();
@@ -205,10 +225,13 @@ async function handleRegularMessage(
           return;
         }
 
-        // Send tool call descriptions (with results for connection URLs)
-        for (let i = 0; i < step.toolCalls.length; i++) {
-          const tc = step.toolCalls[i]!;
-          const tr = step.toolResults[i];
+        // Send tool call descriptions (with results for connection URLs).
+        // Match results by toolCallId — toolResults excludes tool-error parts,
+        // so index pairing mislabels calls after an errored one.
+        for (const tc of step.toolCalls) {
+          const tr = step.toolResults.find(
+            (r) => r.toolCallId === tc.toolCallId,
+          );
           const tcInput = toPlainRecordSafe(tc.input);
           const desc = describeToolCall({
             toolName: tc.toolName,
@@ -244,5 +267,8 @@ async function handleRegularMessage(
       return;
     }
     throw error;
+  } finally {
+    // Aborted/errored runs never reach onFinish's mcp.close — idempotent.
+    await closeMcp().catch(() => undefined);
   }
 }
