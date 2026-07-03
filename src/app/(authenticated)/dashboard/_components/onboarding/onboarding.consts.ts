@@ -98,6 +98,24 @@ export const HOUSE_MODELS = [
     cost: "free",
   },
   {
+    value: "house/kimi-k2.7-highspeed" as const,
+    label: "Kimi K2.7 Highspeed",
+    description: "Free · uncensored · fastest output",
+    cost: "free",
+  },
+  {
+    value: "house/kimi-k2.6" as const,
+    label: "Kimi K2.6",
+    description: "Free · uncensored · vision + thinking",
+    cost: "free",
+  },
+  {
+    value: "house/kimi-k2.5" as const,
+    label: "Kimi K2.5",
+    description: "Free · uncensored · vision",
+    cost: "free",
+  },
+  {
     value: "house/deepseek" as const,
     label: "DeepSeek V4 Flash",
     description: "Free · uncensored · on the house",

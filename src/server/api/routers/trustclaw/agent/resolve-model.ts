@@ -48,6 +48,24 @@ const HOUSE_MODELS: Record<
     nativeModel: "kimi-k2.7-code",
     openrouterModel: "moonshotai/kimi-k2.7-code",
   },
+  "house/kimi-k2.7-highspeed": {
+    nativeBaseURL: "https://api.moonshot.ai/v1",
+    // Same weights as kimi-k2.7-code served ~180-260 tok/s at 2x the price.
+    // OpenRouter doesn't carry the highspeed tier - the fallback serves the
+    // standard variant (same model, slower).
+    nativeModel: "kimi-k2.7-code-highspeed",
+    openrouterModel: "moonshotai/kimi-k2.7-code",
+  },
+  "house/kimi-k2.6": {
+    nativeBaseURL: "https://api.moonshot.ai/v1",
+    nativeModel: "kimi-k2.6",
+    openrouterModel: "moonshotai/kimi-k2.6",
+  },
+  "house/kimi-k2.5": {
+    nativeBaseURL: "https://api.moonshot.ai/v1",
+    nativeModel: "kimi-k2.5",
+    openrouterModel: "moonshotai/kimi-k2.5",
+  },
 };
 
 export function isHouseModel(modelId: string): boolean {
@@ -55,10 +73,8 @@ export function isHouseModel(modelId: string): boolean {
 }
 
 function houseNativeKey(modelId: string): string | undefined {
-  if (modelId === "house/deepseek" || modelId === "house/deepseek-pro") {
-    return env.DEEPSEEK_API_KEY;
-  }
-  if (modelId === "house/kimi-k2") return env.MOONSHOT_API_KEY;
+  if (modelId.startsWith("house/deepseek")) return env.DEEPSEEK_API_KEY;
+  if (modelId.startsWith("house/kimi")) return env.MOONSHOT_API_KEY;
   return undefined;
 }
 
