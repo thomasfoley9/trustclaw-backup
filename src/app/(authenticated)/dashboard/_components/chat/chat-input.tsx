@@ -339,22 +339,25 @@ export function ChatInput({
           </div>
         )}
 
-        <div className="flex items-end gap-2">
-          <input
-            ref={fileInputRef}
-            type="file"
-            multiple
-            accept="image/*,application/pdf,.csv,.tsv,.txt,.md,.markdown,.json,.log,.xml,.yaml,.yml"
-            className="hidden"
-            onChange={(e) => {
-              if (e.target.files) void addFiles(Array.from(e.target.files));
-              e.target.value = "";
-            }}
-          />
+        <input
+          ref={fileInputRef}
+          type="file"
+          multiple
+          accept="image/*,application/pdf,.csv,.tsv,.txt,.md,.markdown,.json,.log,.xml,.yaml,.yml"
+          className="hidden"
+          onChange={(e) => {
+            if (e.target.files) void addFiles(Array.from(e.target.files));
+            e.target.value = "";
+          }}
+        />
+
+        {/* Voice & attachment controls - their own strip so the composer gets
+            the full row width. All buttons fit on mobile again. */}
+        <div className="mb-1.5 flex items-center gap-1">
           <Button
             variant="ghost"
             size="icon"
-            className="size-10 shrink-0 rounded-2xl"
+            className="size-9 shrink-0 rounded-xl"
             onClick={() => fileInputRef.current?.click()}
             disabled={isStreaming}
             aria-label="Attach files"
@@ -368,7 +371,7 @@ export function ChatInput({
               variant="ghost"
               size="icon"
               className={cn(
-                "hidden size-10 shrink-0 rounded-2xl sm:inline-flex",
+                "size-9 shrink-0 rounded-xl",
                 isListening && "bg-primary/15 text-primary",
               )}
               onClick={toggleDictation}
@@ -387,7 +390,7 @@ export function ChatInput({
             variant="ghost"
             size="icon"
             className={cn(
-              "hidden size-10 shrink-0 rounded-2xl sm:inline-flex",
+              "size-9 shrink-0 rounded-xl",
               voiceEnabled && "bg-primary/15 text-primary",
             )}
             onClick={onToggleVoice}
@@ -405,11 +408,7 @@ export function ChatInput({
             )}
           </Button>
 
-          {conversationSupported && (
-            <span className="hidden sm:inline-flex">
-              <VoicePicker disabled={isStreaming} />
-            </span>
-          )}
+          {conversationSupported && <VoicePicker disabled={isStreaming} />}
 
           {conversationSupported && (
             <Button
@@ -417,7 +416,7 @@ export function ChatInput({
               variant="ghost"
               size="icon"
               className={cn(
-                "size-10 shrink-0 rounded-2xl",
+                "size-9 shrink-0 rounded-xl",
                 conversationActive && "bg-primary/15 text-primary",
               )}
               onClick={
@@ -437,7 +436,9 @@ export function ChatInput({
               )}
             </Button>
           )}
+        </div>
 
+        <div className="flex items-end gap-2">
           <Textarea
             ref={textareaRef}
             value={input}

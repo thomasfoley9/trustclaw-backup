@@ -34,7 +34,7 @@ export function VoicePicker({ disabled }: { disabled?: boolean }) {
           type="button"
           variant="ghost"
           size="icon"
-          className="size-10 shrink-0 rounded-2xl"
+          className="size-9 shrink-0 rounded-xl"
           disabled={disabled}
           aria-label="Choose assistant voice"
         >
