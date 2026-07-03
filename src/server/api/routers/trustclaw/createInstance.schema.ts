@@ -1,11 +1,13 @@
 import { z } from "zod";
 
 export const ALLOWED_ANTHROPIC_MODELS = [
-  "claude-sonnet-4-5-20250929",
-  "claude-sonnet-4-6",
+  "claude-fable-5",
   "claude-opus-4-8",
   "claude-opus-4-7",
   "claude-opus-4-6",
+  "claude-sonnet-5",
+  "claude-sonnet-4-6",
+  "claude-sonnet-4-5-20250929",
   "claude-haiku-4-5-20251001",
 ] as const;
 
@@ -28,9 +30,7 @@ export const selectableModelSchema = z.union([
 ]);
 
 export const createInstanceInput = z.object({
-  anthropicModel: allowedAnthropicModelSchema.default(
-    "claude-sonnet-4-5-20250929",
-  ),
+  anthropicModel: allowedAnthropicModelSchema.default("claude-sonnet-5"),
 });
 
 export type CreateInstanceInput = z.infer<typeof createInstanceInput>;

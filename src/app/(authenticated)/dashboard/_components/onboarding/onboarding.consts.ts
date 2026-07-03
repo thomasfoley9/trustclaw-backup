@@ -38,9 +38,15 @@ export const CURATED_EMOJIS = [
 
 export const MODELS = [
   {
+    value: "claude-fable-5" as const,
+    label: "Claude Fable 5",
+    description: "Most intelligent",
+    cost: "$$$$",
+  },
+  {
     value: "claude-opus-4-8" as const,
     label: "Claude Opus 4.8",
-    description: "Most capable",
+    description: "Most capable Opus",
     cost: "$$$",
   },
   {
@@ -54,6 +60,12 @@ export const MODELS = [
     label: "Claude Opus 4.6",
     description: "Very capable",
     cost: "$$$",
+  },
+  {
+    value: "claude-sonnet-5" as const,
+    label: "Claude Sonnet 5",
+    description: "Near-Opus, Sonnet price",
+    cost: "$$",
   },
   {
     value: "claude-sonnet-4-6" as const,
@@ -75,18 +87,25 @@ export const MODELS = [
   },
 ] as const;
 
-// House models: owner-funded (Kimi K2 + DeepSeek via OpenRouter), free to every
-// user, no key needed — they run an uncensored persona.
+// House models: owner-funded, free to every user, no key needed — they run an
+// uncensored persona. Ids are stable routing keys (stored on instances); the
+// concrete provider model behind each lives in agent/resolve-model.ts.
 export const HOUSE_MODELS = [
   {
     value: "house/kimi-k2" as const,
-    label: "Kimi K2",
+    label: "Kimi K2.7 Code",
     description: "Free · uncensored · on the house",
     cost: "free",
   },
   {
     value: "house/deepseek" as const,
-    label: "DeepSeek",
+    label: "DeepSeek V4 Flash",
+    description: "Free · uncensored · on the house",
+    cost: "free",
+  },
+  {
+    value: "house/deepseek-pro" as const,
+    label: "DeepSeek V4 Pro",
     description: "Free · uncensored · on the house",
     cost: "free",
   },

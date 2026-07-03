@@ -24,6 +24,9 @@ const OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1";
 // "House" models ride OWNER-funded keys — free to every user, billed to the
 // owner. Each prefers its native provider key (if set), else the shared
 // OpenRouter key.
+// The "house/..." ids are stable routing keys stored on instances — upgrade
+// the concrete provider model HERE and every user upgrades with it.
+// Ids verified against the providers' live catalogs 2026-07-03.
 const HOUSE_MODELS: Record<
   string,
   { nativeBaseURL: string; nativeModel: string; openrouterModel: string }
@@ -33,10 +36,17 @@ const HOUSE_MODELS: Record<
     nativeModel: "deepseek-v4-flash",
     openrouterModel: "deepseek/deepseek-v4-flash",
   },
+  "house/deepseek-pro": {
+    nativeBaseURL: "https://api.deepseek.com/v1",
+    nativeModel: "deepseek-v4-pro",
+    openrouterModel: "deepseek/deepseek-v4-pro",
+  },
   "house/kimi-k2": {
     nativeBaseURL: "https://api.moonshot.ai/v1",
-    nativeModel: "kimi-k2.6",
-    openrouterModel: "moonshotai/kimi-k2",
+    // K2.7 Code — Moonshot's current flagship (256K ctx, ~30% fewer thinking
+    // tokens than the k2.6 this used to pin).
+    nativeModel: "kimi-k2.7-code",
+    openrouterModel: "moonshotai/kimi-k2.7-code",
   },
 };
 
@@ -45,7 +55,9 @@ export function isHouseModel(modelId: string): boolean {
 }
 
 function houseNativeKey(modelId: string): string | undefined {
-  if (modelId === "house/deepseek") return env.DEEPSEEK_API_KEY;
+  if (modelId === "house/deepseek" || modelId === "house/deepseek-pro") {
+    return env.DEEPSEEK_API_KEY;
+  }
   if (modelId === "house/kimi-k2") return env.MOONSHOT_API_KEY;
   return undefined;
 }

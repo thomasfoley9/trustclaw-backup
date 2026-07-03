@@ -9,7 +9,11 @@ const CONTEXT_WINDOW = 200_000;
 // long chats. Best-effort published values; lower if a provider rejects long
 // contexts.
 const MODEL_CONTEXT_WINDOWS: Record<string, number> = {
-  "house/deepseek": 128_000,
+  // DeepSeek V4 family advertises 1M; stay conservative so compaction fires
+  // well before the provider's real ceiling.
+  "house/deepseek": 256_000,
+  "house/deepseek-pro": 256_000,
+  // kimi-k2.7-code is 256K.
   "house/kimi-k2": 256_000,
 };
 

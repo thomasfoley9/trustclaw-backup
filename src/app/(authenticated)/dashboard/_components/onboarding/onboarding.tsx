@@ -122,7 +122,7 @@ export function Onboarding({
       lore: savedState?.lore ?? "",
       anthropicModel: parsedModel.success
         ? parsedModel.data
-        : "claude-sonnet-4-5-20250929",
+        : "claude-sonnet-5",
       anthropicApiKey: "",
     };
   });

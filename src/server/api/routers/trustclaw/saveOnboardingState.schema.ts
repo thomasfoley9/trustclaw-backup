@@ -25,7 +25,7 @@ export const saveOnboardingStateInput = z.object({
   personality: z.string().max(2_000).nullable().default(null),
   emoji: z.string().max(64).nullable().default(null),
   lore: z.string().max(20_000).default(""),
-  anthropicModel: selectableModelSchema.default("claude-sonnet-4-5-20250929"),
+  anthropicModel: selectableModelSchema.default("claude-sonnet-5"),
 });
 
 export type SaveOnboardingStateInput = z.infer<typeof saveOnboardingStateInput>;
