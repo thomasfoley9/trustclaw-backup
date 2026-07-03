@@ -11,12 +11,17 @@ export function AnthropicKeyBanner() {
     refetchOnWindowFocus: "always",
   });
   const { data: status } = trpc.trustclaw.getStatus.useQuery();
+  const { data: instanceData } = trpc.trustclaw.getInstance.useQuery();
 
   if (pathname?.startsWith("/dashboard/settings")) return null;
   // No instance yet = the user is still in the onboarding wizard; don't cover
   // it with a "chat disabled" banner whose CTA navigates them out of setup.
   if (!status?.hasInstance) return null;
   if (!data || data.hasKey) return null;
+  // House models are owner-funded - chat works fine without an Anthropic key,
+  // so "chat is disabled" would be a lie. The model picker's Claude entries
+  // fail with a clear "add your key" error if selected later.
+  if (instanceData?.instance?.anthropicModel?.startsWith("house/")) return null;
 
   return (
     <div className="bg-destructive/10 border-border border-b px-4 py-2 text-sm">

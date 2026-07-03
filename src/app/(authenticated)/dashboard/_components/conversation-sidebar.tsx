@@ -33,10 +33,11 @@ export function runningNow(activeRunStartedAt: string | Date | null): boolean {
 
 type View = "chats" | "cron";
 
-// Desktop sidebar wrapper - hidden on mobile (the drawer handles small screens).
+// Desktop sidebar - fills its resizable panel (DashboardPanels owns the width
+// and hides the panel on mobile; the drawer handles small screens).
 export function ConversationSidebar() {
   return (
-    <aside className="border-sidebar-border bg-sidebar hidden w-64 shrink-0 flex-col border-r md:flex">
+    <aside className="border-sidebar-border bg-sidebar flex h-full w-full flex-col border-r">
       <ConversationSidebarContent />
     </aside>
   );

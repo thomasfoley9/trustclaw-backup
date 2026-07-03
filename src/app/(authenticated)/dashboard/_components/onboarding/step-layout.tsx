@@ -16,6 +16,7 @@ interface StepLayoutProps {
   onSkip?: () => void;
   nextDisabled?: boolean;
   nextLabel?: string;
+  skipLabel?: string;
 }
 
 export function StepLayout({
@@ -27,6 +28,7 @@ export function StepLayout({
   onSkip,
   nextDisabled,
   nextLabel,
+  skipLabel,
 }: StepLayoutProps) {
   return (
     <motion.div
@@ -66,7 +68,7 @@ export function StepLayout({
               onClick={onSkip}
               className="min-h-[44px] w-full sm:w-auto"
             >
-              Skip
+              {skipLabel ?? "Skip"}
             </Button>
           )}
           {onNext && (

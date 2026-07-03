@@ -18,7 +18,13 @@ import {
   SheetHeader,
   SheetTitle,
 } from "~/components/ui/sheet";
+import {
+  ResizableHandle,
+  ResizablePanel,
+  ResizablePanelGroup,
+} from "~/components/ui/resizable";
 import { useIsMobile } from "~/lib/use-is-mobile";
+import { usePersistedPanelLayout } from "~/lib/use-persisted-panel-layout";
 import { useTerminalStore } from "../terminal-store";
 import { useChatHook, type ChatFilePart } from "../use-chat-hook";
 import { UserMessage } from "./user-message";
@@ -344,6 +350,8 @@ export function ChatView({
   // instead. Its own state (defaults closed) so the desktop pane's default-open
   // never auto-pops the sheet on a phone.
   const isMobile = useIsMobile();
+  const { groupRef: panelGroupRef, onLayoutChanged: onPanelLayoutChanged } =
+    usePersistedPanelLayout("trustclaw-panels-chat");
   const [mobileTerminalOpen, setMobileTerminalOpen] = useState(false);
 
   // Stable callback so memoized AssistantMessage rows don't re-render on every
@@ -373,9 +381,15 @@ export function ChatView({
   }, [liveCallActive, toggleConversationMute]);
 
   return (
-    <div className="flex h-full overflow-hidden">
-      <div className="flex min-h-0 min-w-0 flex-1 flex-col">
-        <ComposioCta />
+    <ResizablePanelGroup
+      orientation="horizontal"
+      groupRef={panelGroupRef}
+      onLayoutChanged={onPanelLayoutChanged}
+      className="h-full overflow-hidden"
+    >
+      <ResizablePanel id="conversation" className="min-w-0">
+        <div className="flex h-full min-h-0 min-w-0 flex-col">
+          <ComposioCta />
         <div className="relative min-h-0 flex-1">
           {isEmpty ? (
             <div className="flex h-full flex-col items-center justify-center gap-6 px-4 text-center">
@@ -485,17 +499,31 @@ export function ChatView({
           onCockpitEvent={handleCockpitEvent}
           onTranscript={handleTranscript}
         />
-      </div>
+        </div>
+      </ResizablePanel>
 
       {terminalOpen && (
-        <div className="border-border hidden w-[400px] max-w-[40vw] shrink-0 border-l md:block lg:w-[500px]">
-          <TerminalPane
-            messages={messages}
-            status={status}
-            onHide={() => setTerminalOpen(false)}
-            liveEvents={voiceEvents}
-          />
-        </div>
+        <>
+          <ResizableHandle className="hidden md:flex" />
+          <ResizablePanel
+            id="terminal"
+            defaultSize="440px"
+            minSize="300px"
+            maxSize="60%"
+            // className lands on the panel's INNER div (border still works
+            // there); mobile hiding needs data-mobile-hidden on the outer
+            // element (see globals.css).
+            className="border-border border-l"
+            data-mobile-hidden=""
+          >
+            <TerminalPane
+              messages={messages}
+              status={status}
+              onHide={() => setTerminalOpen(false)}
+              liveEvents={voiceEvents}
+            />
+          </ResizablePanel>
+        </>
       )}
 
       {isMobile && (
@@ -513,6 +541,6 @@ export function ChatView({
           </SheetContent>
         </Sheet>
       )}
-    </div>
+    </ResizablePanelGroup>
   );
 }

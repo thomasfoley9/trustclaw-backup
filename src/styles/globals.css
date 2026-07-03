@@ -338,3 +338,12 @@
       );
   }
 }
+/* react-resizable-panels puts className on an INNER content div, so responsive
+   hiding of a panel must target the outer element (which receives rest props)
+   via this attribute. Below Tailwind's md breakpoint the panel vanishes
+   entirely - otherwise a display:none inner div leaves phantom flex space. */
+@media (width < 48rem) {
+  [data-mobile-hidden] {
+    display: none !important;
+  }
+}

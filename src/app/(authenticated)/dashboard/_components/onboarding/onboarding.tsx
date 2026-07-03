@@ -8,7 +8,7 @@ import { trpc } from "~/clients/trpc";
 import { showTrpcErrorToast } from "~/components/core/toast-notifications";
 import { ErrorBoundary } from "~/components/core/error-boundary";
 import { Button } from "~/components/ui/button";
-import { allowedAnthropicModelSchema } from "~/server/api/routers/trustclaw/createInstance.schema";
+import { onboardingModelSchema } from "~/server/api/routers/trustclaw/createInstance.schema";
 import {
   STEP_ORDER,
   WRITING_STYLES,
@@ -45,7 +45,7 @@ interface OnboardingWizardState {
   personality: PersonalityKey | null;
   emoji: string | null;
   lore: string;
-  anthropicModel: z.infer<typeof allowedAnthropicModelSchema>;
+  anthropicModel: z.infer<typeof onboardingModelSchema>;
   // In-memory only - never persisted to onboardingState (it's a secret).
   anthropicApiKey: string;
 }
@@ -104,7 +104,7 @@ export function Onboarding({
 
   const [step, setStep] = useState<Step>(initialStep);
   const [wizardState, setWizardState] = useState<OnboardingWizardState>(() => {
-    const parsedModel = allowedAnthropicModelSchema.safeParse(
+    const parsedModel = onboardingModelSchema.safeParse(
       savedState?.anthropicModel,
     );
     return {
@@ -183,6 +183,7 @@ export function Onboarding({
 
   const handleModelNext = async () => {
     const key = wizardState.anthropicApiKey.trim();
+    const isHouse = wizardState.anthropicModel.startsWith("house/");
     try {
       if (!instanceCreated) {
         await createInstance.mutateAsync({
@@ -190,10 +191,33 @@ export function Onboarding({
         });
         setInstanceCreated(true);
       }
-      // Validate + save the user's Anthropic key (skippable only if one is
-      // already on the instance from a previous pass).
-      if (key) {
+      // Validate + save the user's Anthropic key. Not needed for house models
+      // (owner-funded), and skippable if one is already on the instance.
+      if (!isHouse && key) {
         await setAnthropicKey.mutateAsync({ apiKey: key });
+      }
+      goToStep("integrations");
+    } catch (error) {
+      showTrpcErrorToast(error);
+    }
+  };
+
+  // "Skip - start free": no Anthropic key, land on the default house model so
+  // chat works immediately. If the instance already exists (a previous pass
+  // through this step), skipping just moves on without touching its model.
+  const handleModelSkip = async () => {
+    try {
+      if (!instanceCreated) {
+        const nextState: OnboardingWizardState = {
+          ...wizardState,
+          anthropicModel: "house/kimi-k2",
+        };
+        await createInstance.mutateAsync({ anthropicModel: "house/kimi-k2" });
+        setInstanceCreated(true);
+        setWizardState(nextState);
+        setStep("integrations");
+        void persistState("integrations", nextState);
+        return;
       }
       goToStep("integrations");
     } catch (error) {
@@ -345,6 +369,7 @@ export function Onboarding({
               saving={createInstance.isPending || setAnthropicKey.isPending}
               onNext={() => void handleModelNext()}
               onBack={goBack}
+              onSkip={() => void handleModelSkip()}
             />
           )}
 

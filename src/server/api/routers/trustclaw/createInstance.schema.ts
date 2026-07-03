@@ -13,6 +13,27 @@ export const ALLOWED_ANTHROPIC_MODELS = [
 
 export const allowedAnthropicModelSchema = z.enum(ALLOWED_ANTHROPIC_MODELS);
 
+// Owner-funded house models selectable during onboarding (no user key needed).
+// Keep in sync with HOUSE_MODELS in agent/resolve-model.ts and the UI list in
+// onboarding.consts.ts.
+export const HOUSE_MODEL_IDS = [
+  "house/kimi-k2",
+  "house/kimi-k2.7-highspeed",
+  "house/kimi-k2.6",
+  "house/kimi-k2.5",
+  "house/deepseek",
+  "house/deepseek-pro",
+] as const;
+
+export const houseModelSchema = z.enum(HOUSE_MODEL_IDS);
+
+// What the onboarding model step may select: a Claude preset (BYO key) or a
+// free house model.
+export const onboardingModelSchema = z.union([
+  allowedAnthropicModelSchema,
+  houseModelSchema,
+]);
+
 // Looser id for user-added gateway-style models, e.g. "openai/gpt-4o".
 export const customModelIdSchema = z
   .string()
@@ -30,7 +51,7 @@ export const selectableModelSchema = z.union([
 ]);
 
 export const createInstanceInput = z.object({
-  anthropicModel: allowedAnthropicModelSchema.default("claude-sonnet-5"),
+  anthropicModel: onboardingModelSchema.default("claude-sonnet-5"),
 });
 
 export type CreateInstanceInput = z.infer<typeof createInstanceInput>;
