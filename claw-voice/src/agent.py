@@ -1,17 +1,14 @@
-"""Claw — real-time voice agent (LiveKit cascade), Design C.
+"""Claw — real-time voice agent (LiveKit + OpenAI GPT Realtime).
 
-Agent A (THIS worker) is the conversational voice front: Smallest Pulse STT ->
-a real LLM (a house model — Kimi K2 by default) with the persona + ONE tool,
-`delegate` -> Smallest Lightning TTS. Chit-chat A answers directly; real work A
-delegates to Agent B by POSTing the intent to the Next.js /api/voice-turn route,
-which runs the user's heavy Composio agent on the user's model and streams back
-tool activity (forwarded to the 'cockpit' data channel) + a result that A speaks.
+Agent A (THIS worker) is the conversational voice front: OpenAI's GPT-4o
+Realtime model handles speech-to-speech natively (no separate STT/TTS
+pipeline) with the persona + ONE tool, `delegate`. Chit-chat A answers
+directly; real work A delegates to Agent B by POSTing the intent to the
+Next.js /api/voice-turn route, which runs the user's heavy Composio agent on
+the user's model and streams back tool activity (forwarded to the 'cockpit'
+data channel) + a result that A speaks.
 
-Why A is house-only: A runs in LiveKit Cloud, which holds only the owner-funded
-house keys. Per-user keys (Claude/custom) live encrypted on Vercel — so B, which
-runs there via /api/voice-turn, is the one that uses the user's chosen model.
-
-Session config (userId, conversationId, models, persona) arrives as JSON in the
+Session config (userId, conversationId, persona) arrives as JSON in the
 agent-dispatch metadata from the /api/livekit-token route.
 """
 
@@ -30,9 +27,10 @@ from livekit.agents import (
     RunContext,
     function_tool,
 )
-from livekit.plugins import openai, smallestai
+from livekit.plugins import openai
 
 load_dotenv(".env.local")
+load_dotenv()
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("claw-voice")
 
@@ -81,42 +79,38 @@ def build_instructions(config: dict) -> str:
     return f"{str(character).strip()}\n\n{VOICE_FRONT_RULES}"
 
 
-def build_agent_a_llm(agent_a_model: str | None) -> openai.LLM:
-    """Agent A's LLM — restricted to house models (the only keys the worker holds).
-    The voice front needs LOW LATENCY, not raw power (the heavy multi-tool work is
-    Agent B's job), so it defaults to a fast Kimi variant. Tunable without a code
-    redeploy via the AGENT_A_MOONSHOT_MODEL secret."""
-    moonshot = os.environ.get("MOONSHOT_API_KEY")
-    deepseek = os.environ.get("DEEPSEEK_API_KEY")
-    if agent_a_model == "house/deepseek" and deepseek:
-        return openai.LLM(
-            model="deepseek-v4-flash",
-            base_url="https://api.deepseek.com/v1",
-            api_key=deepseek,
-            # One tool call at a time — A only ever needs ONE delegate. Stops the
-            # model emitting overlapping delegate calls that collide on the
-            # framework's reused call_id ("Task already running for delegate_1"),
-            # which was killing the session after a couple of turns.
-            parallel_tool_calls=False,
-        )
-    # kimi-k2.7-code-highspeed: same agentic K2 brain, ~180-260 tok/s vs the much
-    # slower kimi-k2.6 — what makes spoken replies snappy. Persona drives the tone.
-    moonshot_model = os.environ.get(
-        "AGENT_A_MOONSHOT_MODEL", "kimi-k2.7-code-highspeed"
-    )
-    if not moonshot:
-        # Fail loud at startup instead of returning an LLM with api_key=None that
-        # silently 401s on the first inference (a deaf, mute agent).
+OPENAI_VOICES = frozenset(
+    {
+        "alloy",
+        "ash",
+        "ballad",
+        "cedar",
+        "coral",
+        "echo",
+        "marin",
+        "sage",
+        "shimmer",
+        "verse",
+    }
+)
+DEFAULT_VOICE = "marin"
+
+
+def build_realtime_model(voice: str) -> openai.realtime.RealtimeModel:
+    """Agent A's model — OpenAI GPT-4o Realtime. Handles speech-to-speech
+    natively (STT + LLM + TTS in one hop), so the agent session doesn't need
+    separate STT/TTS plugins."""
+    if not os.environ.get("OPENAI_API_KEY"):
         raise RuntimeError(
-            "MOONSHOT_API_KEY is not set on the worker — Agent A has no LLM key."
+            "OPENAI_API_KEY is not set on the worker — Agent A has no model key."
         )
-    return openai.LLM(
-        model=moonshot_model,
-        base_url="https://api.moonshot.ai/v1",
-        api_key=moonshot,
-        # One tool call at a time (see note above) — prevents the colliding
-        # delegate calls that broke the session mid-conversation.
-        parallel_tool_calls=False,
+    resolved_voice = voice if voice in OPENAI_VOICES else DEFAULT_VOICE
+    # gpt-realtime is the GA speech-to-speech model. The -preview 4o variants
+    # are gone from this account's model list — using one fails at session
+    # start, which presents as the agent joining the room but never speaking.
+    return openai.realtime.RealtimeModel(
+        model="gpt-realtime",
+        voice=resolved_voice,
     )
 
 
@@ -250,7 +244,9 @@ class ClawAgent(Agent):
             logger.warning("cockpit publish skipped", exc_info=True)
 
 
-@server.rtc_session(agent_name="claw-voice")
+# AGENT_NAME override lets a local dev worker register under a different name
+# (e.g. claw-voice-dev) so explicit dispatches can't route prod calls to it.
+@server.rtc_session(agent_name=os.environ.get("AGENT_NAME", "claw-voice"))
 async def entrypoint(ctx: JobContext):
     # Session config from the token route's agent-dispatch metadata (fallback:
     # the human participant's metadata).
@@ -273,20 +269,27 @@ async def entrypoint(ctx: JobContext):
             "VOICE_WORKER_SHARED_SECRET not set — delegate calls will be rejected"
         )
 
-    # The user's chosen voice (Settings -> Voice) rides in the dispatch
-    # metadata; fall back to a sensible default if it's missing.
-    # IMPORTANT: model + voice must match. The Settings picker offers the
-    # standard lightning_v3.1 voices (avery, mia, ...), so the TTS MUST use the
-    # standard "lightning_v3.1" model — pairing them with the "_pro" model makes
-    # synthesis fail silently (the agent joins but never speaks).
-    voice_id = config.get("voiceId") or "avery"
-    logger.info("voice session using voice_id=%s", voice_id)
+    voice_id = config.get("voiceId") or DEFAULT_VOICE
+    logger.info("voice session using voice=%s", voice_id)
     session = AgentSession(
-        stt=smallestai.STT(),
-        tts=smallestai.TTS(model="lightning_v3.1", voice_id=voice_id),
-        llm=build_agent_a_llm(config.get("agentAModel")),
-        # AgentSession bundles a VAD now; no explicit vad= needed.
+        llm=build_realtime_model(voice_id),
     )
+
+    # Turn-level breadcrumbs: one line per finalized user/assistant item, and
+    # any session error. This is what makes "the call was silent" diagnosable
+    # from `lk agent logs` instead of a black box.
+    @session.on("conversation_item_added")
+    def _log_item(ev) -> None:
+        try:
+            item = ev.item
+            text = (item.text_content or "").strip().replace("\n", " ")
+            logger.info("turn [%s]: %.200s", item.role, text)
+        except Exception:  # noqa: BLE001
+            pass
+
+    @session.on("error")
+    def _log_error(ev) -> None:
+        logger.error("session error: %s", getattr(ev, "error", ev))
 
     # NOTE: server-side hold music (BackgroundAudioPlayer) was removed — it
     # publishes a SECOND audio track, which mobile browsers won't reliably play
@@ -309,15 +312,19 @@ async def entrypoint(ctx: JobContext):
     except Exception:  # noqa: BLE001 — API unavailable; greet immediately
         logger.info("wait_for_participant unavailable", exc_info=True)
 
-    # Greet with a FIXED line via say() — TTS only, NO LLM round-trip. The old
-    # generate_reply greeting cost ~5s (a full Kimi call + TTS) before the first
-    # word was even heard; say() speaks in ~1s. The active personality still
-    # fully governs the real conversation — only this one hello is fixed, a fair
-    # trade for cutting ~5s off every call's perceived start. It stays
-    # interruptible, so the user can talk over it the instant they're ready.
+    # Greet via generate_reply — say() needs a TTS plugin, which a RealtimeModel
+    # session doesn't have (it raises RuntimeError and the call starts silent).
+    # GPT Realtime's first-token latency is low enough that the generated
+    # greeting still lands fast, and it comes out in the active personality's
+    # voice. It stays interruptible.
     try:
-        await session.say("Hey — what do you need?")
-    except Exception:  # noqa: BLE001 — a TTS hiccup shouldn't kill the session
+        await session.generate_reply(
+            instructions=(
+                "Greet the user with ONE short line in character and ask what "
+                "they need. Nothing else."
+            )
+        )
+    except Exception:  # noqa: BLE001 — a greeting hiccup shouldn't kill the session
         logger.warning("greeting failed", exc_info=True)
 
 

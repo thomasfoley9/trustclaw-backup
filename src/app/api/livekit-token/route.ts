@@ -71,8 +71,8 @@ export async function POST(request: Request) {
     agentAModel: instance.agentAModel ?? null,
     // Agent B (worker) model — what /api/voice-turn runs for delegated work.
     agentBModel: instance.anthropicModel,
-    // The user's chosen Smallest voice; the worker's TTS reads this so the
-    // Settings voice picker actually changes how the call sounds.
+    // The user's chosen OpenAI Realtime voice; the worker maps unknown ids
+    // (e.g. legacy Smallest ids) to its default.
     voiceId: instance.voiceId ?? DEFAULT_VOICE_ID,
   });
 

@@ -397,14 +397,14 @@ version = "0.1.0"
 source = { virtual = "." }
 dependencies = [
     { name = "httpx" },
-    { name = "livekit-agents", extra = ["openai", "silero", "smallestai", "turn-detector"] },
+    { name = "livekit-agents", extra = ["openai", "silero", "turn-detector"] },
     { name = "python-dotenv" },
 ]
 
 [package.metadata]
 requires-dist = [
     { name = "httpx", specifier = ">=0.27" },
-    { name = "livekit-agents", extras = ["smallestai", "silero", "turn-detector", "openai"], specifier = "~=1.5" },
+    { name = "livekit-agents", extras = ["silero", "turn-detector", "openai"], specifier = "~=1.5" },
     { name = "python-dotenv", specifier = ">=1.0" },
 ]
 
@@ -945,9 +945,6 @@ openai = [
 silero = [
     { name = "livekit-plugins-silero" },
 ]
-smallestai = [
-    { name = "livekit-plugins-smallestai" },
-]
 turn-detector = [
     { name = "livekit-plugins-turn-detector" },
 ]
@@ -1052,19 +1049,6 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/07/73/d174a7e91edb94cde283fba2670869ca121e23ab7bba8b191590ddfca9fa/livekit_plugins_silero-1.6.2.tar.gz", hash = "sha256:842ab4c73e197b0aa1127566c38c335ae4c54be882ddc8da64dc184bd3008713", size = 1956516, upload-time = "2026-06-19T22:51:16.583Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/e7/ec/2e1b089b5a6cfec3faf0de3622fcd0b399fcad50d2e6e8c27865294554e0/livekit_plugins_silero-1.6.2-py3-none-any.whl", hash = "sha256:3caa50be09af7b23aa2b19c6a7c4f52609e6edb578b1977003611f896e4948c0", size = 3904450, upload-time = "2026-06-19T22:51:14.981Z" },
-]
-
-[[package]]
-name = "livekit-plugins-smallestai"
-version = "1.6.2"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "livekit-agents", extra = ["codecs"] },
-    { name = "numpy" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/d1/ca/f5b6538b05c99b7b5fdf1f823d6ba6a49d027b925bbf26c35ba644d05f54/livekit_plugins_smallestai-1.6.2.tar.gz", hash = "sha256:7539dbb352205fe949af52c57cc0f6583ff7df0b7bf00c2b54f3caaa053f705f", size = 11863, upload-time = "2026-06-19T22:51:24.966Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/3a/99/af3a1db4f648963e9566aecf4f2fe4e56eda781e0f702ec3e5b0162b8025/livekit_plugins_smallestai-1.6.2-py3-none-any.whl", hash = "sha256:2c4e6e0de529cb389fff2cc850249d9423e70083afc973d4ab2404b146037787", size = 14348, upload-time = "2026-06-19T22:51:23.742Z" },
 ]
 
 [[package]]

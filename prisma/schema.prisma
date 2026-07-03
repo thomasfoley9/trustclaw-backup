@@ -115,10 +115,11 @@ model ComposioClawInstance {
   // gateway fallback). OpenAI/Google models use their own CustomModel key.
   anthropicApiKey String?
 
-  // Voice mode (Smallest.ai TTS). Per-user key, encrypted at rest like the
-  // others; voiceId selects which voice speaks the agent's replies aloud.
+  // Voice. voiceId is an OpenAI Realtime voice for live calls (the read-aloud
+  // path maps it onto a Smallest voice). voiceApiKey is the per-user
+  // Smallest.ai key for read-aloud TTS, encrypted at rest like the others.
   voiceApiKey String?
-  voiceId     String  @default("avery")
+  voiceId     String  @default("marin")
 
   // Memory routing: which bucket new memories save to, and whether the
   // current chat runs incognito (no recall, no save, no history).
@@ -154,18 +155,35 @@ model ComposioClawInstance {
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  messages      Message[]
-  memories      Memory[]
-  cronJobs      CronJob[]
-  personalities Personality[]
-  conversations Conversation[]
-  memoryBuckets MemoryBucket[]
-  customModels  CustomModel[]
-  skills        Skill[]
-  mcpServers    McpServer[]
+  messages        Message[]
+  memories        Memory[]
+  cronJobs        CronJob[]
+  personalities   Personality[]
+  conversations   Conversation[]
+  memoryBuckets   MemoryBucket[]
+  customModels    CustomModel[]
+  skills          Skill[]
+  mcpServers      McpServer[]
+  generatedImages GeneratedImage[]
 
   @@index([userId])
   @@map("composio_claw_instance")
+}
+
+// Agent-generated images. Stored in the DB because the serverless filesystem
+// is read-only (and per-lambda) — a file written by the generating function
+// is invisible to the lambda serving /api/image/[id].
+model GeneratedImage {
+  id         String   @id @default(uuid())
+  instanceId String
+  mimeType   String   @default("image/png")
+  data       Bytes
+  createdAt  DateTime @default(now())
+
+  instance ComposioClawInstance @relation(fields: [instanceId], references: [id], onDelete: Cascade)
+
+  @@index([instanceId])
+  @@map("composio_claw_generated_image")
 }
 
 // Named, invokable agent skills authored in natural language. Each renders

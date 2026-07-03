@@ -113,20 +113,11 @@ export function VoiceSettings() {
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Volume2 className="h-4 w-4" />
-          Voice (Smallest.ai)
+          Voice
         </CardTitle>
         <CardDescription>
-          Bring your own Smallest.ai key so the assistant can speak its replies
-          aloud. Grab one from the{" "}
-          <a
-            href="https://waves.smallest.ai"
-            target="_blank"
-            rel="noreferrer noopener"
-            className="text-primary underline-offset-4 hover:underline"
-          >
-            Smallest dashboard
-          </a>
-          .
+          Choose a voice for the assistant and manage your voice API key for
+          spoken replies.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -178,7 +169,7 @@ export function VoiceSettings() {
                 disabled={isBusy}
               />
               <p className="text-muted-foreground text-xs">
-                We validate the key with Smallest.ai before saving it.
+                We validate the key before saving it.
               </p>
             </div>
             <div className="flex gap-2">

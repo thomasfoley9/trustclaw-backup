@@ -1,21 +1,46 @@
 const SMALLEST_BASE = "https://waves-api.smallest.ai/api/v1";
 
-// Curated English voices from Smallest's lightning-v3.1 catalog (241 total).
+// OpenAI GPT Realtime voices — MUST stay in sync with OPENAI_VOICES in
+// claw-voice/src/agent.py (the worker maps unknown ids to its default).
 export const CURATED_VOICES = [
-  { id: "avery", label: "Avery — American, female" },
-  { id: "mia", label: "Mia — American, female" },
-  { id: "quinn", label: "Quinn — American, female" },
-  { id: "christine", label: "Christine — American, female" },
-  { id: "sophia", label: "Sophia — American, female" },
-  { id: "john", label: "John — American, male" },
-  { id: "ronald", label: "Ronald — American, male" },
-  { id: "robert", label: "Robert — American, male" },
-  { id: "liam", label: "Liam — British, male" },
-  { id: "noah", label: "Noah — British, male" },
-  { id: "poppy", label: "Poppy — British, female" },
+  { id: "marin", label: "Marin — natural, expressive" },
+  { id: "cedar", label: "Cedar — deep, natural" },
+  { id: "ash", label: "Ash — clear, direct" },
+  { id: "ballad", label: "Ballad — warm, expressive" },
+  { id: "coral", label: "Coral — bright, conversational" },
+  { id: "sage", label: "Sage — calm, measured" },
+  { id: "alloy", label: "Alloy — balanced, neutral" },
+  { id: "echo", label: "Echo — deep, resonant" },
+  { id: "shimmer", label: "Shimmer — light, upbeat" },
+  { id: "verse", label: "Verse — rich, articulate" },
 ] as const;
 
-export const DEFAULT_VOICE_ID = "avery";
+export const DEFAULT_VOICE_ID = "marin";
+
+// The read-aloud path (/api/voice/tts) still synthesizes via Smallest, whose
+// voice catalog is disjoint from the OpenAI ids the picker now stores. Any id
+// Smallest doesn't know (an OpenAI id, or garbage) resolves to its default so
+// read-aloud keeps working no matter what's in `voiceId`.
+const SMALLEST_VOICES = new Set([
+  "avery",
+  "mia",
+  "quinn",
+  "christine",
+  "sophia",
+  "john",
+  "ronald",
+  "robert",
+  "liam",
+  "noah",
+  "poppy",
+]);
+const SMALLEST_DEFAULT_VOICE = "avery";
+
+export function resolveSmallestVoice(voiceId: string | null | undefined): string {
+  return voiceId && SMALLEST_VOICES.has(voiceId)
+    ? voiceId
+    : SMALLEST_DEFAULT_VOICE;
+}
 
 export type SmallestKeyCheck = "ok" | "unauthorized" | "unreachable" | "error";
 

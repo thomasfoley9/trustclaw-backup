@@ -16,7 +16,14 @@ export const getVoiceKeyStatus = protectedProcedure.query(async ({ ctx }) => {
   });
 
   const voices = CURATED_VOICES.map((v) => ({ id: v.id, label: v.label }));
-  const voiceId = instance?.voiceId ?? DEFAULT_VOICE_ID;
+  // Report the EFFECTIVE voice: a stored id the catalog no longer carries
+  // (e.g. a legacy Smallest id) resolves to the default, matching what the
+  // realtime worker actually speaks with — so the picker highlights reality.
+  const storedVoice = instance?.voiceId;
+  const voiceId =
+    storedVoice && CURATED_VOICES.some((v) => v.id === storedVoice)
+      ? storedVoice
+      : DEFAULT_VOICE_ID;
   const stored = instance?.voiceApiKey ?? null;
 
   if (!stored) {

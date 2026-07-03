@@ -1,7 +1,7 @@
 import { auth } from "~/server/auth";
 import { db } from "~/server/clients/db";
 import { decryptSecret } from "~/server/clients/crypto";
-import { synthesizeSpeech, DEFAULT_VOICE_ID } from "~/server/clients/smallest";
+import { synthesizeSpeech, resolveSmallestVoice } from "~/server/clients/smallest";
 import { env } from "~/env";
 
 export const maxDuration = 30;
@@ -47,7 +47,9 @@ export async function POST(request: Request) {
     return new Response("No voice key set", { status: 412 });
   }
 
-  const voiceId = instance?.voiceId ?? DEFAULT_VOICE_ID;
+  // voiceId now stores an OpenAI Realtime voice for live calls; map it onto a
+  // Smallest voice here (this route synthesizes via Smallest).
+  const voiceId = resolveSmallestVoice(instance?.voiceId);
 
   try {
     const audio = await synthesizeSpeech({
