@@ -56,7 +56,7 @@ export function ComposioApiKeySettings() {
           Composio API key
         </CardTitle>
         <CardDescription>
-          Bring your own key — every user authenticates against Composio with
+          Bring your own key - every user authenticates against Composio with
           their own. Grab one from your{" "}
           <a
             href="https://app.composio.dev/developers"

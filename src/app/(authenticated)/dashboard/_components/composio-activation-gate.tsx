@@ -46,7 +46,7 @@ export function ComposioActivationGate() {
             Activate your account
           </h1>
           <p className="text-muted-foreground text-sm">
-            One step left — connect your Composio account to unlock your agent&apos;s
+            One step left - connect your Composio account to unlock your agent&apos;s
             500+ tools. Your key is encrypted at rest and only ever yours.
           </p>
         </div>

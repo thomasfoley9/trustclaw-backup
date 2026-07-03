@@ -40,20 +40,20 @@ export function useSpeechDictation({ onFinal }: UseSpeechDictationOptions) {
       case "not-allowed":
       case "service-not-allowed":
         showErrorToast(
-          "Microphone access denied — enable it in your browser settings.",
+          "Microphone access denied - enable it in your browser settings.",
         );
         break;
       case "audio-capture":
         showErrorToast("No microphone found.");
         break;
       case "network":
-        showErrorToast("Speech service unreachable — check your connection.");
+        showErrorToast("Speech service unreachable - check your connection.");
         break;
       case "no-speech":
       case "aborted":
         break; // benign / self-triggered
       default:
-        showErrorToast("Dictation error — try again.");
+        showErrorToast("Dictation error - try again.");
     }
   }, []);
 
@@ -66,7 +66,7 @@ export function useSpeechDictation({ onFinal }: UseSpeechDictationOptions) {
 
     // Desktop + Android: SpeechRecognition's implicit permission can silently
     // no-op (no prompt, no error), so force an explicit getUserMedia prompt with
-    // a clear error path. iOS Safari is the exception — it requires
+    // a clear error path. iOS Safari is the exception - it requires
     // recognition.start() to run synchronously inside the tap gesture, and an
     // awaited preflight drops that user-activation, so on iOS we skip the
     // preflight and let the engine raise its own permission prompt.
@@ -92,7 +92,7 @@ export function useSpeechDictation({ onFinal }: UseSpeechDictationOptions) {
           showErrorToast("No microphone found.");
         } else {
           showErrorToast(
-            "Microphone blocked — allow it for this site in your browser's site settings, then try again.",
+            "Microphone blocked - allow it for this site in your browser's site settings, then try again.",
           );
         }
         return;
@@ -142,7 +142,7 @@ export function useSpeechDictation({ onFinal }: UseSpeechDictationOptions) {
     } catch (error) {
       listeningRef.current = false;
       setIsListening(false);
-      // Don't swallow — surface why nothing happened (e.g. InvalidStateError).
+      // Don't swallow - surface why nothing happened (e.g. InvalidStateError).
       showErrorToast(
         error instanceof Error && error.message
           ? `Couldn't start dictation: ${error.message}`

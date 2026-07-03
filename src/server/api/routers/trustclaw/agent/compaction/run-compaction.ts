@@ -159,7 +159,7 @@ export async function runCompaction(
     });
   } catch (err) {
     // P2025 = the optimistic lock lost: a concurrent compaction already advanced
-    // compactionCount. Benign — this run's summary is discarded and the next
+    // compactionCount. Benign - this run's summary is discarded and the next
     // turn recomputes from the winner's boundary. Anything else is a real
     // persistence failure that was previously invisible.
     if (
@@ -167,7 +167,7 @@ export async function runCompaction(
       err.code === "P2025"
     ) {
       console.warn(
-        `[compaction] optimistic lock lost for conversation ${conversationId} — a concurrent compaction won; skipping`,
+        `[compaction] optimistic lock lost for conversation ${conversationId} - a concurrent compaction won; skipping`,
       );
     } else {
       console.error(

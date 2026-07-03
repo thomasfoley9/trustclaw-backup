@@ -56,7 +56,7 @@ export function AnthropicApiKeySettings() {
           Anthropic API key
         </CardTitle>
         <CardDescription>
-          Bring your own key — your Claude usage is billed to your own Anthropic
+          Bring your own key - your Claude usage is billed to your own Anthropic
           account. Chat won&apos;t run until this is set. Grab one from the{" "}
           <a
             href="https://console.anthropic.com/settings/keys"

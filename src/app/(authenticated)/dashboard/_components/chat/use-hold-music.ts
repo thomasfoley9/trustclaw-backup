@@ -3,8 +3,8 @@
 import { useCallback, useEffect, useMemo, useRef } from "react";
 
 // Self-contained Web Audio hold-music loop. It plays through the browser's OWN
-// audio output (not a separate LiveKit track), so — unlike the server-side
-// BackgroundAudioPlayer that was removed — it actually plays on mobile. A gentle
+// audio output (not a separate LiveKit track), so - unlike the server-side
+// BackgroundAudioPlayer that was removed - it actually plays on mobile. A gentle
 // looping arpeggio, kept well under the agent's voice. Driven by real
 // "Agent B is working" events on the call: start() while a tool runs, stop() the
 // moment work finishes and the agent comes back to speak.
@@ -15,7 +15,7 @@ const NOTES = [
   261.63, 329.63, 196.0, 246.94, 293.66, 392.0,
 ] as const;
 const STEP = 0.34; // seconds between notes
-const PEAK_GAIN = 0.085; // master volume — sits under the agent's voice
+const PEAK_GAIN = 0.085; // master volume - sits under the agent's voice
 const FADE = 0.35; // fade in / out, seconds
 
 export interface HoldMusic {

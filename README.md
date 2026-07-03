@@ -117,7 +117,7 @@ The design choices:
 TrustClaw runs fine on the free Hobby plan, but Vercel applies two limits that affect the agent:
 
 - **Cron jobs can only run once per day**, and even then they fire anywhere within a 60-minute window of the scheduled hour. Any cron expression more frequent than daily (e.g. hourly, every-30-min) **fails at deploy time** on Hobby. The CLI auto-adjusts `vercel.json` to a daily schedule when it detects you're on Hobby.
-- **Functions are capped at 300s (5 min)** — long-running agent turns may time out.
+- **Functions are capped at 300s (5 min)** - long-running agent turns may time out.
 
 To get **per-minute cron precision** and **up to 800s (~13 min) per function**, upgrade to [Vercel Pro](https://vercel.com/pricing) and re-run the CLI (or manually flip `vercel.json` back to `* * * * *` + bump `maxDuration`).
 
@@ -153,7 +153,7 @@ For Telegram, point your bot's webhook at `<NEXT_PUBLIC_APP_URL>/api/telegram-we
 | `DATABASE_URL` | Postgres + pgvector connection string |
 | `BETTER_AUTH_SECRET` | Session signing key (32+ random bytes) |
 | `CRON_SECRET` | Auth for `/api/cron/*` routes (auto-injected on Vercel) |
-| `ENCRYPTION_KEY` _(optional)_ | Encrypts per-user Composio keys at rest (32 bytes, hex/base64). Plaintext when unset — set it in any shared deploy |
+| `ENCRYPTION_KEY` _(optional)_ | Encrypts per-user Composio keys at rest (32 bytes, hex/base64). Plaintext when unset - set it in any shared deploy |
 | `REDIS_URL` _(optional)_ | Resumable streams + abort flags |
 | `TELEGRAM_BOT_TOKEN` _(optional)_ | Telegram bot |
 | `TELEGRAM_BOT_USERNAME` _(optional)_ | Telegram bot |

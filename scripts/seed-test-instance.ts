@@ -2,7 +2,7 @@
 //
 // Seeds a keyless, incognito instance into the LOCAL throwaway DB so the worker
 // pipeline can be exercised without API keys or credits: incognito skips the
-// memory/embedding path, so the run reaches — and fails closed at — the
+// memory/embedding path, so the run reaches - and fails closed at - the
 // Composio key check, after proving instance-load + message-row creation.
 //
 import { db } from "~/server/clients/db";

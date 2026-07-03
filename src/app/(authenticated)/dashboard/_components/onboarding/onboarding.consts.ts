@@ -87,7 +87,7 @@ export const MODELS = [
   },
 ] as const;
 
-// House models: owner-funded, free to every user, no key needed — they run an
+// House models: owner-funded, free to every user, no key needed - they run an
 // uncensored persona. Ids are stable routing keys (stored on instances); the
 // concrete provider model behind each lives in agent/resolve-model.ts.
 export const HOUSE_MODELS = [

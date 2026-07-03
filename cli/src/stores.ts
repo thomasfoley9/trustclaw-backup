@@ -56,7 +56,7 @@ interface AddIntegrationResult {
   ok: boolean;
   /** True when Vercel handed off to a browser for additional setup. */
   needsBrowser: boolean;
-  /** Combined stdout/stderr — useful for debugging genuine failures. */
+  /** Combined stdout/stderr - useful for debugging genuine failures. */
   output: string;
 }
 
@@ -129,7 +129,7 @@ async function pollForEnvVar(
 }
 
 // Env var prefixes Neon/Postgres marketplace integrations inject. We treat
-// these as orphans (and clean them up) when DATABASE_URL is missing — they're
+// these as orphans (and clean them up) when DATABASE_URL is missing - they're
 // leftovers from a prior partial connect that block fresh `integration add`.
 function isPostgresEnvVar(key: string): boolean {
   return (

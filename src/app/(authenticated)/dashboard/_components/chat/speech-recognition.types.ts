@@ -1,5 +1,5 @@
 // Minimal Web Speech API typings. `SpeechRecognition` isn't in the default
-// lib.dom across setups, and CLAUDE.md forbids `any` — so we declare just the
+// lib.dom across setups, and CLAUDE.md forbids `any` - so we declare just the
 // surface this feature uses.
 
 export interface SpeechRecognitionAlternative {

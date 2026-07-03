@@ -21,7 +21,7 @@ export const addCustomModel = protectedProcedure
     const provider = input.modelId.slice(0, slash).toLowerCase();
     const modelId = `${provider}/${input.modelId.slice(slash + 1)}`;
 
-    // "house/" is reserved for built-in owner-funded models — a custom row with
+    // "house/" is reserved for built-in owner-funded models - a custom row with
     // that prefix would be silently shadowed by the house route in resolve-model.
     if (provider === "house") {
       throw new TRPCError({
@@ -31,7 +31,7 @@ export const addCustomModel = protectedProcedure
       });
     }
 
-    // Only providers resolve-model can actually call — otherwise the row is
+    // Only providers resolve-model can actually call - otherwise the row is
     // stored but fails opaquely at chat time instead of here.
     const ALLOWED_PROVIDERS = new Set([
       "openai",
@@ -67,7 +67,7 @@ export const addCustomModel = protectedProcedure
       if (mismatched) {
         throw new TRPCError({
           code: "BAD_REQUEST",
-          message: `That key doesn't look like a ${provider} key — double-check which provider you're configuring.`,
+          message: `That key doesn't look like a ${provider} key - double-check which provider you're configuring.`,
         });
       }
     }

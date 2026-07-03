@@ -2,13 +2,13 @@
 // keys on ComposioClawInstance). AES-256-GCM via node:crypto.
 //
 // Stored format:  enc:v1:<ivB64>:<authTagB64>:<ciphertextB64>
-// The `enc:v1:` prefix is unambiguous — real Composio keys are `ak_`/`uak_`
+// The `enc:v1:` prefix is unambiguous - real Composio keys are `ak_`/`uak_`
 // and never collide with it. This lets us detect encrypted vs legacy-plaintext
 // values and migrate the latter in place.
 //
 // Key source: env.ENCRYPTION_KEY (32 bytes, hex or canonical base64). When it
 // is NOT set in local dev, encryptSecret is a passthrough (stores plaintext) so
-// keyless dev keeps working. In production a missing key is a hard error — we
+// keyless dev keeps working. In production a missing key is a hard error - we
 // fail closed rather than silently persist secrets in cleartext.
 import {
   createCipheriv,
@@ -41,7 +41,7 @@ function getKey(): Buffer | null {
   }
 
   // Accept 64 hex chars or base64 (whitespace already trimmed). The decoded
-  // length must be exactly 32 bytes — that catches a malformed key without
+  // length must be exactly 32 bytes - that catches a malformed key without
   // rejecting a valid-but-non-canonical one (e.g. a trailing newline on the env
   // var, which Buffer.from tolerates).
   const buf = /^[0-9a-fA-F]{64}$/.test(raw)

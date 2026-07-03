@@ -20,7 +20,7 @@ export function AnthropicKeyBanner() {
         <div className="text-destructive flex items-center gap-2">
           <Sparkles className="h-4 w-4 shrink-0" />
           <span>
-            No Anthropic API key set — chat is disabled until you add your own
+            No Anthropic API key set - chat is disabled until you add your own
             (your Claude usage bills to your account).
           </span>
         </div>

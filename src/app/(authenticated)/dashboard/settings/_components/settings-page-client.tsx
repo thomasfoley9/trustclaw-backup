@@ -60,7 +60,7 @@ export function SettingsPageClient() {
           Settings
         </h1>
         <p className="text-muted-foreground text-sm">
-          Shape your agent — its brain, voice, models, and what it can do.
+          Shape your agent - its brain, voice, models, and what it can do.
         </p>
       </div>
 

@@ -31,7 +31,7 @@ export function runningNow(activeRunStartedAt: string | Date | null): boolean {
 
 type View = "chats" | "cron";
 
-// Desktop sidebar wrapper — hidden on mobile (the drawer handles small screens).
+// Desktop sidebar wrapper - hidden on mobile (the drawer handles small screens).
 export function ConversationSidebar() {
   return (
     <aside className="border-sidebar-border bg-sidebar hidden w-64 shrink-0 flex-col border-r md:flex">
@@ -40,7 +40,7 @@ export function ConversationSidebar() {
   );
 }
 
-// The shared content — rendered in the desktop aside and the mobile drawer.
+// The shared content - rendered in the desktop aside and the mobile drawer.
 export function ConversationSidebarContent({
   onNavigate,
 }: {

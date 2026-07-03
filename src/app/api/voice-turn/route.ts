@@ -8,7 +8,7 @@ import { env } from "~/env";
 // the user's intent and the session's conversation id, and we run the EXISTING
 // Agent B (ToolLoopAgent + Composio, on the user's model) to completion in that
 // conversation. We stream B's tool activity (for the cockpit) and return B's
-// RAW result text — Agent A adds the persona/voice narration, so we deliberately
+// RAW result text - Agent A adds the persona/voice narration, so we deliberately
 // don't narrate here (no double-narration).
 //
 // Auth: a shared secret that only the LiveKit worker holds (constant-time
@@ -99,7 +99,7 @@ export async function POST(request: Request) {
         // Stream B's run live: light up each tool the instant it starts
         // ("running") and again when it returns ("done") so the cockpit shows
         // the work as it happens. We ALSO tally B's real tool outcomes here so
-        // the result carries a deterministic execution receipt — Agent A anchors
+        // the result carries a deterministic execution receipt - Agent A anchors
         // its "done / not done" to this, never to B's (or its own) prose, which
         // is what stops A fabricating a completed action.
         let toolsSucceeded = 0;
@@ -148,10 +148,10 @@ export async function POST(request: Request) {
               break;
           }
         }
-        // Caller bailed — don't wait on result.text or emit into a dead stream
+        // Caller bailed - don't wait on result.text or emit into a dead stream
         // (the finally still closes the controller).
         if (request.signal.aborted) return;
-        // result.text is B's final answer (resolves after the stream drains) —
+        // result.text is B's final answer (resolves after the stream drains) -
         // correct across multi-tool runs, unlike hand-accumulating deltas.
         const text = (await result.text).trim();
         // Deterministic receipt of what B ACTUALLY did this turn:
@@ -180,7 +180,7 @@ export async function POST(request: Request) {
         });
       } finally {
         // Barge-in aborts and zero-step errors never reach onFinish's
-        // mcp.close — idempotent, so double-close is fine.
+        // mcp.close - idempotent, so double-close is fine.
         await closeMcp().catch(() => undefined);
         controller.close();
       }

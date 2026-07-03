@@ -10,7 +10,7 @@ export default function GlobalError({
   reset: () => void;
 }) {
   useEffect(() => {
-    // This is the last-resort boundary — never swallow the error, or crashes
+    // This is the last-resort boundary - never swallow the error, or crashes
     // become undebuggable. Log the full object + surface the message below.
     console.error("[global-error]", error);
   }, [error]);

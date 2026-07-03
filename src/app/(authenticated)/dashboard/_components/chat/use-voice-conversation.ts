@@ -66,7 +66,7 @@ export function useVoiceConversation({
   const transcriptRef = useRef("");
   const silenceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   // Deferred-resume timer: scheduled when the loop looks idle, cancelled if it
-  // goes busy again before the next tick — closes the 1-commit window between
+  // goes busy again before the next tick - closes the 1-commit window between
   // the chat going idle and isPreparing flipping true (which would otherwise
   // blink the mic open every voiced turn).
   const resumeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -141,12 +141,12 @@ export function useVoiceConversation({
       const err = event.error;
       if (err === "not-allowed" || err === "service-not-allowed") {
         showErrorToast(
-          "Microphone access denied — enable it in your browser settings.",
+          "Microphone access denied - enable it in your browser settings.",
         );
         setPhaseSafe("off");
         stopRecognition();
       } else if (err === "audio-capture") {
-        showErrorToast("No microphone found — ending hands-free.");
+        showErrorToast("No microphone found - ending hands-free.");
         setPhaseSafe("off");
         stopRecognition();
       }
@@ -188,7 +188,7 @@ export function useVoiceConversation({
 
   // Drive the loop off the chat signals. A turn is "busy" while the agent
   // streams, while a reply is being prepared for speech, or while it's speaking.
-  // We resume listening only once a turn has gone busy and then fully idle —
+  // We resume listening only once a turn has gone busy and then fully idle -
   // turnRanRef guards the brief window right after sending (before
   // isAwaitingReply flips true) so the mic can't reopen prematurely, and the
   // idle-resume (rather than a speaking-only edge) means tool-only replies, TTS
@@ -199,7 +199,7 @@ export function useVoiceConversation({
   useEffect(() => {
     if (phaseRef.current === "off") return;
     if (busy) {
-      // A pending resume from a momentary idle blip is now stale — cancel it.
+      // A pending resume from a momentary idle blip is now stale - cancel it.
       clearResume();
       turnRanRef.current = true;
       const target: ConversationPhase = isSpeaking ? "speaking" : "thinking";
@@ -223,7 +223,7 @@ export function useVoiceConversation({
           return;
         }
         turnRanRef.current = false;
-        // Muted: the turn finished but the user paused the mic — park in
+        // Muted: the turn finished but the user paused the mic - park in
         // "muted" instead of reopening it.
         if (mutedRef.current) {
           setPhaseSafe("muted");
@@ -287,12 +287,12 @@ export function useVoiceConversation({
         showErrorToast(
           name === "NotFoundError" || name === "DevicesNotFoundError"
             ? "No microphone found."
-            : "Microphone blocked — allow it for this site, then try again.",
+            : "Microphone blocked - allow it for this site, then try again.",
         );
         return;
       }
     }
-    // The loop was stopped/torn down while the preflight was awaiting — abort.
+    // The loop was stopped/torn down while the preflight was awaiting - abort.
     if (startTokenRef.current !== token) return;
     transcriptRef.current = "";
     setMuted(false);

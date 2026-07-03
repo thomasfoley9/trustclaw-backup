@@ -12,7 +12,7 @@ const composioApiErrorSchema = z
   .passthrough();
 
 // OpenAI-compatible providers (DeepSeek, Moonshot, OpenRouter, OpenAI) return
-// errors as { error: { message, type } } — sometimes with a top-level message
+// errors as { error: { message, type } } - sometimes with a top-level message
 // too (Moonshot 404s set error to a string plus a separate message).
 const providerErrorSchema = z
   .object({
@@ -59,10 +59,10 @@ export function parseAgentError(error: unknown): string {
       haystack,
     )
   ) {
-    // A response body means an OpenAI-compatible provider — i.e. a house model
+    // A response body means an OpenAI-compatible provider - i.e. a house model
     // on the owner's key, or the user's own BYO model.
     if (body) {
-      return "This model's provider account is out of balance/credits. For a house model the owner needs to top it up; for your own model, recharge that provider — then try again.";
+      return "This model's provider account is out of balance/credits. For a house model the owner needs to top it up; for your own model, recharge that provider - then try again.";
     }
     return "Your Anthropic account is out of API credits. Add billing/credits at console.anthropic.com (this is separate from a Claude.ai subscription), then try again.";
   }
@@ -91,11 +91,11 @@ export function parseAgentError(error: unknown): string {
   }
 
   if (raw.includes("invalid x-api-key") || raw.includes("invalid_api_key")) {
-    return "Your Anthropic API key was rejected — double-check it in Settings → Anthropic API key.";
+    return "Your Anthropic API key was rejected - double-check it in Settings → Anthropic API key.";
   }
 
   if (raw.includes("not_found_error") || raw.includes("model_not_found")) {
-    return "That model isn't available on your Anthropic account — pick a different one in Settings.";
+    return "That model isn't available on your Anthropic account - pick a different one in Settings.";
   }
 
   // A clean message from the provider's response body beats a generic fallback.

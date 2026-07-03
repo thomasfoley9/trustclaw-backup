@@ -90,7 +90,7 @@ export function VoiceSettings() {
         }),
       });
       if (!res.ok) {
-        showErrorToast("Couldn't play the voice — check your key and try again.");
+        showErrorToast("Couldn't play the voice - check your key and try again.");
         return;
       }
       const blob = await res.blob();
@@ -258,7 +258,7 @@ export function VoiceSettings() {
               ))}
             </div>
             <p className="text-muted-foreground text-xs">
-              How fast replies are spoken — pitch stays natural. Tap Test to hear
+              How fast replies are spoken - pitch stays natural. Tap Test to hear
               it.
             </p>
           </div>

@@ -12,7 +12,7 @@ import { trpcToastOnError } from "~/components/core/toast-notifications";
 import { cn } from "~/lib/utils";
 
 // Front-facing voice switcher: lives in the chat input's voice controls so
-// anyone can change the assistant's spoken voice in place — no trip to Settings.
+// anyone can change the assistant's spoken voice in place - no trip to Settings.
 // Backed by the same getVoiceKeyStatus/setVoiceId as the Settings picker, so the
 // choice flows through to both spoken replies and live calls.
 export function VoicePicker({ disabled }: { disabled?: boolean }) {

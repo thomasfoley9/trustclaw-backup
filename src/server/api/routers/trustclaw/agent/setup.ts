@@ -85,7 +85,7 @@ interface PrepareAgentRunResult {
   conversationId: string;
   // Tears down the run's MCP clients. onFinish closes them on a normal finish,
   // but aborted runs (Stop) and zero-step provider errors never reach onFinish
-  // — callers MUST also invoke this from their own cleanup (it's idempotent).
+  // - callers MUST also invoke this from their own cleanup (it's idempotent).
   closeMcp: () => Promise<void>;
 }
 
@@ -186,7 +186,7 @@ export async function prepareAgentRun(
           })
         : null;
       if (winner) {
-        // Best-effort orphan cleanup — never fail the run over it, but log so a
+        // Best-effort orphan cleanup - never fail the run over it, but log so a
         // persistent failure (DB trouble) is visible rather than silent.
         await db.conversation
           .delete({ where: { id: created.id } })
@@ -246,7 +246,7 @@ export async function prepareAgentRun(
       : instance.identityPrompt;
 
   // Memory recall, always-inject product knowledge, and enabled skills are
-  // independent reads that all feed buildSystemPrompt() — fetch them
+  // independent reads that all feed buildSystemPrompt() - fetch them
   // concurrently instead of serially. Incognito chats skip all recall.
   const [relevantMemories, productKnowledge, skills] = await Promise.all([
     incognito
@@ -333,7 +333,7 @@ export async function prepareAgentRun(
       const text = bytes.toString("utf8").slice(0, 200_000);
       modelUserMessage += `\n\n--- Attached file: ${att.name} ---\n${text}`;
     } else {
-      modelUserMessage += `\n\n[Attached file "${att.name}" (${att.mediaType}) — unsupported format; ask the user to share it as PDF, CSV, or text if you need its contents.]`;
+      modelUserMessage += `\n\n[Attached file "${att.name}" (${att.mediaType}) - unsupported format; ask the user to share it as PDF, CSV, or text if you need its contents.]`;
     }
   }
 
@@ -359,7 +359,7 @@ export async function prepareAgentRun(
   const { messages: prunedMessages } = pruneContext(aiMessages, contextWindow);
 
   // Anthropic prompt-caching options are meaningless to OpenAI-compatible house
-  // models — only attach them for Anthropic-backed models.
+  // models - only attach them for Anthropic-backed models.
   const isHouse = isHouseModel(instance.anthropicModel);
 
   // Add cache breakpoint to last history message (before new user message)
@@ -413,7 +413,7 @@ export async function prepareAgentRun(
   }
 
   // The Composio session (key load → connection setup → tool fetch) and the
-  // user's MCP servers load independently, so run them concurrently — this is
+  // user's MCP servers load independently, so run them concurrently - this is
   // ~300-600ms of wall-clock off every turn. MCP per-server failures are
   // isolated and never block the run; clients stay open for the run and are
   // closed in onFinish.
@@ -490,7 +490,7 @@ export async function prepareAgentRun(
 
         // Build the agent's tool parts (the cockpit's source of truth) +
         // collect its full text. TEXT CHAT IS SINGLE-AGENT: the persisted
-        // message is [tool parts] + [the agent's FULL text] — no Agent A
+        // message is [tool parts] + [the agent's FULL text] - no Agent A
         // narration/condensing. The two-agent split exists only on the voice
         // plane (the realtime worker narrates aloud; /api/voice-turn returns
         // this same full text for it to speak from).
@@ -500,7 +500,7 @@ export async function prepareAgentRun(
           for (const tc of step.toolCalls) {
             // Match by toolCallId, never by index: toolResults excludes
             // tool-ERROR parts, so with calls [A, B] where A errored, index
-            // pairing would persist A with B's output — and that corrupted
+            // pairing would persist A with B's output - and that corrupted
             // transcript feeds back into the model on every later turn.
             const tr = step.toolResults.find(
               (r) => r.toolCallId === tc.toolCallId,
@@ -583,7 +583,7 @@ export async function prepareAgentRun(
         console.error("[agent/onFinish] post-stream processing failed:", error);
       } finally {
         // NOTE: the resumable-stream pointer is cleared by the web chat route
-        // (which owns the streamId) — clearing it here clobbered a live web
+        // (which owns the streamId) - clearing it here clobbered a live web
         // stream's pointer whenever a telegram/cron run on the same instance
         // finished first.
         await mcp.close().catch((error) =>

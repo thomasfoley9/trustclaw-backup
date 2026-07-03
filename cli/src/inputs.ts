@@ -27,7 +27,7 @@ interface RemainingInputsArgs {
 
 /**
  * The only remaining "remaining input" is whether to add Redis. Composio is no
- * longer configured here — each user adds their own key from the app's Settings
+ * longer configured here - each user adds their own key from the app's Settings
  * UI after deploy; stores are provisioned via `vercel integration add` without
  * user prompts.
  */

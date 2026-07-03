@@ -4,7 +4,7 @@ import { BrandLanding } from "../_components/brand-landing";
 import { BRAND_KEYS, getBrand } from "~/lib/brands";
 
 // Per-prospect demo landing skins at /ford, /gm, /honda, /toyota, /bmw, /volvo,
-// /rivian. Same shared app behind every one — only the landing skin + favicon
+// /rivian. Same shared app behind every one - only the landing skin + favicon
 // change. Unknown slug -> 404. Static routes (/login, etc.) take precedence over
 // this dynamic segment, so they are never shadowed.
 export function generateStaticParams() {
@@ -20,7 +20,7 @@ export async function generateMetadata({
   const brand = getBrand(key);
   if (!brand) return {};
   return {
-    title: `Claw — by ${brand.name}`,
+    title: `Claw - by ${brand.name}`,
     icons: [
       { rel: "icon", url: `/${brand.key}-icon.svg`, type: "image/svg+xml" },
       { rel: "icon", url: `/${brand.key}-favicon.ico`, sizes: "any" },

@@ -1,4 +1,4 @@
-# Phase 3 (Fly deploy). NOT needed for the local spike — see README.
+# Phase 3 (Fly deploy). NOT needed for the local spike - see README.
 FROM python:3.11-slim
 
 ENV PYTHONUNBUFFERED=1 \

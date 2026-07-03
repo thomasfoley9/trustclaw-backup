@@ -62,9 +62,9 @@ export function CustomModelsSettings() {
           <Boxes className="h-4 w-4" /> Custom models
         </CardTitle>
         <CardDescription>
-          Bring any <code>provider/model</code> id — e.g.{" "}
+          Bring any <code>provider/model</code> id - e.g.{" "}
           <code>deepseek/deepseek-chat</code> or{" "}
-          <code>openrouter/moonshotai/kimi-k2</code> — plus that provider&apos;s
+          <code>openrouter/moonshotai/kimi-k2</code> - plus that provider&apos;s
           API key. Works with OpenAI, Anthropic, Google, DeepSeek, Moonshot,
           OpenRouter, Groq, Together, xAI, and Fireworks.
         </CardDescription>

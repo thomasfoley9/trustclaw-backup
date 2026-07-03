@@ -2,7 +2,7 @@
 // was configured. Covers EVERY secret column, not just Composio keys:
 //   composio_claw_instance:      composioApiKey, anthropicApiKey, voiceApiKey
 //   composio_claw_custom_model:  providerApiKey
-// Idempotent — values already in the `enc:v1:` format are skipped, so it's safe
+// Idempotent - values already in the `enc:v1:` format are skipped, so it's safe
 // to run repeatedly.
 //
 // Run AFTER ENCRYPTION_KEY is set in BOTH this process AND the app (same key),
@@ -19,7 +19,7 @@ const PREFIX = "enc:v1:";
 const KEY_BYTES = 32;
 const IV_BYTES = 12;
 
-// (table, column) pairs that hold an encryptable secret. Hardcoded constants —
+// (table, column) pairs that hold an encryptable secret. Hardcoded constants -
 // never interpolate untrusted input into these identifiers.
 const TARGETS = [
   { table: "composio_claw_instance", column: "composioApiKey" },
@@ -31,7 +31,7 @@ const TARGETS = [
 function loadKey() {
   const raw = process.env.ENCRYPTION_KEY;
   if (!raw) {
-    console.error("ENCRYPTION_KEY is not set — nothing to do. Set it and re-run.");
+    console.error("ENCRYPTION_KEY is not set - nothing to do. Set it and re-run.");
     process.exit(1);
   }
   const buf = /^[0-9a-fA-F]{64}$/.test(raw)
@@ -97,7 +97,7 @@ try {
   console.log(
     total === 0
       ? "No plaintext secrets to encrypt. Already up to date."
-      : `Done — encrypted ${total} secret value(s).`,
+      : `Done - encrypted ${total} secret value(s).`,
   );
 } finally {
   await client.end();

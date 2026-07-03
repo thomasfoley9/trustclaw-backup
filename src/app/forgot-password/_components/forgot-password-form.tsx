@@ -51,7 +51,7 @@ export function ForgotPasswordForm() {
                 a password reset link has been generated.
               </p>
               <p className="text-muted-foreground text-xs">
-                This instance doesn&apos;t send email yet — the reset link is
+                This instance doesn&apos;t send email yet - the reset link is
                 printed in the server logs. Open it to set a new password.
               </p>
               <Link href="/login" className="text-primary text-sm hover:underline">

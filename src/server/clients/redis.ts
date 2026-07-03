@@ -54,10 +54,10 @@ const STREAMING_KEY_TTL = 600; // 10 minutes
 //
 // Keyed by (instance, conversation): an instance can have several concurrent
 // runs (web x3, telegram, cron), and a single instance-wide pointer let any
-// run clobber another's resume pointer — killing cross-window reattach and
+// run clobber another's resume pointer - killing cross-window reattach and
 // leaking one conversation's stream into another's view.
 
-// Delete only when the stored value is the caller's streamId — a plain DEL
+// Delete only when the stored value is the caller's streamId - a plain DEL
 // could race a newer run's SET and destroy its pointer.
 const COMPARE_AND_DELETE_LUA = `
 if redis.call('GET', KEYS[1]) == ARGV[1] then
@@ -177,7 +177,7 @@ export async function getTelegramActive(
 // Atomic check-and-record in one Lua script (Redis runs it single-threaded, so
 // there's no check-then-act race across concurrent requests): drop timestamps
 // older than the window, count what remains, and record the new request only
-// when it's under the limit — so a rejected request never extends its own
+// when it's under the limit - so a rejected request never extends its own
 // window. Sorted-set scores are request timestamps (ms); the key self-expires
 // after the window so idle instances leave nothing behind.
 const RATE_LIMIT_LUA = `

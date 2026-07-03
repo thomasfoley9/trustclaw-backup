@@ -24,8 +24,8 @@ export const deleteCustomModel = protectedProcedure
       throw new TRPCError({ code: "NOT_FOUND", message: "Model not found" });
     }
 
-    // If the agent was pointed at this model — as the main (B) model or the
-    // voice-front (A) model — fall back so the next run doesn't resolve a
+    // If the agent was pointed at this model - as the main (B) model or the
+    // voice-front (A) model - fall back so the next run doesn't resolve a
     // now-missing id and fail with a misleading "add your API key" error.
     const instanceData = {
       ...(instance.anthropicModel === model.modelId

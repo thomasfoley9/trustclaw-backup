@@ -7,7 +7,7 @@ import { db } from "~/server/clients/db";
 import { decryptSecret } from "~/server/clients/crypto";
 import { env } from "~/env";
 
-// OpenAI-compatible providers (identical wire format, different base URL) — lets
+// OpenAI-compatible providers (identical wire format, different base URL) - lets
 // users bring DeepSeek, Kimi/Moonshot, OpenRouter, Groq, etc. with their own key.
 const OPENAI_COMPATIBLE_BASE_URLS: Record<string, string> = {
   deepseek: "https://api.deepseek.com/v1",
@@ -21,10 +21,10 @@ const OPENAI_COMPATIBLE_BASE_URLS: Record<string, string> = {
 
 const OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1";
 
-// "House" models ride OWNER-funded keys — free to every user, billed to the
+// "House" models ride OWNER-funded keys - free to every user, billed to the
 // owner. Each prefers its native provider key (if set), else the shared
 // OpenRouter key.
-// The "house/..." ids are stable routing keys stored on instances — upgrade
+// The "house/..." ids are stable routing keys stored on instances - upgrade
 // the concrete provider model HERE and every user upgrades with it.
 // Ids verified against the providers' live catalogs 2026-07-03.
 const HOUSE_MODELS: Record<
@@ -43,7 +43,7 @@ const HOUSE_MODELS: Record<
   },
   "house/kimi-k2": {
     nativeBaseURL: "https://api.moonshot.ai/v1",
-    // K2.7 Code — Moonshot's current flagship (256K ctx, ~30% fewer thinking
+    // K2.7 Code - Moonshot's current flagship (256K ctx, ~30% fewer thinking
     // tokens than the k2.6 this used to pin).
     nativeModel: "kimi-k2.7-code",
     openrouterModel: "moonshotai/kimi-k2.7-code",
@@ -77,7 +77,7 @@ function directModel(
       return createGoogleGenerativeAI({ apiKey })(bareModel);
     default: {
       // OpenAI-compatible providers only implement Chat Completions, not the
-      // OpenAI Responses API — use .chat() so we hit /v1/chat/completions.
+      // OpenAI Responses API - use .chat() so we hit /v1/chat/completions.
       const baseURL = OPENAI_COMPATIBLE_BASE_URLS[provider];
       return baseURL ? createOpenAI({ apiKey, baseURL }).chat(bareModel) : null;
     }
@@ -103,7 +103,7 @@ function missingKey(message: string): never {
   throw new TRPCError({ code: "PRECONDITION_FAILED", message });
 }
 
-// Single source of truth for turning a model id into an AI-SDK model — always
+// Single source of truth for turning a model id into an AI-SDK model - always
 // billed to the USER, never the owner's gateway. Bare Claude presets use the
 // instance's own Anthropic key; provider-prefixed custom models use their own
 // BYO key (Anthropic customs may fall back to the instance Anthropic key). If
@@ -133,7 +133,7 @@ export async function resolveAgentModel(
       }).chat(houseRoute.openrouterModel);
     }
     missingKey(
-      "This house model isn't set up yet — the owner needs to add its API key.",
+      "This house model isn't set up yet - the owner needs to add its API key.",
     );
   }
 

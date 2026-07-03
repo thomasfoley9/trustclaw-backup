@@ -27,7 +27,7 @@ export function McpServersSettings() {
 
   const add = trpc.trustclaw.addMcpServer.useMutation({
     onSuccess: (res) => {
-      showSuccessToast(`Connected "${res.label}" — ${res.toolCount} tools`);
+      showSuccessToast(`Connected "${res.label}" - ${res.toolCount} tools`);
       setLabel("");
       setUrl("");
       void utils.trustclaw.getMcpServers.invalidate();

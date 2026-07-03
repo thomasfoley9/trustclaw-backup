@@ -101,17 +101,17 @@ model ComposioClawInstance {
 
   // Model config. anthropicModel = Agent B (the worker that runs tools + does
   // the heavy reasoning). agentAModel = Agent A (the conversational voice/
-  // narrator front); null falls back to a sensible default per surface —
+  // narrator front); null falls back to a sensible default per surface -
   // Agent B's model for the text narrator, a house model for the voice front.
   anthropicModel String  @default("claude-sonnet-4-5-20250929")
   agentAModel    String?
 
-  // Per-user Composio API key. Each user brings their own — no shared key.
+  // Per-user Composio API key. Each user brings their own - no shared key.
   // Tool calls and toolkit listings require this to be set.
   composioApiKey String?
 
   // Per-user Anthropic API key (encrypted, enc:v1: envelope). Each user pays
-  // for their own Claude usage — chat fails closed if this isn't set (no shared
+  // for their own Claude usage - chat fails closed if this isn't set (no shared
   // gateway fallback). OpenAI/Google models use their own CustomModel key.
   anthropicApiKey String?
 
@@ -171,7 +171,7 @@ model ComposioClawInstance {
 }
 
 // Agent-generated images. Stored in the DB because the serverless filesystem
-// is read-only (and per-lambda) — a file written by the generating function
+// is read-only (and per-lambda) - a file written by the generating function
 // is invisible to the lambda serving /api/image/[id].
 model GeneratedImage {
   id         String   @id @default(uuid())
@@ -229,7 +229,7 @@ model CustomModel {
   @@map("composio_claw_custom_model")
 }
 
-// Per-user MCP (Model Context Protocol) servers — e.g. Composio MCP URLs.
+// Per-user MCP (Model Context Protocol) servers - e.g. Composio MCP URLs.
 // The agent connects to each at run time and merges its tools. The `url`
 // embeds an auth token, so it's encrypted at rest (enc:v1: envelope).
 model McpServer {

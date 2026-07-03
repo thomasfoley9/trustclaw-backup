@@ -1,18 +1,18 @@
 const SMALLEST_BASE = "https://waves-api.smallest.ai/api/v1";
 
-// OpenAI GPT Realtime voices — MUST stay in sync with OPENAI_VOICES in
+// OpenAI GPT Realtime voices - MUST stay in sync with OPENAI_VOICES in
 // claw-voice/src/agent.py (the worker maps unknown ids to its default).
 export const CURATED_VOICES = [
-  { id: "marin", label: "Marin — natural, expressive" },
-  { id: "cedar", label: "Cedar — deep, natural" },
-  { id: "ash", label: "Ash — clear, direct" },
-  { id: "ballad", label: "Ballad — warm, expressive" },
-  { id: "coral", label: "Coral — bright, conversational" },
-  { id: "sage", label: "Sage — calm, measured" },
-  { id: "alloy", label: "Alloy — balanced, neutral" },
-  { id: "echo", label: "Echo — deep, resonant" },
-  { id: "shimmer", label: "Shimmer — light, upbeat" },
-  { id: "verse", label: "Verse — rich, articulate" },
+  { id: "marin", label: "Marin - natural, expressive" },
+  { id: "cedar", label: "Cedar - deep, natural" },
+  { id: "ash", label: "Ash - clear, direct" },
+  { id: "ballad", label: "Ballad - warm, expressive" },
+  { id: "coral", label: "Coral - bright, conversational" },
+  { id: "sage", label: "Sage - calm, measured" },
+  { id: "alloy", label: "Alloy - balanced, neutral" },
+  { id: "echo", label: "Echo - deep, resonant" },
+  { id: "shimmer", label: "Shimmer - light, upbeat" },
+  { id: "verse", label: "Verse - rich, articulate" },
 ] as const;
 
 export const DEFAULT_VOICE_ID = "marin";
@@ -44,7 +44,7 @@ export function resolveSmallestVoice(voiceId: string | null | undefined): string
 
 export type SmallestKeyCheck = "ok" | "unauthorized" | "unreachable" | "error";
 
-/** Free, read-only auth check (voice listing) — validates a key before storing. */
+/** Free, read-only auth check (voice listing) - validates a key before storing. */
 export async function checkSmallestKey(apiKey: string): Promise<SmallestKeyCheck> {
   let res: Response;
   try {

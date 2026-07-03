@@ -1,10 +1,10 @@
 // Claude 4.x presets are all 200K. Custom (BYO) models are ASSUMED to be 200K
-// too — if a smaller-window model is added, compaction may trigger late. Map
+// too - if a smaller-window model is added, compaction may trigger late. Map
 // specific custom ids here if that becomes a problem.
 const CONTEXT_WINDOW = 200_000;
 
 // Models whose window differs from the 200K default. House models are
-// OpenAI-compatible providers with their own limits — assuming 200K for a
+// OpenAI-compatible providers with their own limits - assuming 200K for a
 // smaller-window model makes compaction fire too late and the provider 400s on
 // long chats. Best-effort published values; lower if a provider rejects long
 // contexts.

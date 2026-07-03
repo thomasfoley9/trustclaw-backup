@@ -35,7 +35,7 @@ const cockpitMessageSchema = z.object({
 // A live Agent B tool event forwarded from the LiveKit worker's cockpit channel.
 export interface VoiceCockpitEvent {
   type: "b_tool";
-  // toolCallId from Agent B — stable key so running→done updates in place.
+  // toolCallId from Agent B - stable key so running→done updates in place.
   id: string;
   name: string;
   status: "running" | "done";
@@ -66,7 +66,7 @@ interface VoiceCallProps {
 // Real-time voice: connects the browser to the user's LiveKit room (token minted
 // server-side at /api/livekit-token, which also dispatches the Agent A worker),
 // publishes the mic, and plays the agent's audio. Replaces the browser Web Speech
-// loop on the real-time path. Renders nothing visible itself — audio + a hidden
+// loop on the real-time path. Renders nothing visible itself - audio + a hidden
 // cockpit-data bridge.
 export function VoiceCall({
   active,
@@ -78,7 +78,7 @@ export function VoiceCall({
   // A fresh Room is created per call (in the connect effect) and held here so
   // the RoomContext + audio renderer can read it. Reusing ONE Room across
   // start/stop cycles let a new connect() race a prior teardown on the same
-  // object — the source of duplicate / overlapping sessions on re-click. Null
+  // object - the source of duplicate / overlapping sessions on re-click. Null
   // between calls.
   const [room, setRoom] = useState<Room | null>(null);
   const onEndedRef = useRef(onEnded);
@@ -130,16 +130,16 @@ export function VoiceCall({
         if (cancelled) return;
 
         // Split the two failure modes so the surfaced error is precise: the room
-        // connection (network / WebRTC) vs. the mic grant (getUserMedia — the
+        // connection (network / WebRTC) vs. the mic grant (getUserMedia - the
         // usual mobile/iOS culprit, which needs HTTPS + a permission grant).
         try {
           await liveRoom.connect(data.serverUrl, data.token);
         } catch (err) {
           const detail =
             err instanceof Error ? `${err.name}: ${err.message}` : String(err);
-          console.error("[voice] room.connect failed —", detail);
+          console.error("[voice] room.connect failed -", detail);
           showErrorToast(
-            "Couldn't connect the call — check your connection and try again.",
+            "Couldn't connect the call - check your connection and try again.",
           );
           if (!cancelled) onEndedRef.current();
           return;
@@ -152,13 +152,13 @@ export function VoiceCall({
           const name = err instanceof Error ? err.name : "";
           const detail =
             err instanceof Error ? `${err.name}: ${err.message}` : String(err);
-          console.error("[voice] microphone enable failed —", detail);
+          console.error("[voice] microphone enable failed -", detail);
           showErrorToast(
             name === "NotAllowedError" || name === "SecurityError"
               ? "Microphone access was blocked. Allow mic access for this site, then try again."
               : name === "NotFoundError"
                 ? "No microphone was found on this device."
-                : "Couldn't turn on your microphone — try again.",
+                : "Couldn't turn on your microphone - try again.",
           );
           if (!cancelled) onEndedRef.current();
           return;
@@ -166,15 +166,15 @@ export function VoiceCall({
 
         // Unlock audio playback. Mobile browsers (and Safari) block autoplay
         // until a gesture-initiated startAudio, so the agent's voice wouldn't be
-        // heard otherwise. Best-effort — RoomAudioRenderer also handles it.
+        // heard otherwise. Best-effort - RoomAudioRenderer also handles it.
         void liveRoom.startAudio().catch(() => undefined);
       } catch (err) {
-        // An aborted token fetch is an intentional teardown, not a failure —
+        // An aborted token fetch is an intentional teardown, not a failure -
         // stay silent and let the cleanup path own it.
         if (tokenAbort.signal.aborted) return;
         const detail =
           err instanceof Error ? `${err.name}: ${err.message}` : String(err);
-        console.error("[voice] call setup failed —", detail);
+        console.error("[voice] call setup failed -", detail);
         showErrorToast("Couldn't connect the call.");
         if (!cancelled) onEndedRef.current();
       }
@@ -198,11 +198,11 @@ export function VoiceCall({
     if (room?.state !== ConnectionState.Connected) return;
     void room.localParticipant
       .setMicrophoneEnabled(!muted)
-      .catch((err) => console.error("[voice] mute toggle failed —", err));
+      .catch((err) => console.error("[voice] mute toggle failed -", err));
   }, [muted, room]);
 
   // Hold music: a browser-played loop (mobile-safe, see use-hold-music) that runs
-  // while Agent B is actually doing work — keyed off the SAME cockpit b_tool
+  // while Agent B is actually doing work - keyed off the SAME cockpit b_tool
   // running/done events the receipts pane uses, so it's deterministic and never
   // overlaps the agent's voice (B stays silent while its tools run, then speaks
   // the result once they're done). This is what fills the gap after "please hold".
@@ -247,7 +247,7 @@ export function VoiceCall({
     holdMusic.stop();
   }, [active, holdMusic, clearStopGrace]);
 
-  // Prime the AudioContext on the first user tap of the call — mobile blocks
+  // Prime the AudioContext on the first user tap of the call - mobile blocks
   // audio created outside a gesture, and the music's start() fires later off a
   // data event, not a tap. The tap-to-enable-sound button primes it too.
   useEffect(() => {
@@ -259,7 +259,7 @@ export function VoiceCall({
 
   // Mobile/Safari (and often desktop Chrome) block audio autoplay until a user
   // gesture. The after-connect startAudio() runs outside the tap, so it can be
-  // blocked — surface a tap-to-enable button that calls startAudio inside a real
+  // blocked - surface a tap-to-enable button that calls startAudio inside a real
   // gesture (the reliable path on every platform). Re-check canPlaybackAudio on
   // EVERY relevant trigger so the button can't silently fail to appear if one
   // browser doesn't emit AudioPlaybackStatusChanged.

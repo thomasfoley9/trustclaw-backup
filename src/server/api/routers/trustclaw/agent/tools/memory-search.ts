@@ -86,7 +86,7 @@ export function createMemorySearchTool(
           })),
         };
       } catch (err) {
-        // A memory lookup failing shouldn't crash the turn — return nothing.
+        // A memory lookup failing shouldn't crash the turn - return nothing.
         console.error(
           "[memory_search] failed",
           err instanceof Error ? err.message : err,

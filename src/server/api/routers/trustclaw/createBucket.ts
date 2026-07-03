@@ -58,7 +58,7 @@ export const createBucket = protectedProcedure
       });
     } catch (err) {
       // Check-then-create race: a concurrent create with the same slug lands
-      // here as a unique violation — surface it as the same friendly CONFLICT.
+      // here as a unique violation - surface it as the same friendly CONFLICT.
       if (
         err instanceof Prisma.PrismaClientKnownRequestError &&
         err.code === "P2002"

@@ -103,7 +103,7 @@ export function PersonalitySettings() {
     setDialogOpen(true);
   };
 
-  // Prefill the create form from a starter template. Everything stays editable —
+  // Prefill the create form from a starter template. Everything stays editable -
   // this just seeds name/avatar/prompt. Names are unique per instance, so
   // de-dupe against existing ones up front ("Dad" -> "Dad 2") to avoid a save
   // failure. buildPersonaPrompt() wraps the voice with the shared guardrails.
@@ -283,7 +283,7 @@ export function PersonalitySettings() {
               <div className="space-y-1.5">
                 <p className="text-muted-foreground text-xs font-medium">
                   Start from a template{" "}
-                  <span className="font-normal">(optional — edit anything after)</span>
+                  <span className="font-normal">(optional - edit anything after)</span>
                 </p>
                 <div className="flex gap-2 overflow-x-auto pb-1">
                   {STARTER_PERSONALITIES.map((t) => (

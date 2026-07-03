@@ -22,7 +22,7 @@ export const updateSettings = protectedProcedure
     }
 
     // A non-preset model id must be either a built-in house model or one of the
-    // caller's own custom models — don't let a client point the agent at an
+    // caller's own custom models - don't let a client point the agent at an
     // arbitrary id.
     if (
       input.anthropicModel &&
@@ -80,7 +80,7 @@ export const updateSettings = protectedProcedure
     }
 
     // Likewise, don't let a client point activeMemoryBucket at a bucket that
-    // isn't theirs (or doesn't exist) — otherwise the agent could save to /
+    // isn't theirs (or doesn't exist) - otherwise the agent could save to /
     // recall from a slug it shouldn't.
     if (input.activeMemoryBucket) {
       const owned = await db.memoryBucket.findFirst({

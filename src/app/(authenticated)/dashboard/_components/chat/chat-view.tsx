@@ -39,7 +39,7 @@ const SAMPLE_PROMPTS = [
 const NEAR_BOTTOM_PX = 80;
 const NEAR_TOP_PX = 120;
 
-// Plain text of an assistant message (text parts only — tool calls/results are
+// Plain text of an assistant message (text parts only - tool calls/results are
 // skipped) for text-to-speech.
 function assistantText(parts: UIMessage["parts"]): string {
   let out = "";
@@ -81,7 +81,7 @@ export function ChatView({
   const setTerminalOpen = useTerminalStore((s) => s.setTerminalOpen);
 
   // Live voice-call overlay: ephemeral transcript lines + Agent B tool events
-  // arriving over the LiveKit data channel during a call. Display-only — the
+  // arriving over the LiveKit data channel during a call. Display-only - the
   // voice turn itself is persisted server-side to its own conversation thread.
   const [voiceTranscripts, setVoiceTranscripts] = useState<
     VoiceTranscriptEntry[]
@@ -194,7 +194,7 @@ export function ChatView({
   // while viewing, or switched back mid-run), adopt it - but never while a
   // local stream is writing. "Ahead" is decided by the newest row's id, not
   // list lengths: a new reply can push the oldest row out of the page window
-  // (same length, different content), which a length compare never adopts —
+  // (same length, different content), which a length compare never adopts -
   // the reply then simply never appears. A stale refetch can't fire this: its
   // newest id is already in the local list.
   useEffect(() => {
@@ -304,7 +304,7 @@ export function ChatView({
     if (liveKitConfigured) {
       // Re-entry guard: a live call is already up (or mid-connect, since
       // liveCallActive flips true synchronously here). Without this, a second
-      // trigger would mint a new token + dispatch a second agent — the
+      // trigger would mint a new token + dispatch a second agent - the
       // duplicate-session bug. Toggling OFF goes through onStopConversation.
       if (liveCallActive) return;
       clearVoiceOverlay(); // start each call with a fresh transcript + action feed
@@ -340,7 +340,7 @@ export function ChatView({
     [setTerminalOpen],
   );
 
-  // Clear the overlay when a call ends — including a failed/aborted setup — so a
+  // Clear the overlay when a call ends - including a failed/aborted setup - so a
   // stale transcript / action feed doesn't linger into the next session.
   const handleVoiceEnded = useCallback(() => {
     clearVoiceOverlay();

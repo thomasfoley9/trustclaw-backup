@@ -4,11 +4,11 @@ import { env } from "~/env";
 import type { MessageSource } from "~/server/api/routers/trustclaw/agent/setup";
 import type { CronJobRow } from "~/app/api/cron/trustclaw/execute/route.schema";
 
-// BullMQ requires its Redis connections to use `maxRetriesPerRequest: null` —
+// BullMQ requires its Redis connections to use `maxRetriesPerRequest: null` -
 // its blocking commands (BRPOPLPUSH etc.) must not be torn down by ioredis's
 // retry logic. This is a SEPARATE connection from the app's getRedis() (which
 // uses maxRetriesPerRequest: 3 for normal commands). Created lazily so importing
-// this module never opens a socket until something actually enqueues — the
+// this module never opens a socket until something actually enqueues - the
 // Next.js serverless app imports the producer side but doesn't connect until it
 // enqueues; the worker process gets its own blocking connection.
 function createQueueConnection(): Redis {
@@ -51,7 +51,7 @@ export type QueueJobData = AgentJobData | CronJobData;
 
 /**
  * True when long-running jobs should be routed to the worker queue. Requires
- * both the explicit flag AND a configured Redis — so a half-configured deploy
+ * both the explicit flag AND a configured Redis - so a half-configured deploy
  * (flag on, no Redis) safely falls back to inline execution instead of
  * silently dropping work.
  */
@@ -76,7 +76,7 @@ export function getAgentQueue(): Queue<QueueJobData> | null {
 // separator), so we normalize ':' -> '_'. The transform is deterministic, so
 // idempotency still holds across retried enqueues of the same logical id.
 //
-// `attempts: 1` — no auto-retry until the confirm/idempotency work (plan §5B,
+// `attempts: 1` - no auto-retry until the confirm/idempotency work (plan §5B,
 // Phase 4) makes re-execution of a partially-completed run provably safe.
 async function enqueue(jobId: string, data: QueueJobData): Promise<string> {
   const queue = getAgentQueue();
@@ -102,7 +102,7 @@ async function enqueue(jobId: string, data: QueueJobData): Promise<string> {
  * that `userId` owns `instanceId`. No user-facing caller enqueues today (only
  * the CRON_SECRET-gated cron dispatch). Before any web/voice endpoint calls
  * this, it MUST first assert instance ownership (as the chat route does at
- * route.ts) — otherwise a forged request could run an agent under another
+ * route.ts) - otherwise a forged request could run an agent under another
  * user's instance.
  */
 export function enqueueAgentJob(
@@ -124,7 +124,7 @@ export function enqueueCronJob(
 }
 
 /**
- * Worker-side factory. Runs in the standalone worker process — never in the
+ * Worker-side factory. Runs in the standalone worker process - never in the
  * Next.js serverless app. Each worker gets its own dedicated blocking
  * connection, as BullMQ requires.
  */

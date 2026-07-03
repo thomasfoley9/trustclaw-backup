@@ -3,7 +3,7 @@ import { protectedProcedure } from "~/server/api/trpc";
 import { db } from "~/server/clients/db";
 import { updateBucketInput } from "./updateBucket.schema";
 
-// Slug is intentionally NOT editable — it's the stable key stored on every
+// Slug is intentionally NOT editable - it's the stable key stored on every
 // memory in the bucket. Only the label/description/alwaysInject change.
 export const updateBucket = protectedProcedure
   .input(updateBucketInput)

@@ -36,7 +36,7 @@ export function LandingPage() {
           </h1>
 
           <p className="text-muted-foreground mt-5 max-w-xl text-lg text-pretty">
-            Your always-on AI founder that runs on rails — building, emailing,
+            Your always-on AI founder that runs on rails - building, emailing,
             scheduling, and closing loops around the clock. All aboard.
           </p>
 
@@ -46,7 +46,7 @@ export function LandingPage() {
                 size="lg"
                 className="bg-accent-gradient h-12 rounded-2xl border-0 px-7 text-base text-white shadow-lg transition-transform hover:scale-[1.03]"
               >
-                Get started — it&apos;s free
+                Get started - it&apos;s free
               </Button>
             </Link>
             <Link

@@ -21,7 +21,7 @@ primary_region = "iad"
 [build]
   dockerfile = "Dockerfile.worker"
 
-# Queue consumer — no inbound HTTP, so deliberately no [http_service] and no
+# Queue consumer - no inbound HTTP, so deliberately no [http_service] and no
 # public IP. The container just runs the worker CMD and pulls jobs from Redis.
 
 [[vm]]

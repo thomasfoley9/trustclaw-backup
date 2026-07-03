@@ -189,7 +189,7 @@ export async function detectAuth(): Promise<AuthResult> {
 
   // List all teams the token can see, then let the user pick. SAML-enforced
   // orgs (e.g. composio) appear here even when the user's session can't
-  // actually create resources under them — picking the wrong one is what
+  // actually create resources under them - picking the wrong one is what
   // bit @CryogenicPlanet's tester. Defaulting to whatever they had won't
   // help in that case, so we always prompt when there's more than one.
   s.stop(`Authenticated as ${userData.user.email}`);

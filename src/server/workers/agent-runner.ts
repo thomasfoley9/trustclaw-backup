@@ -19,7 +19,7 @@ export interface RunAgentResult {
 }
 
 /**
- * Portable, non-streaming agent run callable from any runtime — the existing
+ * Portable, non-streaming agent run callable from any runtime - the existing
  * Vercel background path today, and (Phase 2) the standalone worker process.
  *
  * Wraps prepareAgentRun + agent.generate(). All persistence (assistant row,
@@ -28,7 +28,7 @@ export interface RunAgentResult {
  *
  * This is the single seam the worker tier reuses (see docs/audio-mode-plan.md
  * §4). It deliberately mirrors the telegram/cron consumers, which already drive
- * runs to completion via agent.generate() — NOT the web streaming path, which
+ * runs to completion via agent.generate() - NOT the web streaming path, which
  * stays untouched.
  */
 export async function runAgent(input: RunAgentInput): Promise<RunAgentResult> {

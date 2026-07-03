@@ -1,5 +1,5 @@
-# Standalone agent worker (Phase 2). Runs the BullMQ consumer OUTSIDE Vercel —
-# a long-lived container with no function-duration ceiling — so multi-minute
+# Standalone agent worker (Phase 2). Runs the BullMQ consumer OUTSIDE Vercel -
+# a long-lived container with no function-duration ceiling - so multi-minute
 # agent runs can finish. Built from the same source as the Next app; only the
 # entrypoint differs.
 #
@@ -14,7 +14,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends openssl \
 RUN corepack enable
 WORKDIR /app
 
-# Dependencies first — cached unless the manifests or schema change.
+# Dependencies first - cached unless the manifests or schema change.
 COPY package.json pnpm-lock.yaml ./
 COPY prisma ./prisma
 RUN pnpm install --frozen-lockfile
@@ -25,11 +25,11 @@ COPY src ./src
 COPY scripts ./scripts
 
 # Generate the Prisma client for the linux/glibc target inside the image
-# (never reuse the host's generated client — wrong platform binary).
+# (never reuse the host's generated client - wrong platform binary).
 RUN pnpm exec prisma generate
 
 ENV NODE_ENV=production
 # All secrets (REDIS_URL, DATABASE_URL, ENCRYPTION_KEY) come from the runtime
-# environment — never baked into the image. Per-user provider keys are loaded
+# environment - never baked into the image. Per-user provider keys are loaded
 # and decrypted from the DB per job, not from env.
 CMD ["pnpm", "exec", "tsx", "src/workers/agent/index.ts"]

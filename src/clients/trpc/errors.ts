@@ -28,7 +28,7 @@ export function parseTrpcError(error: unknown): {
     const code = (error.data as Record<string, unknown> | undefined)?.code as
       | string
       | undefined;
-    // Prefer the server's own message — our procedures throw user-facing
+    // Prefer the server's own message - our procedures throw user-facing
     // messages (e.g. "Anthropic rejected this API key", "out of credits").
     // Fall back to a code-based generic only when there's no useful message.
     const serverMessage =

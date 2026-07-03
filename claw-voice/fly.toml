@@ -1,6 +1,6 @@
 # Phase 3 (Fly deploy). NOT needed for the local spike.
 # `fly launch --no-deploy` will regenerate/adjust this; treat it as a starting
-# point. Key choices below are deliberate — keep them.
+# point. Key choices below are deliberate - keep them.
 
 app = "claw-voice"
 
@@ -15,7 +15,7 @@ primary_region = "iad"
 [env]
 
 # This is an OUTBOUND-ONLY worker: it dials out to LiveKit Cloud and has no HTTP
-# service. Intentionally NO [http_service] / [[services]] block — that also means
+# service. Intentionally NO [http_service] / [[services]] block - that also means
 # Fly won't autostop it, which is what we want (a warm worker, no cold dispatch).
 [[vm]]
   size = "performance-2x"

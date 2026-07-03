@@ -1,6 +1,6 @@
 "use client";
 
-// An original, cheeky cartoon steam engine — the "face" of the landing hero.
+// An original, cheeky cartoon steam engine - the "face" of the landing hero.
 // Deliberately NOT any trademarked train character: our own chunky blue
 // locomotive with a smiley smokebox face.
 export function TrainMascot({

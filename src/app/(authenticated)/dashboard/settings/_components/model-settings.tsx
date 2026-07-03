@@ -31,9 +31,9 @@ import {
 } from "~/app/(authenticated)/dashboard/_components/onboarding/onboarding.consts";
 
 interface ModelSettingsProps {
-  // anthropicModel — the single agent behind text chat + tool work.
+  // anthropicModel - the single agent behind text chat + tool work.
   currentModel: string;
-  // agentAModel — voice-only narrator override (spoken briefs). null = use the
+  // agentAModel - voice-only narrator override (spoken briefs). null = use the
   // main model.
   currentAgentAModel: string | null;
 }
@@ -121,7 +121,7 @@ export function ModelSettings({
       <CardHeader>
         <CardTitle>Models</CardTitle>
         <CardDescription>
-          Text chat runs on a single agent — the <strong>main model</strong>{" "}
+          Text chat runs on a single agent - the <strong>main model</strong>{" "}
           below does the reasoning, runs your tools, and writes the full reply.
           On <strong>voice</strong>, a second lightweight narrator condenses
           replies into something speakable; everything on screen stays
@@ -130,7 +130,7 @@ export function ModelSettings({
       </CardHeader>
       <CardContent className="space-y-5">
         <div className="space-y-2">
-          <Label>Main model — chat, work &amp; tools</Label>
+          <Label>Main model - chat, work &amp; tools</Label>
           <Select value={selectedB} onValueChange={setSelectedB}>
             <SelectTrigger className="w-full sm:w-72">
               <SelectValue />
@@ -144,7 +144,7 @@ export function ModelSettings({
         </div>
 
         <div className="space-y-2">
-          <Label>Voice narrator — spoken replies only</Label>
+          <Label>Voice narrator - spoken replies only</Label>
           <Select value={selectedA} onValueChange={setSelectedA}>
             <SelectTrigger className="w-full sm:w-72">
               <SelectValue />
@@ -162,7 +162,7 @@ export function ModelSettings({
             </SelectContent>
           </Select>
           <p className="text-muted-foreground text-xs">
-            Only used when replies are spoken aloud — it shortens the on-screen
+            Only used when replies are spoken aloud - it shortens the on-screen
             answer into a quick verbal brief. Text chat never uses it.
           </p>
         </div>

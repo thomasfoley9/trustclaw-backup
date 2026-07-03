@@ -226,7 +226,7 @@ async function handleRegularMessage(
         }
 
         // Send tool call descriptions (with results for connection URLs).
-        // Match results by toolCallId — toolResults excludes tool-error parts,
+        // Match results by toolCallId - toolResults excludes tool-error parts,
         // so index pairing mislabels calls after an errored one.
         for (const tc of step.toolCalls) {
           const tr = step.toolResults.find(
@@ -268,7 +268,7 @@ async function handleRegularMessage(
     }
     throw error;
   } finally {
-    // Aborted/errored runs never reach onFinish's mcp.close — idempotent.
+    // Aborted/errored runs never reach onFinish's mcp.close - idempotent.
     await closeMcp().catch(() => undefined);
   }
 }

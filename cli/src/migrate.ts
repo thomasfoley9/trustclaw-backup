@@ -34,7 +34,7 @@ interface RunMigrationArgs {
   /**
    * Absolute path to a directory containing `prisma/schema.prisma`. Required
    * when the CLI is running outside any local trustclaw clone (the fork
-   * deploy path) — pass the path returned by `cloneForkLocally`. If omitted,
+   * deploy path) - pass the path returned by `cloneForkLocally`. If omitted,
    * we'll search for the schema in/around `process.cwd()`.
    */
   repoRoot?: string;
@@ -63,7 +63,7 @@ export async function runMigration(args: RunMigrationArgs): Promise<void> {
     // migrate deploy, NOT db push: the app's vercel-build runs
     // `prisma migrate deploy`, which aborts with P3005 ("schema is not
     // empty", baseline required) on a db-push'd database that has no
-    // _prisma_migrations table — failing the very first production build of
+    // _prisma_migrations table - failing the very first production build of
     // every fresh deploy. migrate deploy here applies the same schema AND
     // records migration history, so the build's run becomes a no-op.
     await exec("npx -y prisma@^7.3.0 migrate deploy", {

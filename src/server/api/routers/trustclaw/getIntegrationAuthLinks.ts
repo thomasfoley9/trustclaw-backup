@@ -23,7 +23,7 @@ const ONBOARDING_TOOLKITS = [
 export const getIntegrationAuthLinks = protectedProcedure.query(
   async ({ ctx }) => {
     // Every brand-new user is keyless until they add a Composio key. Don't let
-    // that throw during onboarding — return placeholders so the integrations
+    // that throw during onboarding - return placeholders so the integrations
     // step can render a friendly "add your key later" state and proceed.
     let composio;
     try {

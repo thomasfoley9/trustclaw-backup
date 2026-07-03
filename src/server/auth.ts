@@ -49,10 +49,10 @@ const redisRateLimitStorage = isRedisConfigured()
 
 // Who may CREATE an account. Allowed if ANY of these match:
 //   - email on an allowed domain (composio.dev is always allowed; extra domains
-//     via ALLOWED_EMAIL_DOMAINS) — applies to BOTH password and Google sign-up.
+//     via ALLOWED_EMAIL_DOMAINS) - applies to BOTH password and Google sign-up.
 //   - email on the explicit ALLOWED_EMAILS list ("anyone I tell you").
 //   - a valid SIGNUP_INVITE_CODE (password form only, via the x-invite-code
-//     header) — lets anyone with the code in regardless of email.
+//     header) - lets anyone with the code in regardless of email.
 // Enforced in the user.create.before hook so Google sign-up can't slip past the
 // email gate (OAuth carries no invite-code header).
 // Registration is OPEN to everyone unless SIGNUP_RESTRICTED="true", in which
@@ -90,7 +90,7 @@ function signupRestrictionMessage(): string {
   const extra = ALLOWED_EMAILS.length
     ? " (and specifically-invited addresses)"
     : "";
-  const code = env.SIGNUP_INVITE_CODE ? " — or enter a valid invite code" : "";
+  const code = env.SIGNUP_INVITE_CODE ? " - or enter a valid invite code" : "";
   return `Sign-up is restricted to ${domains}${extra}${code}.`;
 }
 
@@ -105,7 +105,7 @@ function inviteCodeValid(supplied: string): boolean {
   return timingSafeEqual(a, b);
 }
 
-// OAuth provider tokens (Google access/refresh/id) are secrets — encrypt them
+// OAuth provider tokens (Google access/refresh/id) are secrets - encrypt them
 // at rest with the same AES-256-GCM envelope as the API keys. The app never
 // reads them back (Google tools go through Composio), so encrypt-on-write is
 // sufficient; nothing needs to decrypt them.
@@ -147,7 +147,7 @@ export const auth = betterAuth({
         before: async (user, ctx) => {
           // Open registration: anyone may create an account. Only when
           // SIGNUP_RESTRICTED is set do we fall back to the gate (a valid invite
-          // code on the password form, OR an allowed email — OAuth carries no
+          // code on the password form, OR an allowed email - OAuth carries no
           // code header so it relies on the email gate).
           if (!signupRestricted) {
             return { data: user };
@@ -186,7 +186,7 @@ export const auth = betterAuth({
       // No email provider is wired in, so the reset link is surfaced in the
       // server logs for this self-hosted instance. To enable real email
       // delivery, replace this body with your provider (Resend / SMTP /
-      // Composio Gmail) — it's the only line that needs to change.
+      // Composio Gmail) - it's the only line that needs to change.
       console.warn(
         `\n========== PASSWORD RESET REQUEST ==========\n` +
           `account: ${user.email}\n` +
@@ -205,7 +205,7 @@ export const auth = betterAuth({
       maxUsernameLength: USERNAME_MAX_LENGTH,
       // Override BOTH validators: the plugin's default (/^[a-zA-Z0-9_.]+$/)
       // rejects hyphens, and it validates the normalized username AND the
-      // display username separately — so without both, a handle like
+      // display username separately - so without both, a handle like
       // "thomas-5672" fails on the display-name check even if the first passes.
       usernameValidator: isValidUsernameChars,
       displayUsernameValidator: isValidUsernameChars,

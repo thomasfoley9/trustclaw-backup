@@ -16,7 +16,7 @@ When you need to look up documentation for any of these libraries, use the **Con
 
 ## Architecture
 
-This dashboard uses a **single tRPC backend** running within Next.js. Auth is handled by Better Auth with username/password. Composio is accessed **per-user** — each user supplies their own Composio API key, stored on their `ComposioClawInstance` (no shared key). **LLM chat is also per-user**: each user brings their own Anthropic key (`ComposioClawInstance.anthropicApiKey`, encrypted) and `resolveAgentModel` (`agent/resolve-model.ts`) calls Anthropic directly with it — chat **fails closed** (`PRECONDITION_FAILED`) if no key is set, with no shared-gateway fallback. Custom OpenAI/Google models use their own BYO key (`CustomModel.providerApiKey`). Only **embeddings** (memory) and **image generation** still route through the **Vercel AI Gateway** via plain string model IDs; that gateway auth uses `VERCEL_OIDC_TOKEN` on Vercel or `AI_GATEWAY_API_KEY` for local dev.
+This dashboard uses a **single tRPC backend** running within Next.js. Auth is handled by Better Auth with username/password. Composio is accessed **per-user** - each user supplies their own Composio API key, stored on their `ComposioClawInstance` (no shared key). **LLM chat is also per-user**: each user brings their own Anthropic key (`ComposioClawInstance.anthropicApiKey`, encrypted) and `resolveAgentModel` (`agent/resolve-model.ts`) calls Anthropic directly with it - chat **fails closed** (`PRECONDITION_FAILED`) if no key is set, with no shared-gateway fallback. Custom OpenAI/Google models use their own BYO key (`CustomModel.providerApiKey`). Only **embeddings** (memory) and **image generation** still route through the **Vercel AI Gateway** via plain string model IDs; that gateway auth uses `VERCEL_OIDC_TOKEN` on Vercel or `AI_GATEWAY_API_KEY` for local dev.
 
 ### tRPC (Backend)
 
@@ -382,7 +382,7 @@ await authClient.signOut();
 
 - All data fetching goes through tRPC: use `trpc` from `~/clients/trpc` (e.g., `trpc.*.useQuery()`)
 - NEVER use raw `fetch` for API calls
-- Composio SDK calls happen server-side inside tRPC procedures via the per-user helpers in `~/server/clients/composio` (`getComposioForUser` / `getComposioForInstance`) — no shared/global key
+- Composio SDK calls happen server-side inside tRPC procedures via the per-user helpers in `~/server/clients/composio` (`getComposioForUser` / `getComposioForInstance`) - no shared/global key
 
 **tRPC queries:**
 
@@ -473,7 +473,7 @@ trpc.domain.procedure.useSubscription(input, {
 
 The local tRPC backend uses Prisma with Neon PostgreSQL (including pgvector for embeddings).
 
-**Schema changes:** This project uses **Prisma Migrate** (versioned migrations in `prisma/migrations/`), not `db push`. For a schema change, run `npx prisma migrate dev --name <change>` locally; deploy to other environments (incl. cloud/Neon) with `npx prisma migrate deploy`. Do NOT use `db push` anymore — it drifts from migration history.
+**Schema changes:** This project uses **Prisma Migrate** (versioned migrations in `prisma/migrations/`), not `db push`. For a schema change, run `npx prisma migrate dev --name <change>` locally; deploy to other environments (incl. cloud/Neon) with `npx prisma migrate deploy`. Do NOT use `db push` anymore - it drifts from migration history.
 
 **pgvector indexes:** The `embedding` column is `Unsupported("VECTOR(1024)")`, so pgvector indexes (e.g. HNSW) can't be expressed via `@@index`. Add them as raw SQL inside a migration (see `prisma/migrations/20260602120100_memory_hnsw_index/`), using `vector_cosine_ops` to match the `<=>` operator used in memory search.
 
@@ -604,7 +604,7 @@ We rarely need to make custom components since we are maximally using shadcn pri
 
 - ALWAYS use the `env` helper from `~/env` instead of raw `process.env` - it provides type safety and validation via Zod
 - Only use `process.env` directly in root config files that run before the app bootstraps (e.g., `next.config.js`) where the `env` helper is unavailable
-- Key server-only env vars: `BETTER_AUTH_SECRET`, `DATABASE_URL`, `CRON_SECRET`, and optionally `AI_GATEWAY_API_KEY` (for local dev - on Vercel, `VERCEL_OIDC_TOKEN` is used automatically). There is no shared `COMPOSIO_API_KEY` — each user supplies their own via Settings
+- Key server-only env vars: `BETTER_AUTH_SECRET`, `DATABASE_URL`, `CRON_SECRET`, and optionally `AI_GATEWAY_API_KEY` (for local dev - on Vercel, `VERCEL_OIDC_TOKEN` is used automatically). There is no shared `COMPOSIO_API_KEY` - each user supplies their own via Settings
 - There are no `NEXT_PUBLIC_BACKEND_URL` or similar public backend env vars - all API calls go through tRPC
 
   ```typescript

@@ -1,7 +1,7 @@
 import { db } from "~/server/clients/db";
 import { requiredInputsSchema, type SkillForPrompt } from "./skills";
 
-// requiredInputs is a Json column — parse it into the typed shape at the one
+// requiredInputs is a Json column - parse it into the typed shape at the one
 // crossing point. `.catch([])` keeps a malformed row from breaking the prompt.
 export async function listInstanceSkills(instanceId: string) {
   const rows = await db.skill.findMany({

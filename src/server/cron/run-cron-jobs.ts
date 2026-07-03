@@ -8,14 +8,14 @@ import type { CronJobRow } from "~/app/api/cron/trustclaw/execute/route.schema";
 
 // Shared cron executor. Called by the cron /execute route inline (via after())
 // when the worker queue is disabled, and by the standalone worker when it's
-// enabled. Identical logic either way — only WHERE it runs differs.
+// enabled. Identical logic either way - only WHERE it runs differs.
 //
-// Failure posture: this never throws — it catches its own errors and releases
+// Failure posture: this never throws - it catches its own errors and releases
 // the job locks (with lastError set) so a failed run reschedules cleanly. The
 // one gap: if the WORKER PROCESS crashes after dequeue but before
 // releaseJobLocks runs, the job stays locked until the ~10-min stale-lock
 // reclaim (the cron dispatcher's LOCK_TIMEOUT_MS). Alert on jobs locked > 5 min
-// once the worker is live — see the pre-enable gates in docs/audio-mode-plan.md.
+// once the worker is live - see the pre-enable gates in docs/audio-mode-plan.md.
 
 async function releaseJobLocks(
   jobs: CronJobRow[],
@@ -75,7 +75,7 @@ export async function runCronJobs(
     try {
       result = await agent.generate({ prompt: messages });
     } finally {
-      // Zero-step provider errors never reach onFinish's mcp.close —
+      // Zero-step provider errors never reach onFinish's mcp.close -
       // idempotent, so double-close on the happy path is fine.
       await closeMcp().catch(() => undefined);
     }

@@ -43,7 +43,7 @@ export async function tryClaimRun(
 // RUN_STALE_MS (its slot legitimately re-claimed by a successor) can no longer
 // clear the successor's flag on its way out and open the door to a third
 // concurrent run. Without claimedAt (chat/stop), the clear is unconditional by
-// design — stop must always release.
+// design - stop must always release.
 export async function markRunEnded(
   conversationId: string,
   claimedAt?: Date,
@@ -58,7 +58,7 @@ export async function markRunEnded(
       data: { activeRunStartedAt: null },
     })
     .catch((err) => {
-      // Best-effort (don't rethrow — the run already finished), but not silent:
+      // Best-effort (don't rethrow - the run already finished), but not silent:
       // a failure here strands the run flag until RUN_STALE_MS, blocking the
       // conversation. Surface it so DB trouble is visible to operators.
       console.error(

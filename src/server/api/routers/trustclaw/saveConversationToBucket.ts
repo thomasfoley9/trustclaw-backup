@@ -83,7 +83,7 @@ export const saveConversationToBucket = protectedProcedure
     if (statements.length > 0 && savedCount === 0) {
       throw new TRPCError({
         code: "INTERNAL_SERVER_ERROR",
-        message: "Couldn't save to your bucket — please try again.",
+        message: "Couldn't save to your bucket - please try again.",
       });
     }
 

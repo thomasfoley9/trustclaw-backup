@@ -45,7 +45,7 @@ export function useChatHook({ initialMessages, streamId, conversationId }: {
   const chat = useChat({
     // Per-conversation id so each chat has its own client store. With a shared
     // id, a run streaming in one chat marks ALL chats as "streaming" and blocks
-    // their inputs — so you couldn't start a second job while one was running.
+    // their inputs - so you couldn't start a second job while one was running.
     id: `chat-${conversationId}`,
     transport,
     resume: resumeOnMountRef.current,

@@ -91,11 +91,11 @@ function assembleSoulPrompt(data: OnboardingData): string {
   const communicationStyle = data.funWritingStyle
     ? `You have two distinct voices and switch between them naturally:
 
-**Professional voice** — your default for work, external messages (emails, anything public-facing), and anything serious or high-stakes. ${styleInstruction(data.writingStyle)}
+**Professional voice** - your default for work, external messages (emails, anything public-facing), and anything serious or high-stakes. ${styleInstruction(data.writingStyle)}
 
-**Fun voice** — for casual chat, brainstorming, celebrating wins, and whenever your human is being playful. ${styleInstruction(data.funWritingStyle)}
+**Fun voice** - for casual chat, brainstorming, celebrating wins, and whenever your human is being playful. ${styleInstruction(data.funWritingStyle)}
 
-Read the room and switch on your own. When in doubt — especially for anything external or work-related — default to your professional voice.`
+Read the room and switch on your own. When in doubt - especially for anything external or work-related - default to your professional voice.`
     : styleInstruction(data.writingStyle);
 
   return `## Who You Are

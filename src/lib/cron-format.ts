@@ -36,6 +36,6 @@ export function formatCronExpression(expression: string): string {
 }
 
 export function formatCronDate(date: Date | string | null): string {
-  if (!date) return "—";
+  if (!date) return "-";
   return moment(date).format("MMM D, h:mm A");
 }

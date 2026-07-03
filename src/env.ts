@@ -33,7 +33,7 @@ export const env = createEnv({
     // prod is unchanged until the worker is deployed and this is set to "true".
     WORKER_QUEUE_ENABLED: z.enum(["true", "false"]).optional(),
 
-    // Owner-funded keys for the "house" models (Kimi K2, DeepSeek) — free to
+    // Owner-funded keys for the "house" models (Kimi K2, DeepSeek) - free to
     // every user, billed to the owner. Each house model prefers its native key
     // (DeepSeek / Moonshot) and falls back to the shared OpenRouter key. All
     // optional; a house model is unavailable when it has neither.
@@ -41,13 +41,13 @@ export const env = createEnv({
     DEEPSEEK_API_KEY: z.string().optional(),
     MOONSHOT_API_KEY: z.string().optional(),
 
-    // Owner-funded shared Smallest.ai (voice/TTS) key — every user gets spoken
+    // Owner-funded shared Smallest.ai (voice/TTS) key - every user gets spoken
     // replies without bringing their own. A per-user voice key still overrides it.
     SMALLEST_API_KEY: z.string().optional(),
 
     // Real-time voice (LiveKit). API key/secret mint room-join JWTs in the token
     // route. VOICE_WORKER_SHARED_SECRET authenticates the LiveKit Python worker
-    // when it calls /api/voice-turn. All optional — voice is opt-in.
+    // when it calls /api/voice-turn. All optional - voice is opt-in.
     LIVEKIT_API_KEY: z.string().optional(),
     LIVEKIT_API_SECRET: z.string().optional(),
     VOICE_WORKER_SHARED_SECRET: z.string().optional(),
@@ -125,7 +125,7 @@ export const env = createEnv({
               : undefined),
   },
   // SKIP_ENV_VALIDATION is for local lint/typecheck without a full .env.
-  // Never honour it in production — security-critical secrets like
+  // Never honour it in production - security-critical secrets like
   // CRON_SECRET and BETTER_AUTH_SECRET must always be present at runtime.
   skipValidation:
     !!process.env.SKIP_ENV_VALIDATION &&

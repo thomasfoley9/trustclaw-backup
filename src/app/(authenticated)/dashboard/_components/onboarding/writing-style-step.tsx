@@ -52,7 +52,7 @@ export function WritingStyleStep({
   return (
     <StepLayout
       title="How should I write?"
-      subtitle="Set up two voices — I'll switch between them depending on the moment"
+      subtitle="Set up two voices - I'll switch between them depending on the moment"
       onNext={onNext}
       onBack={onBack}
       nextDisabled={!professional || !fun}

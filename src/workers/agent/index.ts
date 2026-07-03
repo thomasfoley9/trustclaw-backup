@@ -1,7 +1,7 @@
 /* eslint-disable no-console -- worker process entrypoint; logs to stdout/stderr for the container log stream */
 //
-// Standalone agent worker (Phase 2). Runs OUTSIDE Vercel — in a long-lived
-// container with no function-duration ceiling — consuming the agent-jobs queue
+// Standalone agent worker (Phase 2). Runs OUTSIDE Vercel - in a long-lived
+// container with no function-duration ceiling - consuming the agent-jobs queue
 // and driving each run to completion via the portable runAgent(). All
 // persistence (assistant row, memory flush, compaction, cleanup) happens inside
 // the agent's onFinish, so the worker only needs to invoke runAgent.
@@ -40,7 +40,7 @@ worker.on("error", (err) => {
   console.error("[worker] worker error:", err);
 });
 
-console.log("[worker] agent worker started — waiting for jobs");
+console.log("[worker] agent worker started - waiting for jobs");
 
 // Graceful shutdown: stop accepting new jobs and let in-flight ones finish
 // (within the platform's grace period) before the process exits, so a deploy
@@ -49,7 +49,7 @@ let shuttingDown = false;
 async function shutdown(signal: string) {
   if (shuttingDown) return;
   shuttingDown = true;
-  console.log(`[worker] ${signal} received — draining…`);
+  console.log(`[worker] ${signal} received - draining…`);
   try {
     await worker.close();
   } catch (err) {

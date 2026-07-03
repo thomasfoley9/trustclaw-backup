@@ -77,7 +77,7 @@ export function MemoryBucketControl() {
         </TooltipTrigger>
         <TooltipContent>
           {incognito
-            ? "Incognito on — not saving or recalling memory"
+            ? "Incognito on - not saving or recalling memory"
             : "Go incognito (no memory)"}
         </TooltipContent>
       </Tooltip>

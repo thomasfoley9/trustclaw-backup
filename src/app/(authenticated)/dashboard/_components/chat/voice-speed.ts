@@ -1,4 +1,4 @@
-// Spoken-reply playback speed — a client-side preference (localStorage), applied
+// Spoken-reply playback speed - a client-side preference (localStorage), applied
 // as the <audio> element's playbackRate with pitch preserved. Synthesis params
 // (voice, key) live server-side; playback rate is purely a listener preference,
 // so it stays on the client and needs no re-synth.

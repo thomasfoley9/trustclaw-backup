@@ -42,7 +42,7 @@ export function ResetPasswordForm() {
         showErrorToast(result.error.message ?? "Failed to reset password");
         return;
       }
-      showSuccessToast("Password updated — please log in");
+      showSuccessToast("Password updated - please log in");
       router.push("/login");
     } finally {
       setPending(false);

@@ -10,7 +10,7 @@ const execFile = promisify(_execFile);
 // We embed the GitHub token in `https://x-access-token:${token}@github.com/...`
 // URLs to authenticate clones and pushes. When a child_process call fails,
 // Node's error includes the failed command + stdout/stderr, which can echo
-// that URL — leaking the token to interactive terminals and CI logs. Scrub
+// that URL - leaking the token to interactive terminals and CI logs. Scrub
 // it from any error fields before re-throwing.
 const CREDENTIAL_URL_PATTERN = /(https?:\/\/[^/@\s:]+:)[^@\s]+@/gi;
 
@@ -32,7 +32,7 @@ function sanitizeChildProcessError(err: unknown): unknown {
   return err;
 }
 
-// Run `git` with an explicit argv array — no shell, no string interpolation.
+// Run `git` with an explicit argv array - no shell, no string interpolation.
 // This prevents shell-metachar injection through values like a branch name
 // (e.g. `main;rm -rf ~`) that the previous `exec(\`git ... ${branch}\`)` form
 // would have parsed and executed.
@@ -238,7 +238,7 @@ export async function confirmLocalPublish(
     initialValue: true,
   });
   if (isCancel(usePublish)) {
-    // Ctrl-C means abort — only an explicit "No" opts into fork mode (null).
+    // Ctrl-C means abort - only an explicit "No" opts into fork mode (null).
     cancel("Cancelled.");
     process.exit(0);
   }

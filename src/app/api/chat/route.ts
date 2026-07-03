@@ -93,7 +93,7 @@ async function getAuthenticatedInstance(request: Request) {
 }
 
 // TEXT CHAT IS SINGLE-AGENT: the agent's full text streams straight through to
-// the client, live. No Agent A narration/condensing here — the two-agent split
+// the client, live. No Agent A narration/condensing here - the two-agent split
 // exists only on the voice plane (/api/voice-turn + the realtime worker), where
 // replies must be short enough to speak.
 
@@ -264,7 +264,7 @@ export async function POST(request: Request) {
       })
       .catch(() => undefined);
     // Setup failures after the MCP clients opened (e.g. the provider rejected
-    // the call) never reach onFinish — close them here or they leak.
+    // the call) never reach onFinish - close them here or they leak.
     await closeMcp().catch(() => undefined);
     await clearStreamingMessage(instanceId, conversationId, streamId).catch(
       () => undefined,
@@ -326,7 +326,7 @@ export async function POST(request: Request) {
           })
           .catch(() => undefined);
       }
-      // Abort and zero-step failures never reach onFinish's mcp.close —
+      // Abort and zero-step failures never reach onFinish's mcp.close -
       // idempotent, so double-close on the happy path is fine.
       await closeMcp().catch(() => undefined);
       await clearStreamingMessage(instanceId, conversationId, streamId).catch(
@@ -381,13 +381,13 @@ export async function GET(request: Request) {
 
   const activeStreamId = await getStreamingMessage(instanceId, conversationId);
   if (activeStreamId !== streamId) {
-    // A stale/finished pointer is "nothing to resume", not an error — a 404
+    // A stale/finished pointer is "nothing to resume", not an error - a 404
     // here made the SDK's reconnect throw a spurious toast on idle chats.
     return new Response(null, { status: 204 });
   }
 
   const streamContext = getStreamContext();
-  // 204 is a null-body status — passing a body string makes the Response
+  // 204 is a null-body status - passing a body string makes the Response
   // constructor itself throw (500) instead of returning "nothing to resume".
   if (!streamContext) {
     return new Response(null, { status: 204 });

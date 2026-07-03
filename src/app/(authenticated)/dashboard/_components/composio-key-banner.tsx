@@ -20,7 +20,7 @@ export function ComposioKeyBanner() {
         <div className="text-foreground flex items-center gap-2">
           <KeyRound className="text-chart-4 h-4 w-4 shrink-0" />
           <span>
-            No Composio API key set — tools and integrations are disabled until
+            No Composio API key set - tools and integrations are disabled until
             you add one.
           </span>
         </div>

@@ -46,7 +46,7 @@ interface OnboardingWizardState {
   emoji: string | null;
   lore: string;
   anthropicModel: z.infer<typeof allowedAnthropicModelSchema>;
-  // In-memory only — never persisted to onboardingState (it's a secret).
+  // In-memory only - never persisted to onboardingState (it's a secret).
   anthropicApiKey: string;
 }
 

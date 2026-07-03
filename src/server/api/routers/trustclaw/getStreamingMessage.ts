@@ -15,7 +15,7 @@ export const getStreamingMessage = protectedProcedure
 
     if (!instance) return null;
 
-    // Scoped to the conversation the caller is viewing — an instance-wide
+    // Scoped to the conversation the caller is viewing - an instance-wide
     // pointer leaked one conversation's live stream into another's view.
     const messageId = await getStreamingMessageFromRedis(
       instance.id,

@@ -1,4 +1,4 @@
-# claw-voice — Thomas Claw real-time voice agent (LiveKit cascade)
+# claw-voice - Thomas Claw real-time voice agent (LiveKit cascade)
 
 A separate **Python** worker (LiveKit Agents 1.x) that runs the real-time voice
 plane: **Smallest Pulse STT → A→B bridge → Smallest Lightning TTS**, with
@@ -8,19 +8,19 @@ Python-only. The Next.js app stays the frontend + token server + the A→B brain
 
 ---
 
-## ▶ Phase 0 — the spike (do this FIRST, before anything else gets built)
+## ▶ Phase 0 - the spike (do this FIRST, before anything else gets built)
 
-`src/agent.py` currently yields a **hardcoded stub** — no real model, no HTTP
+`src/agent.py` currently yields a **hardcoded stub** - no real model, no HTTP
 call. Its only purpose is to de-risk the one off-label assumption the whole plan
 rests on: an `AgentSession` with **no `llm=`**, whose `Agent.llm_node` streams
 plain strings straight to TTS.
 
 **The spike passes only if all four hold:**
-1. The agent **speaks the stubbed reply** — proving the pipeline calls the
+1. The agent **speaks the stubbed reply** - proving the pipeline calls the
    overridden `llm_node` with no LLM in the session.
-2. The **greeting** (`session.say(...)`) plays on connect — `say()` works with no LLM.
+2. The **greeting** (`session.say(...)`) plays on connect - `say()` works with no LLM.
 3. **Transcripts** appear (your speech + the agent's) via `lk.transcription`.
-4. **Barge-in**: talking over the agent cuts it off cleanly — no crash/traceback.
+4. **Barge-in**: talking over the agent cuts it off cleanly - no crash/traceback.
 
 ### Run it locally (no Fly needed)
 ```bash
@@ -37,7 +37,7 @@ uv run src/agent.py dev
 Then open the **LiveKit Agents Playground** (https://agents-playground.livekit.io),
 connect it to the same project, and talk. The worker joins as `claw-voice`.
 
-### Likely first-run snags (all expected — this is a spike)
+### Likely first-run snags (all expected - this is a spike)
 - **No audio / agent never hears you** → add `await ctx.connect()` as the first
   line of `entrypoint()` in `src/agent.py`.
 - **`smallestai.STT()` errors on model** → pass the explicit Pulse model arg
@@ -47,7 +47,7 @@ connect it to the same project, and talk. The worker joins as `claw-voice`.
 - **`session.say` not found / needs an LLM** → note it; the greeting/filler
   strategy changes.
 
-Record which of these you hit — each one is a real answer the spike exists to get.
+Record which of these you hit - each one is a real answer the spike exists to get.
 
 ---
 
@@ -56,7 +56,7 @@ Record which of these you hit — each one is a real answer the spike exists to 
   `VOICE_TURN_URL` (`/api/voice-turn`), yielding Agent A tokens to TTS and
   forwarding Agent B tool events to the `cockpit` data channel. Build the
   Next.js token route + `/api/voice-turn` + the React `VoiceCall` component.
-- **Phase 3 (deploy) — LiveKit Cloud managed hosting (no Fly needed):**
+- **Phase 3 (deploy) - LiveKit Cloud managed hosting (no Fly needed):**
   deploy the worker straight to LiveKit Cloud with `lk agent create` /
   `lk agent deploy` (auto-scaling, same LiveKit account). Set agent secrets
   (`SMALLEST_API_KEY`, `VOICE_WORKER_SHARED_SECRET`, `VOICE_TURN_URL`) via the

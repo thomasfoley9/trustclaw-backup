@@ -141,7 +141,7 @@ export function buildContext(
   // Anthropic requires the first message to be a user turn. The
   // MESSAGE_SAFETY_CAP window can land on an assistant/tool row (200+ short
   // messages with no compaction yet), and each new turn adds two rows, so the
-  // bad parity persists — every subsequent call 400s. The compaction summary
+  // bad parity persists - every subsequent call 400s. The compaction summary
   // (unshifted below) satisfies the requirement when present.
   if (!lastCompactionSummary) {
     const firstUser = aiMessages.findIndex((m) => m.role === "user");

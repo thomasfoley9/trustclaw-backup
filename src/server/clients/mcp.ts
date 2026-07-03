@@ -57,7 +57,7 @@ export async function validateMcpServer(url: string): Promise<number> {
 
 // Load all of an instance's MCP servers' tools for one agent run. Clients stay
 // open for the run; the returned close() tears them down (call it in onFinish).
-// A failing/unreachable server is logged and skipped — never kills the run.
+// A failing/unreachable server is logged and skipped - never kills the run.
 export async function loadMcpTools(
   instanceId: string,
 ): Promise<{ tools: ToolSet; close: () => Promise<void> }> {

@@ -5,18 +5,18 @@ import { resolveAgentModel } from "~/server/api/routers/trustclaw/agent/resolve-
 
 export const maxDuration = 30;
 
-// Turns the assistant's written reply into a short SPOKEN brief — the "Agent A"
+// Turns the assistant's written reply into a short SPOKEN brief - the "Agent A"
 // curation layer. Voice reads this, never the full on-screen digest.
 const BRIEF_SYSTEM = `You are a voice assistant giving a quick verbal update on the phone. Convert the assistant's written reply into the SHORTEST useful spoken answer.
 
 Rules:
-- ONE sentence. Two only if genuinely necessary. Aim for under 25 spoken words — this is for the ear, and the full answer is already on screen.
+- ONE sentence. Two only if genuinely necessary. Aim for under 25 spoken words - this is for the ear, and the full answer is already on screen.
 - Lead with the single most important thing. Collapse lists into counts ("twenty emails, three need you"). Drop detail the listener can read on screen.
 - Plain speech ONLY: no markdown, no bullets, no emoji, no URLs, no IDs or code. Say numbers naturally.
 - Speak the outcome, not tool mechanics or raw data.
 - Keep the tone of the original (if it's blunt or crude, stay blunt or crude).
 - If there's more to say, end by offering it ("want the details?") rather than dumping it.
-Output ONLY the spoken text — nothing else.`;
+Output ONLY the spoken text - nothing else.`;
 
 // Last-resort fallback: never speak the whole essay. Strip light markdown and
 // return roughly the first sentence (hard-capped) so voice stays short even when
@@ -54,7 +54,7 @@ export async function POST(request: Request) {
   }
 
   // If anything fails (no key, model error), fall back to a SHORT spoken version
-  // — never the whole reply — so voice stays brief even when curation is down.
+  // - never the whole reply - so voice stays brief even when curation is down.
   const fallback = shortSpoken(text);
   try {
     const model = await resolveAgentModel(

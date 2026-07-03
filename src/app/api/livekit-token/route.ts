@@ -6,7 +6,7 @@ import { DEFAULT_VOICE_ID } from "~/server/clients/smallest";
 
 // Mints a short-lived LiveKit room-join JWT for the signed-in user. The room is
 // derived SERVER-SIDE from the user id, so a caller can only ever join their own
-// room — never another user's voice session. Per-session config (which models,
+// room - never another user's voice session. Per-session config (which models,
 // persona, and the fresh voice conversation id) rides in the token + agent
 // dispatch metadata so the LiveKit worker knows who it's acting for.
 export const runtime = "nodejs"; // livekit-server-sdk needs Node, not edge
@@ -38,14 +38,14 @@ export async function POST(request: Request) {
   }
 
   // Separate voice thread: a brand-new conversation per call. Intentionally does
-  // NOT become the active (text) conversation — voice gets its own clean thread
+  // NOT become the active (text) conversation - voice gets its own clean thread
   // but still inherits the shared, instance-level memory at run time.
   const conversation = await db.conversation.create({
     data: { instanceId: instance.id, title: "Voice call" },
     select: { id: true },
   });
 
-  // The active personality's prompt drives Agent A's SPOKEN voice — without it,
+  // The active personality's prompt drives Agent A's SPOKEN voice - without it,
   // the voice front falls back to the default Claw character while the text
   // agent uses the personality. Forward it in the dispatch metadata so voice
   // matches text.
@@ -62,7 +62,7 @@ export async function POST(request: Request) {
     conversationId: conversation.id,
     personaId: instance.activePersonalityId ?? null,
     personaName: activePersonality?.name ?? null,
-    // Full personality prompt — Agent A adopts this as its spoken character so
+    // Full personality prompt - Agent A adopts this as its spoken character so
     // the voice matches the personality the user picked (same as text chat).
     // Model routing is fully server-side: the worker's realtime model is fixed
     // and /api/voice-turn resolves Agent B's model itself.
@@ -91,7 +91,7 @@ export async function POST(request: Request) {
   });
   const token = await at.toJwt();
 
-  // Dispatch the worker EXPLICITLY via the dispatch API — the same reliable path
+  // Dispatch the worker EXPLICITLY via the dispatch API - the same reliable path
   // LiveKit's own console uses. Embedding the dispatch in the join token
   // (RoomConfiguration) proved flaky for Cloud agents. The agent reads
   // ctx.job.metadata for the session config.
@@ -115,7 +115,7 @@ export async function POST(request: Request) {
     await db.conversation
       .delete({ where: { id: conversation.id } })
       .catch(() => undefined);
-    return new Response("Couldn't start the voice agent — try again.", {
+    return new Response("Couldn't start the voice agent - try again.", {
       status: 503,
     });
   }

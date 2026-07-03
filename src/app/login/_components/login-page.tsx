@@ -51,7 +51,7 @@ export function LoginPage({
         callbackURL: "/dashboard",
       });
     } catch {
-      showErrorToast("Google sign-in failed — try again");
+      showErrorToast("Google sign-in failed - try again");
       setPending(false);
     }
   };

@@ -43,7 +43,7 @@ export function TelegramSettings() {
   // the user to send /start to BotFather; otherwise just read the steady-state
   // value. Derive isLinked directly from the query so we don't have to mirror
   // server state into local useState (the prior implementation did and needed
-  // a useEffect to keep the two in sync — classic anti-pattern).
+  // a useEffect to keep the two in sync - classic anti-pattern).
   const { data: instanceData } = trpc.trustclaw.getInstance.useQuery(undefined, {
     refetchInterval: telegramToken ? 3000 : false,
   });

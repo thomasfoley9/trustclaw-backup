@@ -1,7 +1,7 @@
 [project]
 name = "claw-voice"
 version = "0.1.0"
-description = "Thomas Claw real-time voice agent — LiveKit + OpenAI GPT Realtime"
+description = "Thomas Claw real-time voice agent - LiveKit + OpenAI GPT Realtime"
 requires-python = ">=3.11"
 dependencies = [
     # LiveKit Agents 1.x + the OpenAI plugin (GPT-4o Realtime handles

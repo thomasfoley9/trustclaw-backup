@@ -12,7 +12,7 @@ function getTelegramApiBase(): string {
 }
 
 // Best-effort outbound. These are UI feedback (typing indicator, partial/final
-// replies) — a send failure must NEVER throw: throwing here cuts the agent loop
+// replies) - a send failure must NEVER throw: throwing here cuts the agent loop
 // short (the user gets no final answer) and leaks as an unhandled rejection in
 // the webhook's after() callback. Log and move on. The response body is not
 // logged (it can carry upstream detail).
@@ -30,7 +30,7 @@ export async function sendTelegramMessage(
     });
     if (markdownResponse.ok) return;
 
-    // Markdown parsing failed (e.g. underscores in URLs) — retry as plain text.
+    // Markdown parsing failed (e.g. underscores in URLs) - retry as plain text.
     const plainResponse = await fetch(`${TELEGRAM_API_BASE}/sendMessage`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },

@@ -6,12 +6,12 @@ import type { Brand } from "~/lib/brands";
 
 // One parameterized demo landing skin, driven by the active Brand. The product is
 // neutral "Claw" everywhere; the brand lives entirely in the wordmark, accent
-// colour, favicon, and the "by {brand}" line — so no prospect ever sees a rival's
+// colour, favicon, and the "by {brand}" line - so no prospect ever sees a rival's
 // name inside the shared app. Rendered per-path from src/app/[brand]/page.tsx.
 const CAPS = [
   { icon: Mail, label: "Clears your inbox", sub: "Reads, drafts, replies, sends." },
   { icon: CalendarDays, label: "Runs your calendar", sub: "Books, moves, defends your time." },
-  { icon: MessageSquare, label: "Works your tools", sub: "Slack, CRM, docs — connected." },
+  { icon: MessageSquare, label: "Works your tools", sub: "Slack, CRM, docs - connected." },
   { icon: Zap, label: "Actually does it", sub: "Not suggestions. Done." },
 ];
 
@@ -58,7 +58,7 @@ export function BrandLanding({ brand }: { brand: Brand }) {
           <br className="hidden sm:block" /> experience worth your time.
         </h1>
         <p className="mt-7 max-w-2xl text-lg text-white/60 sm:text-xl">
-          Meet <span className="text-white">Claw</span> — the AI that doesn&apos;t just
+          Meet <span className="text-white">Claw</span> - the AI that doesn&apos;t just
           answer, it <span style={{ color: accent }}>drives</span>. Your inbox, your calendar,
           your busywork: handled, hands-free.
         </p>
@@ -97,7 +97,7 @@ export function BrandLanding({ brand }: { brand: Brand }) {
 
       <footer className="relative z-10 mx-auto max-w-6xl px-6 pb-10">
         <div className="flex flex-col items-center justify-between gap-3 border-t border-white/10 pt-6 text-xs text-white/40 sm:flex-row">
-          <span className="tracking-[0.3em] uppercase">Claw — by {brand.name}</span>
+          <span className="tracking-[0.3em] uppercase">Claw - by {brand.name}</span>
           <span>The drive that does the work.</span>
         </div>
       </footer>

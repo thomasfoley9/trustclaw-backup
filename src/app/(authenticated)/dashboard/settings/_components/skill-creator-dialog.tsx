@@ -45,7 +45,7 @@ export function SkillCreatorDialog({
           </DialogTitle>
           <DialogDescription>
             Describe what you want the agent to be able to do. It&apos;ll draft
-            the steps and the inputs to ask for — you can edit everything before
+            the steps and the inputs to ask for - you can edit everything before
             saving.
           </DialogDescription>
         </DialogHeader>

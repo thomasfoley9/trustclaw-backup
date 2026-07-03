@@ -1,4 +1,4 @@
-"""Claw — real-time voice agent (LiveKit + OpenAI GPT Realtime).
+"""Claw - real-time voice agent (LiveKit + OpenAI GPT Realtime).
 
 Agent A (THIS worker) is the conversational voice front: OpenAI's GPT-4o
 Realtime model handles speech-to-speech natively (no separate STT/TTS
@@ -46,28 +46,28 @@ WORKER_SECRET = os.environ.get("VOICE_WORKER_SHARED_SECRET", "")
 # overridden by the user's selected personality prompt (passed in the dispatch
 # metadata as `personaPrompt`) so the SPOKEN agent takes on that personality,
 # matching the text agent.
-DEFAULT_CHARACTER = """You are Claw — a blunt, quick, no-corporate-bullshit personal assistant. Dry wit, zero fluff, zero corporate-speak. You keep it real and get straight to the point."""
+DEFAULT_CHARACTER = """You are Claw - a blunt, quick, no-corporate-bullshit personal assistant. Dry wit, zero fluff, zero corporate-speak. You keep it real and get straight to the point."""
 
-# Operational rules — ALWAYS applied, after the character. The character sets the
+# Operational rules - ALWAYS applied, after the character. The character sets the
 # VOICE; these set the JOB and never change with personality.
-VOICE_FRONT_RULES = """You're talking out loud on a voice call, so keep replies short, natural, and conversational; never read long lists or raw data aloud. Stay fully in the character and voice described above — that voice is who you are on this call, in every reply.
+VOICE_FRONT_RULES = """You're talking out loud on a voice call, so keep replies short, natural, and conversational; never read long lists or raw data aloud. Stay fully in the character and voice described above - that voice is who you are on this call, in every reply.
 
 You have ONE tool, `delegate`, which hands a task to the worker that actually does things (email, calendar, Slack, the CRM, files, web lookups, sending/scheduling/changing anything). The worker remembers the whole call, so treat it as your hands.
 
-WHEN TO DELEGATE — anything that touches the user's real accounts, data, or the outside world. This includes the follow-ups:
+WHEN TO DELEGATE - anything that touches the user's real accounts, data, or the outside world. This includes the follow-ups:
 - The first request ("check my email", "schedule lunch with Sam Friday").
-- Their ANSWER to a question you asked, their CONFIRMATION ("yes", "send it", "go ahead"), an EDIT ("make it 3pm instead"), or a follow-up that continues the task. These are NOT small talk — they move real work forward, so you MUST delegate them. Pass what they decided (e.g. "User confirmed — send the email to Sam we drafted" or "Change the meeting to 3pm").
+- Their ANSWER to a question you asked, their CONFIRMATION ("yes", "send it", "go ahead"), an EDIT ("make it 3pm instead"), or a follow-up that continues the task. These are NOT small talk - they move real work forward, so you MUST delegate them. Pass what they decided (e.g. "User confirmed - send the email to Sam we drafted" or "Change the meeting to 3pm").
 
-WHEN TO ANSWER DIRECTLY — only pure conversation with no task behind it: greetings, thanks, "how are you", who you are. That's it.
+WHEN TO ANSWER DIRECTLY - only pure conversation with no task behind it: greetings, thanks, "how are you", who you are. That's it.
 
 HOW TO DELEGATE:
-- Pass a clear, self-contained `intent` that carries EVERY detail the user gave — names, dates, times, the actual message content, which account/tool. Don't make the worker guess; don't drop specifics.
-- When you delegate real work, say ONE short line that concisely states WHAT you're about to do, and END that line with "please hold." The task statement comes FIRST, the hold cue LAST — never lead with "please hold." E.g. "Pulling your Linear tickets from the last week — please hold." In character it bends to the personality (Ramsay: "Right, checking those tickets now — hold on."; Alfred: "Fetching that for you, sir — one moment, please.").
-- CRITICAL: say that line AND call `delegate` in the SAME turn. Never announce a hold without actually delegating — otherwise they wait on silence.
-- ONE delegate at a time. After you delegate, STAY QUIET and wait for the result — do not call delegate again, and don't keep talking, until it comes back.
+- Pass a clear, self-contained `intent` that carries EVERY detail the user gave - names, dates, times, the actual message content, which account/tool. Don't make the worker guess; don't drop specifics.
+- When you delegate real work, say ONE short line that concisely states WHAT you're about to do, and END that line with "please hold." The task statement comes FIRST, the hold cue LAST - never lead with "please hold." E.g. "Pulling your Linear tickets from the last week - please hold." In character it bends to the personality (Ramsay: "Right, checking those tickets now - hold on."; Alfred: "Fetching that for you, sir - one moment, please.").
+- CRITICAL: say that line AND call `delegate` in the SAME turn. Never announce a hold without actually delegating - otherwise they wait on silence.
+- ONE delegate at a time. After you delegate, STAY QUIET and wait for the result - do not call delegate again, and don't keep talking, until it comes back.
 - When the result comes back, give it in one or two spoken sentences, fully in character.
 
-IRON RULE — never say something was done, sent, scheduled, found, replied, or changed unless a `delegate` call actually came back saying so. If you didn't delegate, nothing happened — do not pretend it did. If a delegate result contains a `[SYSTEM: ...]` note, that is the ground truth about what really happened — obey it exactly, over your own assumptions. For anything that sends or is hard to undo, you may read back what's about to happen and get a quick "yes" first — but the instant they say yes, delegate it so it truly executes."""
+IRON RULE - never say something was done, sent, scheduled, found, replied, or changed unless a `delegate` call actually came back saying so. If you didn't delegate, nothing happened - do not pretend it did. If a delegate result contains a `[SYSTEM: ...]` note, that is the ground truth about what really happened - obey it exactly, over your own assumptions. For anything that sends or is hard to undo, you may read back what's about to happen and get a quick "yes" first - but the instant they say yes, delegate it so it truly executes."""
 
 
 def build_instructions(config: dict) -> str:
@@ -97,16 +97,16 @@ DEFAULT_VOICE = "marin"
 
 
 def build_realtime_model(voice: str) -> openai.realtime.RealtimeModel:
-    """Agent A's model — OpenAI GPT-4o Realtime. Handles speech-to-speech
+    """Agent A's model - OpenAI GPT-4o Realtime. Handles speech-to-speech
     natively (STT + LLM + TTS in one hop), so the agent session doesn't need
     separate STT/TTS plugins."""
     if not os.environ.get("OPENAI_API_KEY"):
         raise RuntimeError(
-            "OPENAI_API_KEY is not set on the worker — Agent A has no model key."
+            "OPENAI_API_KEY is not set on the worker - Agent A has no model key."
         )
     resolved_voice = voice if voice in OPENAI_VOICES else DEFAULT_VOICE
     # gpt-realtime is the GA speech-to-speech model. The -preview 4o variants
-    # are gone from this account's model list — using one fails at session
+    # are gone from this account's model list - using one fails at session
     # start, which presents as the agent joining the room but never speaking.
     return openai.realtime.RealtimeModel(
         model="gpt-realtime",
@@ -121,7 +121,7 @@ class ClawAgent(Agent):
         super().__init__(instructions=build_instructions(config))
         self._user_id = config.get("userId", "")
         self._conversation_id = config.get("conversationId", "")
-        # The live room, handed in by the entrypoint — used to publish cockpit
+        # The live room, handed in by the entrypoint - used to publish cockpit
         # events. Storing it avoids reaching into ctx.session._room (private, and
         # not guaranteed bound when delegate() streams).
         self._room = room
@@ -130,7 +130,7 @@ class ClawAgent(Agent):
     async def delegate(self, ctx: RunContext, intent: str) -> str:
         """Delegate real work to the worker agent. Use for anything involving the
         user's email, calendar, Slack, CRM, files, web, or sending/changing
-        anything — INCLUDING the user's confirmations, answers, and edits that
+        anything - INCLUDING the user's confirmations, answers, and edits that
         continue a task already in motion ("yes, send it" / "make it 3pm"). The
         worker remembers the whole call, so pass a clear, self-contained `intent`
         with every detail (names, dates, message content)."""
@@ -164,10 +164,10 @@ class ClawAgent(Agent):
                     if resp.status_code != 200:
                         logger.error("voice-turn returned %s", resp.status_code)
                         if resp.status_code == 401:
-                            return "My link to the worker isn't set up right — tell Thomas to check the secrets."
+                            return "My link to the worker isn't set up right - tell Thomas to check the secrets."
                         if resp.status_code == 404:
-                            return "I lost track of this conversation — let's start fresh?"
-                        return "I couldn't reach the worker just now — try again?"
+                            return "I lost track of this conversation - let's start fresh?"
+                        return "I couldn't reach the worker just now - try again?"
                     async for line in resp.aiter_lines():
                         if not line.startswith("data:"):
                             continue
@@ -184,7 +184,7 @@ class ClawAgent(Agent):
                             result_status = ev.get("status", "no_action")
                             result_tools = ev.get("tools", []) or []
                         elif kind == "error":
-                            return f"That didn't work — {ev.get('message', 'unknown error')}."
+                            return f"That didn't work - {ev.get('message', 'unknown error')}."
         except asyncio.CancelledError:
             # The call ended or the user barged in mid-task. Re-raise so the
             # session shuts down promptly instead of this in-flight request
@@ -192,7 +192,7 @@ class ClawAgent(Agent):
             # (the `aclose timed out` -> `process killed` chain in the logs).
             logger.info("delegate cancelled (call ended or interrupted)")
             raise
-        except Exception as e:  # noqa: BLE001 — surface, don't crash the call
+        except Exception as e:  # noqa: BLE001 - surface, don't crash the call
             logger.exception("delegate failed")
             return f"Something went sideways: {e}"
         # The worker's deterministic execution receipt (status computed from B's
@@ -206,18 +206,18 @@ class ClawAgent(Agent):
             len(result_text),
         )
         if result_status == "failed":
-            # Tools were attempted but only errored — the task did NOT complete.
+            # Tools were attempted but only errored - the task did NOT complete.
             return (
                 "[SYSTEM: The worker hit tool errors and did NOT complete the "
-                "task. Tell the user plainly it didn't go through — do not claim "
+                "task. Tell the user plainly it didn't go through - do not claim "
                 "it's done.]\n\n" + (result_text or "")
             )
         if result_status == "no_action":
-            # B ran no tools — it only looked something up or drafted. Block any
+            # B ran no tools - it only looked something up or drafted. Block any
             # "it's sent/done" claim; this is the anti-fabrication guardrail.
             base = result_text or "I haven't actually done that yet."
             return (
-                base + "\n\n[SYSTEM: The worker took NO action this turn — it "
+                base + "\n\n[SYSTEM: The worker took NO action this turn - it "
                 "only gathered info or drafted a response. Do NOT tell the user "
                 "anything was sent, scheduled, saved, or changed. If an action "
                 "still needs to happen, delegate it explicitly.]"
@@ -225,13 +225,13 @@ class ClawAgent(Agent):
         # executed: at least one tool returned successfully, so result_text
         # reflects real work that happened.
         return result_text or (
-            "The worker ran its tools but didn't summarize — tell the user it's "
+            "The worker ran its tools but didn't summarize - tell the user it's "
             "handled and offer to confirm the details."
         )
 
     async def _publish_cockpit(self, event: dict) -> None:
         """Forward an Agent B tool event to the web cockpit via the data channel.
-        publish_data is a coroutine — it MUST be awaited or nothing is sent."""
+        publish_data is a coroutine - it MUST be awaited or nothing is sent."""
         room = self._room
         if room is None:
             return
@@ -240,7 +240,7 @@ class ClawAgent(Agent):
             await room.local_participant.publish_data(
                 payload, reliable=True, topic="cockpit"
             )
-        except Exception:  # noqa: BLE001 — cockpit is best-effort
+        except Exception:  # noqa: BLE001 - cockpit is best-effort
             logger.warning("cockpit publish skipped", exc_info=True)
 
 
@@ -262,11 +262,11 @@ async def entrypoint(ctx: JobContext):
     logger.info("voice session for user=%s", user_id)
     if not user_id or not config.get("conversationId"):
         logger.error(
-            "session config missing userId/conversationId — delegation will fail"
+            "session config missing userId/conversationId - delegation will fail"
         )
     if not WORKER_SECRET:
         logger.error(
-            "VOICE_WORKER_SHARED_SECRET not set — delegate calls will be rejected"
+            "VOICE_WORKER_SHARED_SECRET not set - delegate calls will be rejected"
         )
 
     voice_id = config.get("voiceId") or DEFAULT_VOICE
@@ -291,7 +291,7 @@ async def entrypoint(ctx: JobContext):
     def _log_error(ev) -> None:
         logger.error("session error: %s", getattr(ev, "error", ev))
 
-    # NOTE: server-side hold music (BackgroundAudioPlayer) was removed — it
+    # NOTE: server-side hold music (BackgroundAudioPlayer) was removed - it
     # publishes a SECOND audio track, which mobile browsers won't reliably play
     # and which destabilized the mic after a couple of turns. Hold music will
     # return client-side (a local <audio> loop), which plays on mobile and never
@@ -301,18 +301,18 @@ async def entrypoint(ctx: JobContext):
     await session.start(agent=ClawAgent(config, ctx.room), room=ctx.room)
 
     # Explicit dispatch can place the agent in the room before the user finishes
-    # connecting — wait for them so the greeting isn't spoken into an empty room.
+    # connecting - wait for them so the greeting isn't spoken into an empty room.
     # Bounded: if the user never joins (dispatch succeeded but their browser
     # failed to connect), end the session instead of sitting idle indefinitely.
     try:
         await asyncio.wait_for(ctx.wait_for_participant(), timeout=60.0)
     except asyncio.TimeoutError:
-        logger.warning("no participant joined within 60s — ending session")
+        logger.warning("no participant joined within 60s - ending session")
         return
-    except Exception:  # noqa: BLE001 — API unavailable; greet immediately
+    except Exception:  # noqa: BLE001 - API unavailable; greet immediately
         logger.info("wait_for_participant unavailable", exc_info=True)
 
-    # Greet via generate_reply — say() needs a TTS plugin, which a RealtimeModel
+    # Greet via generate_reply - say() needs a TTS plugin, which a RealtimeModel
     # session doesn't have (it raises RuntimeError and the call starts silent).
     # GPT Realtime's first-token latency is low enough that the generated
     # greeting still lands fast, and it comes out in the active personality's
@@ -324,7 +324,7 @@ async def entrypoint(ctx: JobContext):
                 "they need. Nothing else."
             )
         )
-    except Exception:  # noqa: BLE001 — a greeting hiccup shouldn't kill the session
+    except Exception:  # noqa: BLE001 - a greeting hiccup shouldn't kill the session
         logger.warning("greeting failed", exc_info=True)
 
 

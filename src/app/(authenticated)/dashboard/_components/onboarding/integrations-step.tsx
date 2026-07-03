@@ -30,7 +30,7 @@ export function IntegrationsStep({
 
   const { data, isLoading, error, refetch } =
     trpc.trustclaw.getIntegrationAuthLinks.useQuery(undefined, {
-      // Poll to catch new connections — but not when the user has no key yet
+      // Poll to catch new connections - but not when the user has no key yet
       // (nothing to connect until they add one in Settings).
       refetchInterval: (query) =>
         query.state.data?.keyMissing ? false : 5000,
@@ -92,14 +92,14 @@ export function IntegrationsStep({
     return (
       <StepLayout
         title="Connect my tools!"
-        subtitle="Gmail, Slack, GitHub & 1000+ more — once your key is set."
+        subtitle="Gmail, Slack, GitHub & 1000+ more - once your key is set."
         onNext={onNext}
         onBack={onBack}
       >
         <motion.div variants={itemVariants} className="space-y-2 text-center">
           <p className="text-muted-foreground text-sm">
             Add a Composio API key in Settings after setup and your tools light
-            up right here. No key needed to finish — let&apos;s keep going.
+            up right here. No key needed to finish - let&apos;s keep going.
           </p>
         </motion.div>
       </StepLayout>

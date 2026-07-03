@@ -10,10 +10,10 @@ const STORAGE_KEY = "trustclaw-voice-enabled";
 // a gesture) is allowed by the browser's autoplay policy.
 const SILENT_WAV =
   "data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQAAAAA=";
-// The /api/voice/tts route caps text at 5000 chars — trim with margin.
+// The /api/voice/tts route caps text at 5000 chars - trim with margin.
 const MAX_TTS_CHARS = 4800;
 
-// Short spoken fallback used when the brief route is unreachable — never read
+// Short spoken fallback used when the brief route is unreachable - never read
 // the whole on-screen reply aloud. Strips light markdown, ~first sentence.
 function shortSpoken(text: string): string {
   const t = text
@@ -25,7 +25,7 @@ function shortSpoken(text: string): string {
   return sentence.length > 180 ? `${sentence.slice(0, 180).trim()}…` : sentence;
 }
 
-// POST with a small retry on 5xx / network errors — the voice routes are
+// POST with a small retry on 5xx / network errors - the voice routes are
 // serverless and can cold-start 503 like the rest of the API. Null if all fail.
 async function postRetry(url: string, body: string): Promise<Response | null> {
   for (let attempt = 0; attempt < 3; attempt++) {
@@ -37,7 +37,7 @@ async function postRetry(url: string, body: string): Promise<Response | null> {
       });
       if (res.ok || res.status < 500) return res;
     } catch {
-      // network error — fall through to retry
+      // network error - fall through to retry
     }
     await new Promise((resolve) => setTimeout(resolve, 500 * (attempt + 1)));
   }
@@ -101,12 +101,12 @@ export function useVoicePlayback() {
   }, [revoke]);
 
   // Prime the <audio> element inside a user gesture so a later (non-gesture)
-  // reply is allowed to autoplay. Called on every send — handles the case where
+  // reply is allowed to autoplay. Called on every send - handles the case where
   // voice is persisted-on across reloads with no fresh toggle gesture.
   const unlock = useCallback(() => {
     if (!enabledRef.current) return;
     const audio = ensureAudio();
-    if (!audio.paused) return; // a real reply is playing — don't interrupt it
+    if (!audio.paused) return; // a real reply is playing - don't interrupt it
     try {
       audio.src = SILENT_WAV;
       void audio.play().catch(() => undefined);
@@ -144,7 +144,7 @@ export function useVoicePlayback() {
       revoke();
 
       try {
-        // 1) Curate the reply into a short spoken brief (the EA layer) — voice
+        // 1) Curate the reply into a short spoken brief (the EA layer) - voice
         // speaks this, not the full on-screen digest. Default to a short spoken
         // version so an unreachable brief route never reads the whole reply.
         let toSpeak = shortSpoken(clean);
@@ -168,7 +168,7 @@ export function useVoicePlayback() {
         if (genRef.current !== myGen) return; // superseded / cancelled
         if (!res) {
           setIsPreparing(false);
-          showErrorToast("Voice service is busy — try again in a moment.");
+          showErrorToast("Voice service is busy - try again in a moment.");
           return;
         }
         if (!res.ok) {

@@ -32,7 +32,7 @@ export function PersonalityAvatar({
   // Render 10% larger than requested, platform-wide.
   const px = size * 1.1;
 
-  // SVGs are static, build-time constants authored by us — safe to inline.
+  // SVGs are static, build-time constants authored by us - safe to inline.
   return (
     <span
       className={className}

@@ -1,11 +1,11 @@
-// Shared username rules — imported by both the Better Auth server config
+// Shared username rules - imported by both the Better Auth server config
 // (src/server/auth.ts) and the register form (login-page.tsx) so client-side
 // guidance can't drift from what the server actually enforces.
 
 export const USERNAME_MIN_LENGTH = 3;
 export const USERNAME_MAX_LENGTH = 30;
 
-// Letters, digits, and . _ - — no spaces, @, or other symbols. Hyphens are
+// Letters, digits, and . _ - - no spaces, @, or other symbols. Hyphens are
 // allowed (common in handles, e.g. "thomas-5672").
 export const USERNAME_PATTERN = /^[a-zA-Z0-9._-]+$/;
 

@@ -32,7 +32,7 @@ export function renderSkillsSection(skills: SkillForPrompt[]): string {
 
   const header =
     "## Skills\n\n" +
-    "You can perform these named skills. Before executing ANY skill, make sure you have every required input — " +
+    "You can perform these named skills. Before executing ANY skill, make sure you have every required input - " +
     "if one is missing, ASK the human for it and wait for their answer before acting. Never invent or assume a required input.";
 
   const body = skills

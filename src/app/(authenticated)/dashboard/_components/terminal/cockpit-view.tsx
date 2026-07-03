@@ -33,7 +33,7 @@ export function CockpitView({ entries, status }: CockpitViewProps) {
       <div className="flex h-full items-center justify-center">
         <div className="text-muted-foreground/50 text-center text-xs">
           <Sparkles className="mx-auto mb-2 size-7" />
-          <p>{working ? "Thinking..." : "No actions yet — just talking."}</p>
+          <p>{working ? "Thinking..." : "No actions yet - just talking."}</p>
         </div>
       </div>
     );

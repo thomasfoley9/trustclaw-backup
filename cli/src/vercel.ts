@@ -31,7 +31,7 @@ export function explainVercelError(
       return `${context} failed: ${status} ${e.code ?? ""} ${e.message}`;
     }
   } catch {
-    // body wasn't JSON — fall through to generic
+    // body wasn't JSON - fall through to generic
   }
   return `${context} failed: ${status} ${body}`;
 }
