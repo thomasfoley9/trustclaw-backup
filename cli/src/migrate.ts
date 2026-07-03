@@ -42,7 +42,7 @@ interface RunMigrationArgs {
 
 export async function runMigration(args: RunMigrationArgs): Promise<void> {
   const s = spinner();
-  s.start("Running database migration (prisma db push)");
+  s.start("Running database migration (prisma migrate deploy)");
 
   try {
     const repoRoot = args.repoRoot ?? (await findRepoRoot());
@@ -60,7 +60,13 @@ export async function runMigration(args: RunMigrationArgs): Promise<void> {
       cwd: repoRoot,
       env: { ...process.env, DATABASE_URL: args.databaseUrl },
     });
-    await exec("npx -y prisma@^7.3.0 db push --accept-data-loss", {
+    // migrate deploy, NOT db push: the app's vercel-build runs
+    // `prisma migrate deploy`, which aborts with P3005 ("schema is not
+    // empty", baseline required) on a db-push'd database that has no
+    // _prisma_migrations table — failing the very first production build of
+    // every fresh deploy. migrate deploy here applies the same schema AND
+    // records migration history, so the build's run becomes a no-op.
+    await exec("npx -y prisma@^7.3.0 migrate deploy", {
       cwd: repoRoot,
       env: { ...process.env, DATABASE_URL: args.databaseUrl },
     });

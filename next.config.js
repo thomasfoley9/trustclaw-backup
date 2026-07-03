@@ -67,6 +67,10 @@ const config = {
                     "script-src 'self' 'unsafe-inline'",
                     "style-src 'self' 'unsafe-inline'",
                     "img-src 'self' data: https:",
+                    // blob: is NOT matched by 'self' — without media-src, the
+                    // <audio> object-URLs used for TTS read-aloud are
+                    // CSP-blocked in prod (silent playback, console violation).
+                    "media-src 'self' blob:",
                     "font-src 'self' data:",
                     // LiveKit Cloud: wss:// for the realtime signal socket and
                     // https:// for the region-settings fetch (voice calls). The

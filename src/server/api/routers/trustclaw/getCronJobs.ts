@@ -29,7 +29,9 @@ export const getCronJobs = protectedProcedure
         lockedAt: true,
         lastError: true,
       },
-      orderBy: { nextRunAt: "asc" },
+      // id tiebreak: nextRunAt is null for every disabled job, and cursor
+      // paging over a non-unique sort key can skip or duplicate rows.
+      orderBy: [{ nextRunAt: "asc" }, { id: "asc" }],
       take: input.limit + 1,
       ...(input.cursor ? { cursor: { id: input.cursor }, skip: 1 } : {}),
     });

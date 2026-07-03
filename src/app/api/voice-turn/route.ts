@@ -77,6 +77,7 @@ export async function POST(request: Request) {
   const stream = new ReadableStream<Uint8Array>({
     async start(controller) {
       const send = (obj: unknown) => controller.enqueue(sse(obj));
+      let closeMcp: () => Promise<void> = () => Promise.resolve();
       try {
         // Inside the stream so prep/setup failures (missing key, DB, Composio)
         // surface as a spoken "that didn't work" instead of an unformatted 500.
@@ -87,6 +88,7 @@ export async function POST(request: Request) {
           conversationId,
         });
         const { agent, messages } = prep.result;
+        closeMcp = prep.result.closeMcp;
         // Pass the request signal so a client disconnect (barge-in "cancel")
         // aborts B's tool loop instead of burning tokens to completion.
         const result = await agent.stream({
@@ -177,6 +179,9 @@ export async function POST(request: Request) {
           message: err instanceof Error ? err.message : "Agent error",
         });
       } finally {
+        // Barge-in aborts and zero-step errors never reach onFinish's
+        // mcp.close — idempotent, so double-close is fine.
+        await closeMcp().catch(() => undefined);
         controller.close();
       }
     },

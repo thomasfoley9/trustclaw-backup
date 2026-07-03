@@ -1,4 +1,5 @@
 import { TRPCError } from "@trpc/server";
+import { Prisma } from "~/generated/prisma/client";
 import { protectedProcedure } from "~/server/api/trpc";
 import { db } from "~/server/clients/db";
 import { requiredInputsSchema } from "./skills";
@@ -26,25 +27,41 @@ export const createSkill = protectedProcedure
       });
     }
 
-    const created = await db.skill.create({
-      data: {
-        instanceId: instance.id,
-        name: input.name,
-        whenToUse: input.whenToUse,
-        instructions: input.instructions,
-        requiredInputs: input.requiredInputs,
-        isPreset: false,
-      },
-      select: {
-        id: true,
-        name: true,
-        whenToUse: true,
-        instructions: true,
-        requiredInputs: true,
-        enabled: true,
-        isPreset: true,
-      },
-    });
+    let created;
+    try {
+      created = await db.skill.create({
+        data: {
+          instanceId: instance.id,
+          name: input.name,
+          whenToUse: input.whenToUse,
+          instructions: input.instructions,
+          requiredInputs: input.requiredInputs,
+          isPreset: false,
+        },
+        select: {
+          id: true,
+          name: true,
+          whenToUse: true,
+          instructions: true,
+          requiredInputs: true,
+          enabled: true,
+          isPreset: true,
+        },
+      });
+    } catch (err) {
+      // Check-then-create race: a concurrent create with the same name lands
+      // here as a unique violation — surface it as the same friendly CONFLICT.
+      if (
+        err instanceof Prisma.PrismaClientKnownRequestError &&
+        err.code === "P2002"
+      ) {
+        throw new TRPCError({
+          code: "CONFLICT",
+          message: `You already have a skill named "${input.name}".`,
+        });
+      }
+      throw err;
+    }
     return {
       ...created,
       requiredInputs: requiredInputsSchema.catch([]).parse(created.requiredInputs),

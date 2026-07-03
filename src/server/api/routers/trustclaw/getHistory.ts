@@ -51,8 +51,11 @@ export const getHistory = protectedProcedure
 
     let nextCursor: string | undefined;
     if (messages.length > input.limit) {
-      const lastItem = messages.pop()!;
-      nextCursor = lastItem.createdAt.toISOString();
+      // Cursor must come from the last RETURNED row, not the popped extra:
+      // the next page filters strictly `lt` the cursor, so anchoring on the
+      // popped row would skip it entirely (one message lost per page).
+      messages.pop();
+      nextCursor = messages[messages.length - 1]!.createdAt.toISOString();
     }
 
     return {

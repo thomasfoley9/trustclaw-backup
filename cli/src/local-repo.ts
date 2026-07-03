@@ -217,8 +217,10 @@ export async function confirmLocalPublish(
       initialValue: false,
     });
     if (isCancel(proceed) || !proceed) {
+      // Really cancel. Returning null here would fall through to fork mode
+      // and silently deploy the upstream repo right after saying "Cancelled."
       cancel("Cancelled.");
-      return null;
+      process.exit(0);
     }
   }
 
@@ -236,8 +238,9 @@ export async function confirmLocalPublish(
     initialValue: true,
   });
   if (isCancel(usePublish)) {
+    // Ctrl-C means abort — only an explicit "No" opts into fork mode (null).
     cancel("Cancelled.");
-    return null;
+    process.exit(0);
   }
   if (!usePublish) {
     return null;

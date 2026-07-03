@@ -10,7 +10,7 @@ export const deleteCustomModel = protectedProcedure
   .mutation(async ({ ctx, input }) => {
     const instance = await db.composioClawInstance.findUnique({
       where: { userId: ctx.session.user.id },
-      select: { id: true, anthropicModel: true },
+      select: { id: true, anthropicModel: true, agentAModel: true },
     });
     if (!instance) {
       throw new TRPCError({ code: "NOT_FOUND", message: "Instance not found" });
@@ -24,14 +24,21 @@ export const deleteCustomModel = protectedProcedure
       throw new TRPCError({ code: "NOT_FOUND", message: "Model not found" });
     }
 
-    // If the agent was pointed at this model, fall back to the default preset
-    // so the next run doesn't resolve a now-missing id.
-    await db.$transaction([
+    // If the agent was pointed at this model — as the main (B) model or the
+    // voice-front (A) model — fall back so the next run doesn't resolve a
+    // now-missing id and fail with a misleading "add your API key" error.
+    const instanceData = {
       ...(instance.anthropicModel === model.modelId
+        ? { anthropicModel: DEFAULT_MODEL }
+        : {}),
+      ...(instance.agentAModel === model.modelId ? { agentAModel: null } : {}),
+    };
+    await db.$transaction([
+      ...(Object.keys(instanceData).length > 0
         ? [
             db.composioClawInstance.update({
               where: { id: instance.id },
-              data: { anthropicModel: DEFAULT_MODEL },
+              data: instanceData,
             }),
           ]
         : []),
