@@ -12,14 +12,13 @@ export function LandingNav() {
         <TrustClawBrand size="md" />
         <div className="flex items-center gap-2">
           <ThemeToggle />
-          <Link href="/login">
-            <Button
-              size="sm"
-              className="bg-accent-gradient rounded-xl border-0 text-white shadow-md transition-transform hover:scale-105"
-            >
-              Get started
-            </Button>
-          </Link>
+          <Button
+            asChild
+            size="sm"
+            className="bg-accent-gradient rounded-xl border-0 text-white shadow-md transition-transform hover:scale-105"
+          >
+            <Link href="/login?tab=register">Get started</Link>
+          </Button>
         </div>
       </div>
     </header>

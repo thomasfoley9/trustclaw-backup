@@ -2,7 +2,7 @@ import "~/styles/globals.css";
 
 import { type Metadata, type Viewport } from "next";
 import { Bricolage_Grotesque, IBM_Plex_Mono, Inter } from "next/font/google";
-import { Toaster } from "sonner";
+import { Toaster } from "~/components/ui/sonner";
 import { TRPCReactProvider } from "~/clients/trpc";
 import { ThemeProvider } from "~/components/core/theme-provider";
 

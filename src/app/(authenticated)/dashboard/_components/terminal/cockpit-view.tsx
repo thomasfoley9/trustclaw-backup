@@ -52,7 +52,7 @@ export function CockpitView({ entries, status }: CockpitViewProps) {
             ) : entry.status === "error" ? (
               <X className="text-destructive size-4" />
             ) : (
-              <Check className="size-4 text-emerald-500 dark:text-emerald-400" />
+              <Check className="text-chart-2 size-4" />
             )}
           </span>
           <span

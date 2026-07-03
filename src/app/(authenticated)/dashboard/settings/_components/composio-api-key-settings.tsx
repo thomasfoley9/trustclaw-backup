@@ -17,6 +17,7 @@ import {
   showSuccessToast,
   trpcToastOnError,
 } from "~/components/core/toast-notifications";
+import { AlertDialog } from "~/components/core/confirm-dialog";
 
 export function ComposioApiKeySettings() {
   const utils = trpc.useUtils();
@@ -73,7 +74,7 @@ export function ComposioApiKeySettings() {
         {hasKey && !editing && (
           <div className="flex flex-col gap-2 rounded-md border bg-muted/30 px-3 py-2 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex min-w-0 items-center gap-2 text-sm">
-              <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600 dark:text-emerald-400" />
+              <CheckCircle2 className="text-chart-2 h-4 w-4 shrink-0" />
               <span className="shrink-0 font-medium">Connected</span>
               <span className="text-muted-foreground truncate font-mono">
                 {data?.maskedKey}
@@ -88,18 +89,24 @@ export function ComposioApiKeySettings() {
               >
                 Replace
               </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => void clearKey.mutateAsync()}
-                disabled={isBusy}
-              >
-                {clearKey.isPending ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  "Remove"
-                )}
-              </Button>
+              <AlertDialog
+                title="Remove your Composio key?"
+                description="Every tool and integration stops working until you add a key again. Connected accounts are kept."
+                confirmLabel="Remove key"
+                onConfirm={async () => {
+                  await clearKey.mutateAsync();
+                }}
+                isPending={clearKey.isPending}
+                trigger={
+                  <Button variant="ghost" size="sm" disabled={isBusy}>
+                    {clearKey.isPending ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      "Remove"
+                    )}
+                  </Button>
+                }
+              />
             </div>
           </div>
         )}

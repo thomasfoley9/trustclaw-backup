@@ -14,10 +14,12 @@ import {
 } from "lucide-react";
 import { trpc } from "~/clients/trpc";
 import { Button } from "~/components/ui/button";
+import { Skeleton } from "~/components/ui/skeleton";
 import { Switch } from "~/components/ui/switch";
 import { cn } from "~/lib/utils";
 import { formatCronExpression, formatCronDate } from "~/lib/cron-format";
 import { trpcToastOnError } from "~/components/core/toast-notifications";
+import { AlertDialog } from "~/components/core/confirm-dialog";
 import { SaveToKnowledgeDialog } from "./save-to-knowledge-dialog";
 
 // Mirror of the server's run-staleness window: runs older than this are
@@ -49,9 +51,8 @@ export function ConversationSidebarContent({
   const utils = trpc.useUtils();
   const [view, setView] = useState<View>("chats");
 
-  const { data, error, refetch } = trpc.trustclaw.getConversations.useQuery(
-    undefined,
-    {
+  const { data, error, isLoading, refetch } =
+    trpc.trustclaw.getConversations.useQuery(undefined, {
       // Poll while any session has a background run so spinners and
       // completions show up without a manual refresh.
       refetchInterval: (query) =>
@@ -60,8 +61,7 @@ export function ConversationSidebarContent({
         )
           ? 4000
           : false,
-    },
-  );
+    });
 
   // When a background run finishes, pull its result into the chat history.
   const prevRunningRef = useRef<Set<string>>(new Set());
@@ -190,6 +190,14 @@ export function ConversationSidebarContent({
                   Try again
                 </button>
               </div>
+            ) : isLoading ? (
+              <ul className="space-y-1 px-1 py-1">
+                {[0, 1, 2, 3].map((i) => (
+                  <li key={i} className="px-1.5 py-2">
+                    <Skeleton className="h-4 w-full" />
+                  </li>
+                ))}
+              </ul>
             ) : conversations.length === 0 ? (
               <p className="text-muted-foreground px-2 py-4 text-xs">
                 No chats yet.
@@ -279,7 +287,7 @@ export function ConversationSidebarContent({
                         type="button"
                         disabled={busy}
                         onClick={() => setSavingConvId(c.id)}
-                        className="text-muted-foreground hover:text-foreground shrink-0 px-1.5 py-2 opacity-0 transition-opacity group-hover:opacity-100"
+                        className="text-muted-foreground hover:text-foreground shrink-0 px-1.5 py-2 opacity-100 transition-opacity focus-visible:opacity-100 md:opacity-0 md:group-hover:opacity-100"
                         aria-label="Save chat to knowledge"
                       >
                         <BookmarkPlus className="h-3.5 w-3.5" />
@@ -288,22 +296,30 @@ export function ConversationSidebarContent({
                         type="button"
                         disabled={busy}
                         onClick={() => beginRename(c.id, c.title)}
-                        className="text-muted-foreground hover:text-foreground shrink-0 px-1.5 py-2 opacity-0 transition-opacity group-hover:opacity-100"
+                        className="text-muted-foreground hover:text-foreground shrink-0 px-1.5 py-2 opacity-100 transition-opacity focus-visible:opacity-100 md:opacity-0 md:group-hover:opacity-100"
                         aria-label="Rename chat"
                       >
                         <Pencil className="h-3.5 w-3.5" />
                       </button>
-                      <button
-                        type="button"
-                        disabled={busy}
-                        onClick={() =>
-                          void deleteConversation.mutateAsync({ id: c.id })
+                      <AlertDialog
+                        title="Delete this chat?"
+                        description="This permanently removes the conversation and its messages. This can't be undone."
+                        confirmLabel="Delete"
+                        onConfirm={async () => {
+                          await deleteConversation.mutateAsync({ id: c.id });
+                        }}
+                        isPending={deleteConversation.isPending}
+                        trigger={
+                          <button
+                            type="button"
+                            disabled={busy}
+                            className="text-muted-foreground hover:text-destructive shrink-0 px-1.5 py-2 opacity-100 transition-opacity focus-visible:opacity-100 md:opacity-0 md:group-hover:opacity-100"
+                            aria-label="Delete chat"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </button>
                         }
-                        className="text-muted-foreground hover:text-destructive shrink-0 px-1.5 py-2 opacity-0 transition-opacity group-hover:opacity-100"
-                        aria-label="Delete chat"
-                      >
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </button>
+                      />
                     </li>
                   );
                 })}

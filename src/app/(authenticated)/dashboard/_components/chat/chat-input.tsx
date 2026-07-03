@@ -354,7 +354,7 @@ export function ChatInput({
               variant="ghost"
               size="icon"
               className={cn(
-                "size-10 shrink-0 rounded-2xl",
+                "hidden size-10 shrink-0 rounded-2xl sm:inline-flex",
                 isListening && "bg-primary/15 text-primary",
               )}
               onClick={toggleDictation}
@@ -373,7 +373,7 @@ export function ChatInput({
             variant="ghost"
             size="icon"
             className={cn(
-              "size-10 shrink-0 rounded-2xl",
+              "hidden size-10 shrink-0 rounded-2xl sm:inline-flex",
               voiceEnabled && "bg-primary/15 text-primary",
             )}
             onClick={onToggleVoice}
@@ -391,7 +391,11 @@ export function ChatInput({
             )}
           </Button>
 
-          {conversationSupported && <VoicePicker disabled={isStreaming} />}
+          {conversationSupported && (
+            <span className="hidden sm:inline-flex">
+              <VoicePicker disabled={isStreaming} />
+            </span>
+          )}
 
           {conversationSupported && (
             <Button

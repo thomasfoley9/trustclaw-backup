@@ -22,6 +22,9 @@ interface LoginPageProps {
   googleEnabled?: boolean;
   // When false (SIGNUP_RESTRICTED), the invite-code field is shown. Open by default.
   signupOpen?: boolean;
+  // Which tab opens first. The landing "Get started" CTAs deep-link with
+  // ?tab=register so a new visitor lands on the sign-up form, not login.
+  defaultTab?: "login" | "register";
 }
 
 function GoogleIcon() {
@@ -39,6 +42,7 @@ export function LoginPage({
   firstTime = false,
   googleEnabled = false,
   signupOpen = true,
+  defaultTab,
 }: LoginPageProps) {
   const router = useRouter();
   const [pending, setPending] = useState(false);
@@ -77,10 +81,15 @@ export function LoginPage({
       });
       if (result.error) {
         showErrorToast(result.error.message ?? "Failed to sign in");
+        setPending(false);
         return;
       }
+      // Keep the button in its pending state through the redirect - resetting
+      // it here flips it back to "Sign in" while the dashboard is still
+      // loading, which reads as a failed submit and invites a double-click.
       router.push("/dashboard");
-    } finally {
+    } catch {
+      showErrorToast("Couldn't reach the server - check your connection and try again.");
       setPending(false);
     }
   };
@@ -115,10 +124,13 @@ export function LoginPage({
       );
       if (result.error) {
         showErrorToast(result.error.message ?? "Failed to create account");
+        setPending(false);
         return;
       }
+      // Stay pending through the redirect (see handleLogin).
       router.push("/dashboard");
-    } finally {
+    } catch {
+      showErrorToast("Couldn't reach the server - check your connection and try again.");
       setPending(false);
     }
   };
@@ -154,7 +166,7 @@ export function LoginPage({
               </div>
             </>
           )}
-          <Tabs defaultValue={firstTime ? "register" : "login"}>
+          <Tabs defaultValue={defaultTab ?? (firstTime ? "register" : "login")}>
             <TabsList className="grid w-full grid-cols-2">
               <TabsTrigger value="login">Login</TabsTrigger>
               <TabsTrigger value="register">Register</TabsTrigger>

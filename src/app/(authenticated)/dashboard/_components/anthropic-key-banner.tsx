@@ -10,8 +10,12 @@ export function AnthropicKeyBanner() {
   const { data } = trpc.trustclaw.getAnthropicKeyStatus.useQuery(undefined, {
     refetchOnWindowFocus: "always",
   });
+  const { data: status } = trpc.trustclaw.getStatus.useQuery();
 
   if (pathname?.startsWith("/dashboard/settings")) return null;
+  // No instance yet = the user is still in the onboarding wizard; don't cover
+  // it with a "chat disabled" banner whose CTA navigates them out of setup.
+  if (!status?.hasInstance) return null;
   if (!data || data.hasKey) return null;
 
   return (

@@ -12,6 +12,13 @@ import type { UIMessage } from "@ai-sdk/react";
 import { Loader2, ArrowDown } from "lucide-react";
 import { ErrorBoundary } from "~/components/core/error-boundary";
 import { Button } from "~/components/ui/button";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+} from "~/components/ui/sheet";
+import { useIsMobile } from "~/lib/use-is-mobile";
 import { useTerminalStore } from "../terminal-store";
 import { useChatHook, type ChatFilePart } from "../use-chat-hook";
 import { UserMessage } from "./user-message";
@@ -333,12 +340,19 @@ export function ChatView({
     stopConversationLoop();
   }, [stopSpeaking, stopConversationLoop, clearVoiceOverlay]);
 
+  // Mobile has no room for the side pane, so tool chips open a bottom Sheet
+  // instead. Its own state (defaults closed) so the desktop pane's default-open
+  // never auto-pops the sheet on a phone.
+  const isMobile = useIsMobile();
+  const [mobileTerminalOpen, setMobileTerminalOpen] = useState(false);
+
   // Stable callback so memoized AssistantMessage rows don't re-render on every
-  // streaming/voice tick just because this arrow was recreated.
-  const handleOpenTerminal = useCallback(
-    () => setTerminalOpen(true),
-    [setTerminalOpen],
-  );
+  // streaming/voice tick just because this arrow was recreated. Opens the
+  // desktop pane and, on mobile, the Sheet.
+  const handleOpenTerminal = useCallback(() => {
+    setTerminalOpen(true);
+    setMobileTerminalOpen(true);
+  }, [setTerminalOpen]);
 
   // Clear the overlay when a call ends - including a failed/aborted setup - so a
   // stale transcript / action feed doesn't linger into the next session.
@@ -473,7 +487,7 @@ export function ChatView({
       </div>
 
       {terminalOpen && (
-        <div className="border-border hidden w-[400px] shrink-0 border-l md:block lg:w-[500px]">
+        <div className="border-border hidden w-[400px] max-w-[40vw] shrink-0 border-l md:block lg:w-[500px]">
           <TerminalPane
             messages={messages}
             status={status}
@@ -481,6 +495,22 @@ export function ChatView({
             liveEvents={voiceEvents}
           />
         </div>
+      )}
+
+      {isMobile && (
+        <Sheet open={mobileTerminalOpen} onOpenChange={setMobileTerminalOpen}>
+          <SheetContent side="bottom" className="h-[80vh] p-0">
+            <SheetHeader className="sr-only">
+              <SheetTitle>Activity</SheetTitle>
+            </SheetHeader>
+            <TerminalPane
+              messages={messages}
+              status={status}
+              onHide={() => setMobileTerminalOpen(false)}
+              liveEvents={voiceEvents}
+            />
+          </SheetContent>
+        </Sheet>
       )}
     </div>
   );

@@ -12,6 +12,14 @@ export function formatCronExpression(expression: string): string {
   const month = parts[3] ?? "*";
   const dayOfWeek = parts[4] ?? "*";
 
+  // Only plain-integer minute/hour fields can be phrased in English. Step,
+  // range, and list syntax ("*/5", "1-5", "0,30") would render as garbage
+  // like "Every hour at :*/5", so fall back to the raw expression for those.
+  const isPlain = (v: string) => /^\d+$/.test(v);
+  if (!isPlain(minute) || !(hour === "*" || isPlain(hour))) {
+    return expression;
+  }
+
   if (dayOfMonth === "*" && month === "*" && dayOfWeek === "*") {
     if (minute === "0" && hour === "*") return "Every hour";
     if (hour === "*") return `Every hour at :${minute.padStart(2, "0")}`;

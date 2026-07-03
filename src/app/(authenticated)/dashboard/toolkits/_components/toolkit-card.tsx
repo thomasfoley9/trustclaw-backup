@@ -47,7 +47,7 @@ export function ToolkitCard({ toolkit }: ToolkitCardProps) {
 
   return (
     <article
-      className="toolkit-card group relative cursor-pointer rounded-xl border-[2px] border-transparent outline outline-1 outline-border bg-card transition-[translate,scale] duration-100 ease-[cubic-bezier(.645,.045,.355,1)] active:translate-y-px active:scale-[0.99]"
+      className="toolkit-card group outline-border bg-card relative rounded-xl border-[2px] border-transparent outline outline-1"
       style={{ containerType: "size", aspectRatio: "1" }}
     >
       {/* Inner container with clip for glow containment */}
@@ -77,7 +77,7 @@ export function ToolkitCard({ toolkit }: ToolkitCardProps) {
           {/* Top-right: status badge or connect button */}
           <div className="absolute right-3 top-3 z-[1]">
             {isConnected ? (
-              <span className="rounded-full bg-green-500/15 px-2 py-0.5 text-xs font-medium text-green-600 dark:text-green-400">
+              <span className="bg-chart-2/15 text-chart-2 rounded-full px-2 py-0.5 text-xs font-medium">
                 {statusLabel}
               </span>
             ) : (

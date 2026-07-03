@@ -93,21 +93,24 @@ export function UserMessage({ message }: UserMessageProps) {
       {textContent && (
         <div className="relative max-w-[80%]">
           <div className="border-primary/20 bg-primary/12 text-foreground rounded-2xl rounded-br-md border px-3.5 py-2 text-sm">
-            <p className="whitespace-pre-wrap">{textContent}</p>
+            <p className="break-words whitespace-pre-wrap">{textContent}</p>
           </div>
         </div>
       )}
 
-      <button
-        onClick={handleCopy}
-        className="mt-1 mr-1 text-muted-foreground/50 transition-colors hover:text-muted-foreground"
-      >
-        {copied ? (
-          <Check className="size-3.5" />
-        ) : (
-          <Copy className="size-3.5" />
-        )}
-      </button>
+      {textContent && (
+        <button
+          onClick={handleCopy}
+          aria-label={copied ? "Copied" : "Copy message"}
+          className="text-muted-foreground/50 hover:text-muted-foreground -m-2 mt-1 mr-1 p-2 transition-colors"
+        >
+          {copied ? (
+            <Check className="size-3.5" />
+          ) : (
+            <Copy className="size-3.5" />
+          )}
+        </button>
+      )}
     </div>
   );
 }

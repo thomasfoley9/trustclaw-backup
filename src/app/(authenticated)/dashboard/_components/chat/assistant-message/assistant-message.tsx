@@ -86,7 +86,10 @@ export function AssistantMessage({
     if (status === "error") {
       return (
         <div className="text-destructive flex items-center gap-2 py-2 text-sm">
-          <span>Something went wrong</span>
+          <span>
+            Something went wrong. Your message wasn&apos;t lost - try sending it
+            again.
+          </span>
         </div>
       );
     }
@@ -128,7 +131,8 @@ export function AssistantMessage({
       {hasTextContent && (
         <button
           onClick={handleCopy}
-          className="text-muted-foreground/50 hover:text-muted-foreground transition-colors"
+          aria-label={copied ? "Copied" : "Copy reply"}
+          className="text-muted-foreground/50 hover:text-muted-foreground -m-2 p-2 transition-colors"
         >
           {copied ? (
             <Check className="size-3.5" />

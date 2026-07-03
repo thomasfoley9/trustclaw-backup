@@ -41,14 +41,13 @@ export function LandingPage() {
           </p>
 
           <div className="mt-9 flex flex-col items-center gap-3 sm:flex-row">
-            <Link href="/login">
-              <Button
-                size="lg"
-                className="bg-accent-gradient h-12 rounded-2xl border-0 px-7 text-base text-white shadow-lg transition-transform hover:scale-[1.03]"
-              >
-                Get started - it&apos;s free
-              </Button>
-            </Link>
+            <Button
+              asChild
+              size="lg"
+              className="bg-accent-gradient h-12 rounded-2xl border-0 px-7 text-base text-white shadow-lg transition-transform hover:scale-[1.03]"
+            >
+              <Link href="/login?tab=register">Get started - it&apos;s free</Link>
+            </Button>
             <Link
               href="/login"
               className="text-muted-foreground hover:text-foreground text-sm"

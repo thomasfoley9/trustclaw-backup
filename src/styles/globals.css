@@ -1,6 +1,7 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
+@plugin "@tailwindcss/typography";
 
 @custom-variant dark (&:is(.dark *));
 
@@ -265,16 +266,25 @@
 
 /* ── Design system utilities ─────────────────────────────────────────── */
 @layer components {
-  /* The signature violet→cyan accent, as text or as a fill. Use sparingly. */
+  /* The signature violet→cyan accent, as text or as a fill. Use sparingly.
+     Endpoints are theme-aware: the light theme needs darker stops or the
+     wordmark washes out against the near-white background. */
   .text-gradient {
+    background-image: linear-gradient(
+      120deg,
+      oklch(0.52 0.19 287),
+      oklch(0.55 0.13 220)
+    );
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+  .dark .text-gradient {
     background-image: linear-gradient(
       120deg,
       oklch(0.78 0.15 287),
       oklch(0.8 0.12 213)
     );
-    -webkit-background-clip: text;
-    background-clip: text;
-    color: transparent;
   }
   .bg-accent-gradient {
     background-image: linear-gradient(

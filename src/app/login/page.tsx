@@ -6,7 +6,13 @@ import { db } from "~/server/clients/db";
 import { env } from "~/env";
 import { ErrorDisplay } from "~/components/core/error-display";
 
-export default async function Page() {
+export default async function Page({
+  searchParams,
+}: {
+  searchParams: Promise<{ tab?: string }>;
+}) {
+  const { tab } = await searchParams;
+  const defaultTab = tab === "register" ? "register" : undefined;
   let session;
   try {
     session = await auth.api.getSession({ headers: await headers() });
@@ -40,6 +46,7 @@ export default async function Page() {
       firstTime={firstTime}
       googleEnabled={googleEnabled}
       signupOpen={signupOpen}
+      defaultTab={defaultTab}
     />
   );
 }

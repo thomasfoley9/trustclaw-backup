@@ -10,8 +10,14 @@ export function ComposioKeyBanner() {
   const { data } = trpc.trustclaw.getComposioKeyStatus.useQuery(undefined, {
     refetchOnWindowFocus: "always",
   });
+  const { data: status } = trpc.trustclaw.getStatus.useQuery();
 
   if (pathname?.startsWith("/dashboard/settings")) return null;
+  // The /dashboard route owns the full-page activation gate when the Composio
+  // key is missing; a second banner with the same ask above it is noise.
+  if (pathname === "/dashboard") return null;
+  // No instance yet = still onboarding; don't cover the wizard.
+  if (!status?.hasInstance) return null;
   if (!data || data.hasKey) return null;
 
   return (
