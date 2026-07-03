@@ -5,7 +5,6 @@ import { getComposioForInstance } from "~/server/clients/composio";
 import { loadMcpTools } from "~/server/clients/mcp";
 import { resolveAgentModel, isHouseModel } from "./resolve-model";
 import { buildSystemPrompt } from "./system-prompt";
-import { narrateWithAgentA, buildToolStepsDigest } from "./narrate";
 import {
   createCustomTools,
   searchMemoriesForContext,
@@ -84,9 +83,6 @@ interface PrepareAgentRunResult {
   messages: ReconstructedMessage[];
   // The session this run resolved to (pinned, dedicated, or active).
   conversationId: string;
-  // Resolves to Agent A's narration (the concise chat bubble) once B finishes.
-  // The route injects it into the live stream; onFinish also persists it.
-  narrationPromise: Promise<string>;
   // Tears down the run's MCP clients. onFinish closes them on a normal finish,
   // but aborted runs (Stop) and zero-step provider errors never reach onFinish
   // — callers MUST also invoke this from their own cleanup (it's idempotent).
@@ -466,14 +462,6 @@ export async function prepareAgentRun(
     },
   });
 
-  // Agent A narration: onFinish computes it once (and persists it); the route
-  // awaits this to inject A's concise reply into the live stream. Defaults to
-  // B's text on any failure so the chat is never empty.
-  let resolveNarration!: (text: string) => void;
-  const narrationPromise = new Promise<string>((resolve) => {
-    resolveNarration = resolve;
-  });
-
   const agent = new ToolLoopAgent({
     model,
     instructions: {
@@ -490,9 +478,6 @@ export async function prepareAgentRun(
     tools: allTools,
     stopWhen: stepCountIs(100),
     onFinish: async (result) => {
-      // B's full text — also the fallback narration if Agent A (or anything
-      // else in here) fails, so the waiting stream is never left to hang on the
-      // race timeout.
       let executorText = "";
       try {
         const { totalUsage, steps } = result;
@@ -503,11 +488,13 @@ export async function prepareAgentRun(
         const cacheWriteTokens =
           totalUsage.inputTokenDetails?.cacheWriteTokens ?? 0;
 
-        // Build B's tool parts (the cockpit's source of truth) + collect B's
-        // full text. Agent A then narrates B's text into the concise chat reply;
-        // the persisted message is [B's tool parts] + [A's narration text].
+        // Build the agent's tool parts (the cockpit's source of truth) +
+        // collect its full text. TEXT CHAT IS SINGLE-AGENT: the persisted
+        // message is [tool parts] + [the agent's FULL text] — no Agent A
+        // narration/condensing. The two-agent split exists only on the voice
+        // plane (the realtime worker narrates aloud; /api/voice-turn returns
+        // this same full text for it to speak from).
         const assistantParts: Array<Record<string, unknown>> = [];
-        const toolNames: string[] = [];
 
         for (const step of steps) {
           for (const tc of step.toolCalls) {
@@ -529,7 +516,6 @@ export async function prepareAgentRun(
               input: tcInput,
               output: tcResult ?? {},
             });
-            toolNames.push(tc.toolName);
           }
 
           const stepText = stripToolResultEchoes(step.text);
@@ -538,20 +524,8 @@ export async function prepareAgentRun(
           }
         }
 
-        // Agent A: turn B's raw output into the concise conversational reply.
-        // Resolve the narration promise first (the live stream is waiting on it),
-        // then append A's text as the chat bubble's text part.
-        const narration = await narrateWithAgentA({
-          instanceId,
-          // Agent A runs on its own model if the user set one, else Agent B's.
-          modelId: instance.agentAModel ?? instance.anthropicModel,
-          executorText,
-          toolStepsDigest: buildToolStepsDigest(toolNames),
-          personaName: activePersonalityName,
-        });
-        resolveNarration(narration);
-        if (narration.trim()) {
-          assistantParts.push({ type: "text" as const, text: narration });
+        if (executorText.trim()) {
+          assistantParts.push({ type: "text" as const, text: executorText });
         }
 
         // Update the pre-created assistant message with final content + totals
@@ -608,10 +582,6 @@ export async function prepareAgentRun(
       } catch (error) {
         console.error("[agent/onFinish] post-stream processing failed:", error);
       } finally {
-        // Idempotent: if the try already resolved with A's narration this is a
-        // no-op; if it threw first, unblock the waiting stream with B's text
-        // instead of forcing it to wait out the race timeout.
-        resolveNarration(executorText);
         // NOTE: the resumable-stream pointer is cleared by the web chat route
         // (which owns the streamId) — clearing it here clobbered a live web
         // stream's pointer whenever a telegram/cron run on the same instance
@@ -629,7 +599,6 @@ export async function prepareAgentRun(
       agent,
       messages: prunedMessages,
       conversationId,
-      narrationPromise,
       closeMcp: () => mcp.close(),
     },
   };

@@ -29,8 +29,6 @@ export async function POST(request: Request) {
     where: { userId },
     select: {
       id: true,
-      agentAModel: true,
-      anthropicModel: true,
       activePersonalityId: true,
       voiceId: true,
     },
@@ -66,11 +64,9 @@ export async function POST(request: Request) {
     personaName: activePersonality?.name ?? null,
     // Full personality prompt — Agent A adopts this as its spoken character so
     // the voice matches the personality the user picked (same as text chat).
+    // Model routing is fully server-side: the worker's realtime model is fixed
+    // and /api/voice-turn resolves Agent B's model itself.
     personaPrompt: activePersonality?.prompt ?? null,
-    // Agent A (voice front) model; null -> the worker uses its house default.
-    agentAModel: instance.agentAModel ?? null,
-    // Agent B (worker) model — what /api/voice-turn runs for delegated work.
-    agentBModel: instance.anthropicModel,
     // The user's chosen OpenAI Realtime voice; the worker maps unknown ids
     // (e.g. legacy Smallest ids) to its default.
     voiceId: instance.voiceId ?? DEFAULT_VOICE_ID,

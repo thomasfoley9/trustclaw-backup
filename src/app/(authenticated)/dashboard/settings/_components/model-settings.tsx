@@ -31,9 +31,10 @@ import {
 } from "~/app/(authenticated)/dashboard/_components/onboarding/onboarding.consts";
 
 interface ModelSettingsProps {
-  // Agent B (anthropicModel) — the worker that runs tools + does the heavy work.
+  // anthropicModel — the single agent behind text chat + tool work.
   currentModel: string;
-  // Agent A (agentAModel) — the voice/conversation front. null = use the default.
+  // agentAModel — voice-only narrator override (spoken briefs). null = use the
+  // main model.
   currentAgentAModel: string | null;
 }
 
@@ -120,15 +121,30 @@ export function ModelSettings({
       <CardHeader>
         <CardTitle>Models</CardTitle>
         <CardDescription>
-          Two agents power the assistant. <strong>Agent A</strong> is the voice &
-          conversation front — it talks, holds the persona, and decides what to
-          do. <strong>Agent B</strong> does the heavy work with your tools. Pick a
-          model for each; add your own under Custom models below.
+          Text chat runs on a single agent — the <strong>main model</strong>{" "}
+          below does the reasoning, runs your tools, and writes the full reply.
+          On <strong>voice</strong>, a second lightweight narrator condenses
+          replies into something speakable; everything on screen stays
+          full-length. Add your own models under Custom models below.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-5">
         <div className="space-y-2">
-          <Label>Agent A — voice &amp; conversation</Label>
+          <Label>Main model — chat, work &amp; tools</Label>
+          <Select value={selectedB} onValueChange={setSelectedB}>
+            <SelectTrigger className="w-full sm:w-72">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>{modelGroups}</SelectContent>
+          </Select>
+          <p className="text-muted-foreground text-xs">
+            Powers every chat and does the heavy multi-tool work on your key.
+            Opus-grade recommended for serious automation.
+          </p>
+        </div>
+
+        <div className="space-y-2">
+          <Label>Voice narrator — spoken replies only</Label>
           <Select value={selectedA} onValueChange={setSelectedA}>
             <SelectTrigger className="w-full sm:w-72">
               <SelectValue />
@@ -138,7 +154,7 @@ export function ModelSettings({
                 <SelectItem value={AGENT_A_DEFAULT}>
                   <span>Default</span>
                   <span className="text-muted-foreground ml-2">
-                    - house voice, free for everyone
+                    - same as the main model
                   </span>
                 </SelectItem>
               </SelectGroup>
@@ -146,22 +162,8 @@ export function ModelSettings({
             </SelectContent>
           </Select>
           <p className="text-muted-foreground text-xs">
-            The fast, conversational front. Default uses a house model so voice
-            works for everyone with no key.
-          </p>
-        </div>
-
-        <div className="space-y-2">
-          <Label>Agent B — work &amp; tools</Label>
-          <Select value={selectedB} onValueChange={setSelectedB}>
-            <SelectTrigger className="w-full sm:w-72">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>{modelGroups}</SelectContent>
-          </Select>
-          <p className="text-muted-foreground text-xs">
-            Does the heavy multi-tool work on your key. Opus-grade recommended for
-            serious automation.
+            Only used when replies are spoken aloud — it shortens the on-screen
+            answer into a quick verbal brief. Text chat never uses it.
           </p>
         </div>
 

@@ -3,7 +3,6 @@ import {
   smoothStream,
   UI_MESSAGE_STREAM_HEADERS,
   createUIMessageStreamResponse,
-  type UIMessageChunk,
 } from "ai";
 import { z } from "zod";
 import { auth } from "~/server/auth";
@@ -93,45 +92,10 @@ async function getAuthenticatedInstance(request: Request) {
   return { userId, instanceId: instance.id };
 }
 
-// Two-agent split on the live stream: Agent B's tool chunks pass straight
-// through (the cockpit reads them), but B's text chunks are dropped and replaced
-// — at the message's finish boundary — by Agent A's concise narration. The same
-// narration is persisted by setup.ts onFinish, so live and reloaded match. The
-// 10s race guards the case where B errors without onFinish firing (narration
-// would otherwise never resolve and the stream would hang).
-function suppressBTextInjectA(
-  narrationPromise: Promise<string>,
-): TransformStream<UIMessageChunk, UIMessageChunk> {
-  return new TransformStream<UIMessageChunk, UIMessageChunk>({
-    async transform(chunk, controller) {
-      const type = (chunk as { type?: string }).type;
-      if (
-        type === "text-start" ||
-        type === "text-delta" ||
-        type === "text-end"
-      ) {
-        return; // suppress B's prose — A speaks instead
-      }
-      if (type === "finish") {
-        const aText = await Promise.race([
-          narrationPromise.catch(() => ""),
-          new Promise<string>((resolve) => setTimeout(() => resolve(""), 10_000)),
-        ]);
-        if (aText.trim()) {
-          const id = crypto.randomUUID();
-          controller.enqueue({ type: "text-start", id } as UIMessageChunk);
-          controller.enqueue({
-            type: "text-delta",
-            id,
-            delta: aText,
-          } as UIMessageChunk);
-          controller.enqueue({ type: "text-end", id } as UIMessageChunk);
-        }
-      }
-      controller.enqueue(chunk);
-    },
-  });
-}
+// TEXT CHAT IS SINGLE-AGENT: the agent's full text streams straight through to
+// the client, live. No Agent A narration/condensing here — the two-agent split
+// exists only on the voice plane (/api/voice-turn + the realtime worker), where
+// replies must be short enough to speak.
 
 // Long enough for tool-heavy agent runs to finish in the background after the
 // viewer navigates away (Vercel fluid compute honors this via after()).
@@ -246,7 +210,6 @@ export async function POST(request: Request) {
   // Set by the response transform's onError; read by the background settle.
   let capturedError: unknown = null;
   let result;
-  let narrationPromise: Promise<string> = Promise.resolve("");
   // The run is driven by a server-side controller, NOT request.signal: closing
   // the tab or switching sessions detaches the viewer but the run continues in
   // the background and persists its result via onFinish. Explicit stop comes
@@ -271,7 +234,6 @@ export async function POST(request: Request) {
     });
 
     const { agent, messages } = prepareResult.result;
-    narrationPromise = prepareResult.result.narrationPromise;
     closeMcp = prepareResult.result.closeMcp;
 
     await setStreamingMessage(instanceId, conversationId, streamId);
@@ -375,18 +337,17 @@ export async function POST(request: Request) {
   });
 
   const streamContext = getStreamContext();
-  // B's UI stream with the error parser still attached (live viewers get the
-  // friendly error text, and the capture feeds the persisted error bubble).
-  const bStream = result.toUIMessageStream({
+  // The agent's UI stream, text and tools alike, with the error parser
+  // attached (live viewers get the friendly error text, and the capture feeds
+  // the persisted error bubble).
+  const uiStream = result.toUIMessageStream({
     onError: (error) => {
       capturedError = error;
       return `⚠️ ${parseAgentError(error)}`;
     },
   });
-  // Drop B's prose, splice in Agent A's narration at the finish boundary.
-  const aStream = bStream.pipeThrough(suppressBTextInjectA(narrationPromise));
   return createUIMessageStreamResponse({
-    stream: aStream,
+    stream: uiStream,
     headers: {
       "X-Stream-Id": streamId,
     },
