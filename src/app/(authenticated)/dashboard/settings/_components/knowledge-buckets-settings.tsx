@@ -193,6 +193,7 @@ export function KnowledgeBucketsSettings() {
                         <AlertDialogFooter>
                           <AlertDialogCancel>Cancel</AlertDialogCancel>
                           <AlertDialogAction
+                            variant="destructive"
                             onClick={() =>
                               void deleteMutation.mutateAsync({ id: bucket.id })
                             }

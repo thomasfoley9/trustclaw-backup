@@ -221,6 +221,7 @@ export function SkillsSettings() {
                       <AlertDialogFooter>
                         <AlertDialogCancel>Cancel</AlertDialogCancel>
                         <AlertDialogAction
+                          variant="destructive"
                           onClick={() =>
                             void deleteMutation.mutateAsync({ id: s.id })
                           }

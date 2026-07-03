@@ -134,6 +134,20 @@ export function ChatInput({
     if (isStreaming && isListening) stopDictation();
   }, [isStreaming, isListening, stopDictation]);
 
+  // Restore focus to the composer when a reply finishes, so the next message
+  // doesn't require re-clicking the box. Skip on coarse pointers (touch) to
+  // avoid popping the mobile keyboard open unprompted.
+  const wasStreamingRef = useRef(false);
+  useEffect(() => {
+    const finePointer =
+      typeof window !== "undefined" &&
+      window.matchMedia?.("(pointer: fine)").matches;
+    if (wasStreamingRef.current && !isStreaming && finePointer) {
+      textareaRef.current?.focus();
+    }
+    wasStreamingRef.current = isStreaming;
+  }, [isStreaming]);
+
   // Stop push-to-talk dictation when the hands-free loop starts, so two
   // SpeechRecognition instances don't fight over the mic.
   useEffect(() => {

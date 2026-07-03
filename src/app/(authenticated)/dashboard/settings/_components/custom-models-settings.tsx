@@ -18,6 +18,7 @@ import {
   showSuccessToast,
   trpcToastOnError,
 } from "~/components/core/toast-notifications";
+import { AlertDialog } from "~/components/core/confirm-dialog";
 
 export function CustomModelsSettings() {
   const utils = trpc.useUtils();
@@ -103,15 +104,26 @@ export function CustomModelsSettings() {
                     {m.maskedKey ? ` · ${m.maskedKey}` : ""}
                   </span>
                 </div>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="text-destructive h-8 w-8 shrink-0"
-                  disabled={isBusy}
-                  onClick={() => void deleteModel.mutateAsync({ id: m.id })}
-                >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
+                <AlertDialog
+                  title={`Delete "${m.label}"?`}
+                  description="This removes the custom model and its stored provider key. Any agent set to it falls back to the default model."
+                  confirmLabel="Delete model"
+                  onConfirm={async () => {
+                    await deleteModel.mutateAsync({ id: m.id });
+                  }}
+                  isPending={deleteModel.isPending}
+                  trigger={
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="text-destructive h-8 w-8 shrink-0"
+                      disabled={isBusy}
+                      aria-label={`Delete ${m.label}`}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  }
+                />
               </li>
             ))}
           </ul>

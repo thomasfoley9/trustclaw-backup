@@ -36,5 +36,7 @@ export function isBrandKey(key: string): key is BrandKey {
 }
 
 export function getBrand(key: string): Brand | null {
-  return isBrandKey(key) ? BRANDS[key] : null;
+  // Case-insensitive: a prospect typing /Ford should resolve like /ford.
+  const lower = key.toLowerCase();
+  return isBrandKey(lower) ? BRANDS[lower] : null;
 }

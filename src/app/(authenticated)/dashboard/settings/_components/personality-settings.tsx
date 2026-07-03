@@ -248,6 +248,7 @@ export function PersonalitySettings() {
                         <AlertDialogFooter>
                           <AlertDialogCancel>Cancel</AlertDialogCancel>
                           <AlertDialogAction
+                            variant="destructive"
                             onClick={() =>
                               void deleteMutation.mutateAsync({
                                 id: personality.id,
