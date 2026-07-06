@@ -84,7 +84,13 @@ export function ModelPicker() {
           <ChevronDown className="size-3 opacity-60" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent align="start" side="top" className="w-64 p-1">
+      {/* The catalog outgrew the viewport (8 Claude + 6 house + customs) -
+          cap the height and scroll instead of clipping. */}
+      <PopoverContent
+        align="start"
+        side="top"
+        className="max-h-[min(60vh,480px)] w-64 overflow-y-auto p-1"
+      >
         <div className="text-muted-foreground px-2 py-1.5 text-xs font-semibold">
           Claude
         </div>
