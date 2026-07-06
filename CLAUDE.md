@@ -16,7 +16,7 @@ When you need to look up documentation for any of these libraries, use the **Con
 
 ## Architecture
 
-This dashboard uses a **single tRPC backend** running within Next.js. Auth is handled by Better Auth with username/password. Composio is accessed **per-user** - each user supplies their own Composio API key, stored on their `ComposioClawInstance` (no shared key). **LLM chat is also per-user**: each user brings their own Anthropic key (`ComposioClawInstance.anthropicApiKey`, encrypted) and `resolveAgentModel` (`agent/resolve-model.ts`) calls Anthropic directly with it - chat **fails closed** (`PRECONDITION_FAILED`) if no key is set, with no shared-gateway fallback. Custom OpenAI/Google models use their own BYO key (`CustomModel.providerApiKey`). Only **embeddings** (memory) and **image generation** still route through the **Vercel AI Gateway** via plain string model IDs; that gateway auth uses `VERCEL_OIDC_TOKEN` on Vercel or `AI_GATEWAY_API_KEY` for local dev.
+This dashboard uses a **single tRPC backend** running within Next.js. Auth is handled by Better Auth with username/password. Composio is **multi-tenant on the owner's platform key** (`COMPOSIO_API_KEY` env): each user is an isolated Composio tenant via a namespaced user id (`trustclaw_<appUserId>`), so OAuth connections (Gmail/Calendar) are private per user. A per-user BYO key (`ComposioClawInstance.composioApiKey`) overrides the shared key and uses the raw app user id in the user's own workspace. **LLM chat is also per-user**: each user brings their own Anthropic key (`ComposioClawInstance.anthropicApiKey`, encrypted) and `resolveAgentModel` (`agent/resolve-model.ts`) calls Anthropic directly with it - chat **fails closed** (`PRECONDITION_FAILED`) if no key is set, with no shared-gateway fallback. Custom OpenAI/Google models use their own BYO key (`CustomModel.providerApiKey`). Only **embeddings** (memory) and **image generation** still route through the **Vercel AI Gateway** via plain string model IDs; that gateway auth uses `VERCEL_OIDC_TOKEN` on Vercel or `AI_GATEWAY_API_KEY` for local dev.
 
 ### tRPC (Backend)
 
@@ -604,7 +604,7 @@ We rarely need to make custom components since we are maximally using shadcn pri
 
 - ALWAYS use the `env` helper from `~/env` instead of raw `process.env` - it provides type safety and validation via Zod
 - Only use `process.env` directly in root config files that run before the app bootstraps (e.g., `next.config.js`) where the `env` helper is unavailable
-- Key server-only env vars: `BETTER_AUTH_SECRET`, `DATABASE_URL`, `CRON_SECRET`, and optionally `AI_GATEWAY_API_KEY` (for local dev - on Vercel, `VERCEL_OIDC_TOKEN` is used automatically). There is no shared `COMPOSIO_API_KEY` - each user supplies their own via Settings
+- Key server-only env vars: `BETTER_AUTH_SECRET`, `DATABASE_URL`, `CRON_SECRET`, and optionally `AI_GATEWAY_API_KEY` (for local dev - on Vercel, `VERCEL_OIDC_TOKEN` is used automatically). `COMPOSIO_API_KEY` (owner's platform key) enables shared multi-tenant tools; per-user BYO keys in Settings override it
 - There are no `NEXT_PUBLIC_BACKEND_URL` or similar public backend env vars - all API calls go through tRPC
 
   ```typescript

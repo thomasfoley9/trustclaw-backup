@@ -126,7 +126,7 @@ When real LLM usage is available (from `result.usage` after `streamText()`), tho
 - **schedule**: Create/list/delete cron jobs (see `../../../app/api/cron/trustclaw/CLAUDE.md`)
 
 ### Composio tools (dynamic)
-Created per-session via `getComposioForInstance(instanceId)` → `{ client, composioUserId }`, then `client.create(composioUserId, {...}).tools()`. The per-user Composio API key lives on `ComposioClawInstance.composioApiKey`; if it isn't set, the helper throws `PRECONDITION_FAILED` and the agent run fails with a friendly "Set your Composio API key in Settings" error.
+Created per-session via `getComposioForInstance(instanceId)` → `{ client, composioUserId }`, then `client.create(composioUserId, {...}).tools()`. Key resolution: a per-user BYO key (`ComposioClawInstance.composioApiKey`) wins; otherwise the owner's shared `COMPOSIO_API_KEY` env is used with a NAMESPACED tenant id (`trustclaw_<appUserId>`) so users' OAuth connections stay isolated. With neither, the helper throws `PRECONDITION_FAILED`.
 
 ## System Prompt
 

@@ -53,6 +53,13 @@ export const env = createEnv({
     // replies without bringing their own. A per-user voice key still overrides it.
     SMALLEST_API_KEY: z.string().optional(),
 
+    // Owner's PLATFORM Composio key for shared multi-tenant mode: users get
+    // tools without bringing a key, each isolated under a namespaced Composio
+    // user id ("trustclaw_<appUserId>") - see server/clients/composio.ts.
+    // A per-user BYO key still overrides it. Optional: without it, BYO keys
+    // are required (self-hosted mode).
+    COMPOSIO_API_KEY: z.string().optional(),
+
     // Real-time voice (LiveKit). API key/secret mint room-join JWTs in the token
     // route. VOICE_WORKER_SHARED_SECRET authenticates the LiveKit Python worker
     // when it calls /api/voice-turn. All optional - voice is opt-in.
@@ -107,6 +114,7 @@ export const env = createEnv({
     DEEPSEEK_API_KEY: process.env.DEEPSEEK_API_KEY,
     MOONSHOT_API_KEY: process.env.MOONSHOT_API_KEY,
     SMALLEST_API_KEY: process.env.SMALLEST_API_KEY,
+    COMPOSIO_API_KEY: process.env.COMPOSIO_API_KEY,
     LIVEKIT_API_KEY: process.env.LIVEKIT_API_KEY,
     LIVEKIT_API_SECRET: process.env.LIVEKIT_API_SECRET,
     VOICE_WORKER_SHARED_SECRET: process.env.VOICE_WORKER_SHARED_SECRET,

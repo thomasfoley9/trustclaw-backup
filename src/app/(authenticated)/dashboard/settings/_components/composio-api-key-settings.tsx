@@ -43,7 +43,10 @@ export function ComposioApiKeySettings() {
     onError: trpcToastOnError,
   });
 
-  const hasKey = !!data?.hasKey;
+  // The card manages the user's OWN key; shared-platform mode (tools on the
+  // house key) renders its own state below instead of a fake "Connected".
+  const hasKey = !!data?.byoKey;
+  const onSharedKey = !!data?.shared;
   const isBusy = setKey.isPending || clearKey.isPending || isLoading;
   const canSave = apiKey.trim().length >= 8 && !isBusy;
 
@@ -57,8 +60,10 @@ export function ComposioApiKeySettings() {
           Composio API key
         </CardTitle>
         <CardDescription>
-          Bring your own key - every user authenticates against Composio with
-          their own. Grab one from your{" "}
+          {onSharedKey
+            ? "Tools run on the house Composio key - no key needed. Your Gmail, Calendar, and other connections are private to your account. Add your own key below to use your own Composio workspace instead."
+            : "Bring your own key - every user authenticates against Composio with their own."}{" "}
+          Grab one from your{" "}
           <a
             href="https://app.composio.dev/developers"
             target="_blank"
@@ -71,6 +76,15 @@ export function ComposioApiKeySettings() {
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
+        {onSharedKey && !editing && (
+          <div className="flex items-center gap-2 rounded-md border bg-muted/30 px-3 py-2 text-sm">
+            <CheckCircle2 className="text-chart-2 h-4 w-4 shrink-0" />
+            <span className="font-medium">Tools active</span>
+            <span className="text-muted-foreground">
+              on the house key, connections scoped to you
+            </span>
+          </div>
+        )}
         {hasKey && !editing && (
           <div className="flex flex-col gap-2 rounded-md border bg-muted/30 px-3 py-2 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex min-w-0 items-center gap-2 text-sm">
