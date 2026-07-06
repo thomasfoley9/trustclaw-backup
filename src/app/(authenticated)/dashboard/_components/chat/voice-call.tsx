@@ -115,6 +115,17 @@ export function VoiceCall({
     };
     liveRoom.on("disconnected", onDisconnected);
 
+    // Prewarm the mic permission in parallel with the token round-trip: the
+    // browser's permission prompt + device grab otherwise serialize AFTER
+    // room.connect (inside setMicrophoneEnabled), adding seconds to call
+    // start. Tracks stop immediately - only the grant is being cached. Errors
+    // are ignored here; the real (user-facing) failure path stays at
+    // setMicrophoneEnabled below.
+    void navigator.mediaDevices
+      ?.getUserMedia({ audio: true })
+      .then((stream) => stream.getTracks().forEach((t) => t.stop()))
+      .catch(() => undefined);
+
     void (async () => {
       try {
         const res = await fetch("/api/livekit-token", {

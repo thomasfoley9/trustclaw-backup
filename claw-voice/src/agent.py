@@ -258,6 +258,14 @@ async def entrypoint(ctx: JobContext):
         except Exception:  # noqa: BLE001
             logger.warning("bad job metadata: %r", raw)
 
+    # Warm-keeper ping (cron-dispatched): LiveKit Cloud scales this agent to
+    # zero when idle, making the first real call pay a multi-second cold boot.
+    # Periodic no-op jobs count as activity and keep the instance hot. Bail
+    # before any model/session setup so pings cost nothing.
+    if config.get("keepalive"):
+        logger.info("keepalive ping - staying warm")
+        return
+
     user_id = config.get("userId")
     logger.info("voice session for user=%s", user_id)
     if not user_id or not config.get("conversationId"):

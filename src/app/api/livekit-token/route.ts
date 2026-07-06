@@ -37,24 +37,29 @@ export async function POST(request: Request) {
     return new Response("No instance", { status: 404 });
   }
 
-  // Separate voice thread: a brand-new conversation per call. Intentionally does
-  // NOT become the active (text) conversation - voice gets its own clean thread
+  // Both depend only on the instance - run them concurrently; this route is on
+  // the call-start critical path, so every serial query is audible latency.
+  //
+  // Conversation: a brand-new voice thread per call. Intentionally does NOT
+  // become the active (text) conversation - voice gets its own clean thread
   // but still inherits the shared, instance-level memory at run time.
-  const conversation = await db.conversation.create({
-    data: { instanceId: instance.id, title: "Voice call" },
-    select: { id: true },
-  });
-
-  // The active personality's prompt drives Agent A's SPOKEN voice - without it,
-  // the voice front falls back to the default Claw character while the text
-  // agent uses the personality. Forward it in the dispatch metadata so voice
-  // matches text.
-  const activePersonality = instance.activePersonalityId
-    ? await db.personality.findFirst({
-        where: { id: instance.activePersonalityId, instanceId: instance.id },
-        select: { name: true, prompt: true },
-      })
-    : null;
+  //
+  // Personality: its prompt drives Agent A's SPOKEN voice - without it, the
+  // voice front falls back to the default Claw character while the text agent
+  // uses the personality. Forwarded in the dispatch metadata so voice matches
+  // text.
+  const [conversation, activePersonality] = await Promise.all([
+    db.conversation.create({
+      data: { instanceId: instance.id, title: "Voice call" },
+      select: { id: true },
+    }),
+    instance.activePersonalityId
+      ? db.personality.findFirst({
+          where: { id: instance.activePersonalityId, instanceId: instance.id },
+          select: { name: true, prompt: true },
+        })
+      : Promise.resolve(null),
+  ]);
 
   const sessionConfig = JSON.stringify({
     userId,

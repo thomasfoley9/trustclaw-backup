@@ -3,6 +3,10 @@
     {
       "path": "/api/cron/trustclaw",
       "schedule": "* * * * *"
+    },
+    {
+      "path": "/api/voice/keepalive",
+      "schedule": "*/5 * * * *"
     }
   ]
 }
