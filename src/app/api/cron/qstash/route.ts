@@ -12,7 +12,8 @@ import { runSingleCronJob } from "~/server/cron/run-single-job";
 // and retries non-2xx, which is exactly what we want for a failed CLAIM but
 // not for a failed RUN (run failures are the job's own retry/auto-pause
 // domain, so those still ack 200).
-export const maxDuration = 300;
+// Pro + Fluid Compute ceiling - the runner's 720s wall clock needs headroom.
+export const maxDuration = 800;
 
 const deliveryBody = z.object({ jobId: z.string() });
 

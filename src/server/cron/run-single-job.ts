@@ -17,8 +17,11 @@ import { scheduleNextFire, cancelScheduledFire } from "~/server/clients/qstash";
 // (fenced on invocationId) and finalizes the CronRun row.
 
 // A scheduled run that hasn't finished in this long is aborted - unattended
-// runs must self-terminate, not discover provider rate limits at 3am.
-const RUN_WALL_CLOCK_MS = 240_000;
+// runs must self-terminate, not discover provider rate limits at 3am. Must
+// stay under the execute/qstash routes' maxDuration (800s on Pro w/ Fluid)
+// with headroom for finalize + Telegram delivery. Real digest jobs were
+// observed getting killed by the previous 240s budget.
+const RUN_WALL_CLOCK_MS = 720_000;
 
 // Consecutive failures before the job is disabled and the user is told.
 export const AUTO_PAUSE_THRESHOLD = 3;

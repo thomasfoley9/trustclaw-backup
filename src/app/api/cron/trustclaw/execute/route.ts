@@ -17,7 +17,8 @@ function safeEqual(a: string, b: string): boolean {
   return timingSafeEqual(ab, bb);
 }
 
-export const maxDuration = 300;
+// Pro + Fluid Compute ceiling - the runner's 720s wall clock needs headroom.
+export const maxDuration = 800;
 
 export async function POST(request: Request) {
   // Bearer-auth via CRON_SECRET (auto-injected by Vercel for cron-triggered
