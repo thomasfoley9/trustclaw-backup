@@ -19,7 +19,7 @@ export const updatePersonality = protectedProcedure
 
     const personality = await db.personality.findFirst({
       where: { id: input.id, instanceId: instance.id },
-      select: { id: true },
+      select: { id: true, isPreset: true },
     });
     if (!personality) {
       throw new TRPCError({
@@ -53,6 +53,10 @@ export const updatePersonality = protectedProcedure
           ...(input.prompt !== undefined && { prompt: input.prompt }),
           ...(input.emoji !== undefined && { emoji: input.emoji }),
           ...(input.avatarKey !== undefined && { avatarKey: input.avatarKey }),
+          // Copy-on-write: getPersonalities re-syncs isPreset rows to their
+          // canonical prompt/avatar on every fetch, which would silently
+          // destroy this edit. Editing a preset forks it into a user row.
+          ...(personality.isPreset && { isPreset: false }),
         },
         select: {
           id: true,

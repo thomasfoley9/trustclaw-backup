@@ -28,6 +28,11 @@ export const deleteInstance = protectedProcedure.mutation(async ({ ctx }) => {
     await tx.composioClawInstance.delete({
       where: { id: instance.id },
     });
+    // Stale wizard state would resume re-onboarding at a late step (telegram/
+    // integrations) with no instance behind it - a permanent dead end.
+    await tx.onboardingState.deleteMany({
+      where: { userId },
+    });
 
     return { success: true };
   });

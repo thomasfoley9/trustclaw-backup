@@ -85,6 +85,12 @@ export function VoiceCall({
   useEffect(() => {
     onEndedRef.current = onEnded;
   }, [onEnded]);
+  // Mirror `muted` for the connect path: the connect effect deps are [active]
+  // only, so it must read the CURRENT mute state, not the value at call start.
+  const mutedRef = useRef(muted);
+  useEffect(() => {
+    mutedRef.current = muted;
+  }, [muted]);
 
   useEffect(() => {
     if (!active) {
@@ -147,7 +153,12 @@ export function VoiceCall({
         if (cancelled) return;
 
         try {
-          await liveRoom.localParticipant.setMicrophoneEnabled(true);
+          // Honor a mute toggled DURING setup: the mute-sync effect below
+          // early-returns until the room is Connected, so enabling the mic
+          // unconditionally here would leave it hot behind a "Muted" UI.
+          await liveRoom.localParticipant.setMicrophoneEnabled(
+            !mutedRef.current,
+          );
         } catch (err) {
           const name = err instanceof Error ? err.name : "";
           const detail =

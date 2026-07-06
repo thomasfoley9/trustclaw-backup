@@ -1,9 +1,7 @@
 import { z } from "zod";
 
 export const getMemoriesInput = z.object({
-  // Validated as a datetime so garbage becomes BAD_REQUEST instead of an
-  // Invalid Date reaching Prisma (500).
-  cursor: z.string().datetime().optional(),
+  cursor: z.string().optional(),
   limit: z.number().min(1).max(100).default(20),
 });
 

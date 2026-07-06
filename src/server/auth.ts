@@ -24,24 +24,37 @@ const redisRateLimitStorage = isRedisConfigured()
   ? {
       customStorage: {
         get: async (key: string) => {
-          const redis = getRedis();
-          const value = redis ? await redis.get(key) : null;
-          const parsedValue = value
-            ? rateLimitValueSchema.parse(JSON.parse(value))
-            : null;
-          return {
-            key,
-            count: parsedValue?.count ?? 0,
-            lastRequest: parsedValue?.lastRequest ?? 0,
-          };
+          // Fail open on any Redis/parse failure - a rate-limit store outage
+          // must not 500 every auth endpoint.
+          try {
+            const redis = getRedis();
+            const value = redis ? await redis.get(key) : null;
+            const parsedValue = value
+              ? rateLimitValueSchema.parse(JSON.parse(value))
+              : null;
+            return {
+              key,
+              count: parsedValue?.count ?? 0,
+              lastRequest: parsedValue?.lastRequest ?? 0,
+            };
+          } catch (error) {
+            console.error("rate-limit storage get failed:", error);
+            return undefined;
+          }
         },
         set: async (
           key: string,
           value: { count: number; lastRequest: number },
         ) => {
-          const redis = getRedis();
-          if (!redis) return;
-          await redis.set(key, JSON.stringify(value), "EX", 60);
+          try {
+            const redis = getRedis();
+            if (!redis) return;
+            // TTL must outlive the longest configured window (900s for
+            // /request-password-reset) or counts reset mid-window.
+            await redis.set(key, JSON.stringify(value), "EX", 900);
+          } catch (error) {
+            console.error("rate-limit storage set failed:", error);
+          }
         },
       },
     }

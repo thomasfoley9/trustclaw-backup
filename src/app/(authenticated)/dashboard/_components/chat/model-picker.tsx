@@ -44,15 +44,17 @@ export function ModelPicker() {
       return status === undefined || status >= 500;
     },
     retryDelay: (attempt) => Math.min(500 * 2 ** attempt, 2000),
-    onError: (error) => {
-      trpcToastOnError(error);
+    onError: trpcToastOnError,
+    onSettled: () => {
       void utils.trustclaw.getInstance.invalidate();
     },
   });
 
-  const selectModel = (modelId: string) => {
+  const selectModel = async (modelId: string) => {
     setOpen(false);
     if (modelId === current) return;
+    // Cancel any in-flight refetch so it can't clobber the optimistic value.
+    await utils.trustclaw.getInstance.cancel();
     // Optimistic: flip the displayed model instantly, like Cursor.
     utils.trustclaw.getInstance.setData(undefined, (prev) =>
       prev?.instance
@@ -90,7 +92,7 @@ export function ModelPicker() {
           <button
             key={m.value}
             type="button"
-            onClick={() => selectModel(m.value)}
+            onClick={() => void selectModel(m.value)}
             className={rowClass(current === m.value)}
           >
             <Check
@@ -118,7 +120,7 @@ export function ModelPicker() {
           <button
             key={m.value}
             type="button"
-            onClick={() => selectModel(m.value)}
+            onClick={() => void selectModel(m.value)}
             className={rowClass(current === m.value)}
           >
             <Check
@@ -146,7 +148,7 @@ export function ModelPicker() {
               <button
                 key={m.id}
                 type="button"
-                onClick={() => selectModel(m.modelId)}
+                onClick={() => void selectModel(m.modelId)}
                 className={rowClass(current === m.modelId)}
               >
                 <Check

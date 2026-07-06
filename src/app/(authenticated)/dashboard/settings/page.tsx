@@ -15,7 +15,7 @@ export default async function Page() {
     trpcServer.api.trustclaw.getMcpServers.prefetch(),
     trpcServer.api.trustclaw.getSkills.prefetch(),
     trpcServer.api.trustclaw.getCronJobs.prefetchInfinite({ limit: 20 }),
-    trpcServer.api.trustclaw.getMemories.prefetch({ limit: 50 }),
+    trpcServer.api.trustclaw.getMemories.prefetchInfinite({ limit: 50 }),
   ]);
 
   return (

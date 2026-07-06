@@ -14,6 +14,8 @@ interface SystemPromptParams {
   // House "uncensored" models: swap in the unhinged persona and drop the normal
   // onboarding identity / personality framing.
   uncensored?: boolean;
+  // Incognito chats have no memory tools - the prompt must not advertise them.
+  incognito?: boolean;
 }
 
 const DEFAULT_SOUL_PROMPT = `## Who You Are
@@ -124,17 +126,29 @@ When tool results are large or need processing, use the workbench.
 - **Never dump raw results.** Summarize tool output in natural language.
 - **Use \`thought\` fields.** They help with debugging and make your reasoning visible.`;
 
-const CUSTOM_TOOLS_DESCRIPTION = `## Your Custom Tools
-
-Beyond the Composio Tool Router, you have these built-in capabilities:
-
-### memory_save
+// Memory tool docs only render when the tools actually exist this turn -
+// incognito strips memory_save/memory_search from the ToolSet, and advertising
+// absent tools makes the model call undeclared names and hallucinate saves.
+const MEMORY_TOOLS_DESCRIPTION = `### memory_save
 Save a durable fact, preference, or piece of context for future conversations. Use this when something is worth remembering long-term - user preferences, key decisions, identifying facts about people/projects, ongoing task state.
+
+When the user explicitly asks you to remember, save, or note something, you MUST call memory_save with it in that same turn. Never tell the user something was saved or remembered unless the tool call actually ran and returned saved: true; if it returned saved: false, say the save failed.
 
 ### memory_search
 Search prior memories by semantic similarity. Use this when a user message references something from before, or when you need context that isn't in the current conversation. Returns the top relevant memories.
 
-### generate_image
+`;
+
+const INCOGNITO_MEMORY_NOTE = `### Memory is OFF (incognito)
+This chat is in incognito mode: you have NO memory tools and no recall of saved memories. If the user asks you to remember or save something, tell them memory is off because incognito mode is enabled, and that they can turn it back on with the ghost icon in the top bar. Do not claim anything was saved.
+
+`;
+
+const CUSTOM_TOOLS_DESCRIPTION = `## Your Custom Tools
+
+Beyond the Composio Tool Router, you have these built-in capabilities:
+
+{{MEMORY_SECTION}}### generate_image
 Generate an image from a text prompt (returns a URL that's displayed inline in the chat). Use this when the user asks you to create, draw, design, or make an image, mockup, logo, or visual. Write a detailed prompt; pick a size (square/landscape/portrait) that fits the request.
 
 ### schedule
@@ -229,7 +243,12 @@ export function buildSystemPrompt(params: SystemPromptParams): string {
   }
 
   sections.push(COMPOSIO_TOOLS_DESCRIPTION);
-  sections.push(CUSTOM_TOOLS_DESCRIPTION);
+  sections.push(
+    CUSTOM_TOOLS_DESCRIPTION.replace(
+      "{{MEMORY_SECTION}}",
+      params.incognito ? INCOGNITO_MEMORY_NOTE : MEMORY_TOOLS_DESCRIPTION,
+    ),
+  );
 
   if (params.skills && params.skills.length > 0) {
     sections.push(renderSkillsSection(params.skills));

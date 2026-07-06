@@ -216,6 +216,24 @@ export function ChatView({
     if (!lastInitial) return;
     const hasNewestRow = messages.some((m) => m.id === lastInitial.id);
     if (!hasNewestRow || initialMessages.length > messages.length) {
+      // Never adopt an EMPTY assistant tail over locally streamed content: a
+      // stopped run leaves its pre-created assistant row unfilled, and
+      // adopting it would visibly wipe the partial reply the user kept.
+      const lastLocal = messages[messages.length - 1];
+      const incomingEmpty =
+        lastInitial.role === "assistant" &&
+        !lastInitial.parts.some(
+          (p) =>
+            (p.type === "text" && p.text.trim().length > 0) ||
+            p.type.startsWith("tool-") ||
+            p.type === "dynamic-tool",
+        );
+      const localHasContent =
+        lastLocal?.role === "assistant" &&
+        lastLocal.parts.some(
+          (p) => p.type === "text" && p.text.trim().length > 0,
+        );
+      if (incomingEmpty && localHasContent) return;
       setMessages(initialMessages);
     }
   }, [initialMessages, isStreaming, messages, setMessages]);
@@ -350,17 +368,32 @@ export function ChatView({
   // instead. Its own state (defaults closed) so the desktop pane's default-open
   // never auto-pops the sheet on a phone.
   const isMobile = useIsMobile();
-  const { groupRef: panelGroupRef, onLayoutChanged: onPanelLayoutChanged } =
-    usePersistedPanelLayout("trustclaw-panels-chat");
+  const {
+    groupRef: panelGroupRef,
+    onLayoutChanged: onPanelLayoutChanged,
+    applyStoredLayout,
+  } = usePersistedPanelLayout("trustclaw-panels-chat");
   const [mobileTerminalOpen, setMobileTerminalOpen] = useState(false);
 
   // Stable callback so memoized AssistantMessage rows don't re-render on every
   // streaming/voice tick just because this arrow was recreated. Opens the
   // desktop pane and, on mobile, the Sheet.
   const handleOpenTerminal = useCallback(() => {
-    setTerminalOpen(true);
-    setMobileTerminalOpen(true);
-  }, [setTerminalOpen]);
+    // Only latch the state for the surface actually in use - setting the
+    // mobile sheet flag on desktop makes it pop open uninvited when the
+    // viewport later crosses below md (e.g. tablet rotation).
+    if (isMobile) setMobileTerminalOpen(true);
+    else setTerminalOpen(true);
+  }, [isMobile, setTerminalOpen]);
+
+  // Reopening the cockpit remounts its panel with the DEFAULT width - the
+  // mount-time layout apply ran while the panel was absent and its share was
+  // dropped. Re-apply the stored layout once the panel has registered.
+  useEffect(() => {
+    if (!terminalOpen) return;
+    const timer = setTimeout(() => applyStoredLayout(), 0);
+    return () => clearTimeout(timer);
+  }, [terminalOpen, applyStoredLayout]);
 
   // Clear the overlay when a call ends - including a failed/aborted setup - so a
   // stale transcript / action feed doesn't linger into the next session.
@@ -369,9 +402,14 @@ export function ChatView({
     setLiveCallActive(false);
   }, [clearVoiceOverlay]);
 
-  // Call-button state reflects either path.
+  // Call-button state reflects either path. A muted live call must not read
+  // "Listening" - the mic is off.
   const callActive = conversationActive || liveCallActive;
-  const callPhase = liveCallActive ? "listening" : conversationPhase;
+  const callPhase = liveCallActive
+    ? liveCallMuted
+      ? "muted"
+      : "listening"
+    : conversationPhase;
   // One mute button drives whichever voice path is live: the LiveKit mic on a
   // real-time call, otherwise the browser conversation loop.
   const isMuted = liveCallActive ? liveCallMuted : conversationMuted;
@@ -510,6 +548,9 @@ export function ChatView({
             defaultSize="440px"
             minSize="300px"
             maxSize="60%"
+            // Keep the cockpit's PIXEL width across window resizes (the
+            // percentage default ratchets it to its clamps).
+            groupResizeBehavior="preserve-pixel-size"
             // className lands on the panel's INNER div (border still works
             // there); mobile hiding needs data-mobile-hidden on the outer
             // element (see globals.css).

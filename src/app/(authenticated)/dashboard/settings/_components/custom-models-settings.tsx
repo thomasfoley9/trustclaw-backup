@@ -153,6 +153,7 @@ export function CustomModelsSettings() {
                 placeholder="GPT-4o"
                 value={label}
                 onChange={(e) => setLabel(e.target.value)}
+                maxLength={60}
                 disabled={isBusy}
               />
             </div>
@@ -179,7 +180,7 @@ export function CustomModelsSettings() {
             onClick={() =>
               void addModel.mutateAsync({
                 modelId: modelId.trim(),
-                label: label.trim(),
+                label: label.trim() || undefined,
                 providerApiKey: apiKey.trim() || undefined,
               })
             }

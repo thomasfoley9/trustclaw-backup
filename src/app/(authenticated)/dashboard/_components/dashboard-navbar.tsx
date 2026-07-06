@@ -18,6 +18,7 @@ import {
 } from "~/components/ui/tooltip";
 import { ThemeToggle } from "~/components/core/theme-toggle";
 import { TrustClawBrand } from "~/app/_components/trustclaw-brand";
+import { trpc } from "~/clients/trpc";
 import { authClient } from "~/clients/auth/react";
 import { useTerminalStore } from "./terminal-store";
 import { useChatDrawerStore } from "./chat-drawer-store";
@@ -32,6 +33,13 @@ export function DashboardNavbar() {
   const terminalOpen = useTerminalStore((s) => s.terminalOpen);
   const setTerminalOpen = useTerminalStore((s) => s.setTerminalOpen);
   const setDrawerOpen = useChatDrawerStore((s) => s.setDrawerOpen);
+  // The mobile drawer only exists on the full chat page. During onboarding
+  // and the Composio activation gate the hamburger would be a dead button
+  // whose stale open state pops the drawer once the gates clear. Both queries
+  // are already warm from the layout banners.
+  const { data: status } = trpc.trustclaw.getStatus.useQuery();
+  const { data: composioKey } = trpc.trustclaw.getComposioKeyStatus.useQuery();
+  const drawerExists = !!status?.hasInstance && !!composioKey?.hasKey;
   const router = useRouter();
   const handleToggleTerminal = () => {
     setTerminalOpen(!terminalOpen);
@@ -45,7 +53,7 @@ export function DashboardNavbar() {
   return (
     <header className="border-sidebar-border bg-background/70 supports-[backdrop-filter]:bg-background/60 flex h-14 shrink-0 items-center justify-between border-b px-4 backdrop-blur-xl">
       <div className="flex min-w-0 items-center gap-1">
-        {isChat && (
+        {isChat && drawerExists && (
           <Button
             variant="ghost"
             size="icon"

@@ -59,8 +59,12 @@ const CONVERSATION_STATUS: Record<
   muted: { icon: MicOff, label: "Muted" },
 };
 
-const MAX_MESSAGE_LENGTH = 50_000;
+// Both caps must match app/api/chat/route.ts (MAX_MESSAGE_CHARS and the
+// TOTAL attachment budget) - a looser client cap lets users compose sends
+// the server then rejects without persisting anything.
+const MAX_MESSAGE_LENGTH = 32_000;
 const MAX_FILE_BYTES = 25 * 1024 * 1024;
+const MAX_TOTAL_ATTACHMENT_BYTES = 25 * 1024 * 1024;
 const MAX_FILES = 8;
 
 interface Attachment {
@@ -162,13 +166,26 @@ export function ChatInput({
         return;
       }
       const accepted: Attachment[] = [];
+      // Track the running TOTAL (server enforces a combined cap, not per-file;
+      // data URLs inflate bytes ~4/3, so budget on the encoded size).
+      let totalBytes = attachments.reduce(
+        (sum, a) => sum + a.dataUrl.length,
+        0,
+      );
       for (const file of files.slice(0, room)) {
         if (file.size > MAX_FILE_BYTES) {
           showErrorToast(`"${file.name}" is over 25MB`);
           continue;
         }
+        if (totalBytes + Math.ceil((file.size * 4) / 3) > MAX_TOTAL_ATTACHMENT_BYTES) {
+          showErrorToast(
+            `"${file.name}" would push attachments over the 25MB total limit`,
+          );
+          continue;
+        }
         try {
           const dataUrl = await readAsDataUrl(file);
+          totalBytes += dataUrl.length;
           accepted.push({
             id: `${file.name}-${file.size}-${Math.random().toString(36).slice(2)}`,
             name: file.name,
@@ -184,7 +201,7 @@ export function ChatInput({
         setAttachments((prev) => [...prev, ...accepted]);
       }
     },
-    [attachments.length],
+    [attachments],
   );
 
   const removeAttachment = (id: string) => {

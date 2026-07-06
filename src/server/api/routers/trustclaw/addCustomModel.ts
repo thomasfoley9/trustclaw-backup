@@ -21,6 +21,9 @@ export const addCustomModel = protectedProcedure
     const provider = input.modelId.slice(0, slash).toLowerCase();
     const modelId = `${provider}/${input.modelId.slice(slash + 1)}`;
 
+    // Label is optional in the UI - fall back to the model id itself.
+    const label = input.label?.length ? input.label : modelId;
+
     // "house/" is reserved for built-in owner-funded models - a custom row with
     // that prefix would be silently shadowed by the house route in resolve-model.
     if (provider === "house") {
@@ -83,14 +86,14 @@ export const addCustomModel = protectedProcedure
       create: {
         instanceId: instance.id,
         modelId,
-        label: input.label,
+        label,
         provider,
         providerApiKey: encryptedKey,
       },
       // Re-adding the same id updates the label and (if a new key was given)
       // the key; an omitted key leaves the stored one untouched.
       update: {
-        label: input.label,
+        label,
         provider,
         ...(encryptedKey ? { providerApiKey: encryptedKey } : {}),
       },

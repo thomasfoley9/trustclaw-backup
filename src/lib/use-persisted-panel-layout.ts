@@ -15,7 +15,10 @@ import type {
 export function usePersistedPanelLayout(storageKey: string) {
   const groupRef = useRef<GroupImperativeHandle | null>(null);
 
-  useEffect(() => {
+  // Also called when a conditionally-rendered panel (the cockpit) remounts:
+  // a mount-time apply that ran while the panel was absent silently dropped
+  // its share, so reopening must re-apply the stored layout.
+  const applyStoredLayout = useCallback(() => {
     try {
       const raw = window.localStorage.getItem(storageKey);
       if (!raw) return;
@@ -27,6 +30,10 @@ export function usePersistedPanelLayout(storageKey: string) {
       // Corrupt saved layout - keep the defaults.
     }
   }, [storageKey]);
+
+  useEffect(() => {
+    applyStoredLayout();
+  }, [applyStoredLayout]);
 
   const onLayoutChanged = useCallback(
     (layout: Layout, meta: LayoutChangedMeta) => {
@@ -41,5 +48,5 @@ export function usePersistedPanelLayout(storageKey: string) {
     [storageKey],
   );
 
-  return { groupRef, onLayoutChanged };
+  return { groupRef, onLayoutChanged, applyStoredLayout };
 }

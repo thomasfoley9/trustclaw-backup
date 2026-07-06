@@ -38,6 +38,25 @@ export function TelegramSettings() {
 
   const telegramToken = linkTelegram.data?.token ?? null;
   const botUsername = linkTelegram.data?.botUsername ?? null;
+  const tokenExpiresAt = linkTelegram.data?.expiresAt ?? null;
+
+  // Flip to the expired state when the link token's TTL passes, so the poll
+  // stops and the user isn't left staring at a stale /start command forever.
+  const [linkExpired, setLinkExpired] = useState(false);
+  useEffect(() => {
+    if (!tokenExpiresAt) {
+      setLinkExpired(false);
+      return;
+    }
+    const remainingMs = tokenExpiresAt.getTime() - Date.now();
+    if (remainingMs <= 0) {
+      setLinkExpired(true);
+      return;
+    }
+    setLinkExpired(false);
+    const timer = setTimeout(() => setLinkExpired(true), remainingMs);
+    return () => clearTimeout(timer);
+  }, [tokenExpiresAt]);
 
   // Single source of truth: the instance query. Poll while we're waiting for
   // the user to send /start to BotFather; otherwise just read the steady-state
@@ -45,7 +64,7 @@ export function TelegramSettings() {
   // server state into local useState (the prior implementation did and needed
   // a useEffect to keep the two in sync - classic anti-pattern).
   const { data: instanceData } = trpc.trustclaw.getInstance.useQuery(undefined, {
-    refetchInterval: telegramToken ? 3000 : false,
+    refetchInterval: telegramToken && !linkExpired ? 3000 : false,
   });
   const isLinked = !!instanceData?.instance?.telegramChatId;
 
@@ -111,9 +130,34 @@ export function TelegramSettings() {
               title="Unlink Telegram"
               description="This will disconnect Telegram from your Claw instance. You can re-link it later."
               confirmLabel="Unlink"
-              onConfirm={() => void unlinkTelegram.mutateAsync()}
+              onConfirm={() =>
+                void unlinkTelegram.mutateAsync().catch(() => undefined)
+              }
               isPending={unlinkTelegram.isPending}
             />
+          </div>
+        ) : telegramToken && botUsername && linkExpired ? (
+          <div className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              Link expired - generate a new link to connect Telegram.
+            </p>
+            <Button
+              variant="outline"
+              onClick={() => void linkTelegram.mutateAsync().catch(() => undefined)}
+              disabled={linkTelegram.isPending}
+            >
+              {linkTelegram.isPending ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Generating link...
+                </>
+              ) : (
+                <>
+                  <MessageSquare className="mr-2 h-4 w-4" />
+                  Generate a new link
+                </>
+              )}
+            </Button>
           </div>
         ) : telegramToken && botUsername ? (
           <div className="space-y-4">
@@ -164,7 +208,7 @@ export function TelegramSettings() {
         ) : (
           <Button
             variant="outline"
-            onClick={() => void linkTelegram.mutateAsync()}
+            onClick={() => void linkTelegram.mutateAsync().catch(() => undefined)}
             disabled={linkTelegram.isPending}
           >
             {linkTelegram.isPending ? (

@@ -57,7 +57,13 @@ export function KnowledgeBucketsSettings() {
   const [description, setDescription] = useState("");
   const [alwaysInject, setAlwaysInject] = useState(false);
 
-  const invalidate = () => void utils.trustclaw.getBuckets.invalidate();
+  // Bucket changes ripple beyond the list: the server can reassign the active
+  // bucket (navbar selector) and recategorize memories (list badges).
+  const invalidate = () => {
+    void utils.trustclaw.getBuckets.invalidate();
+    void utils.trustclaw.getInstance.invalidate();
+    void utils.trustclaw.getMemories.invalidate();
+  };
 
   const createMutation = trpc.trustclaw.createBucket.useMutation({
     onSuccess: invalidate,

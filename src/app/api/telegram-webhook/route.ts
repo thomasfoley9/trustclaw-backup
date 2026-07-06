@@ -3,7 +3,11 @@ import { after, NextResponse } from "next/server";
 import { env } from "~/env";
 import { Prisma } from "~/generated/prisma/client";
 import { db } from "~/server/clients/db";
-import { sendTelegramMessage, sendChatAction } from "~/server/clients/telegram";
+import {
+  sendTelegramMessage,
+  sendTelegramMessageChunked,
+  sendChatAction,
+} from "~/server/clients/telegram";
 import { prepareAgentRun } from "~/server/api/routers/trustclaw/agent/setup";
 import { stripToolResultEchoes } from "~/server/api/routers/trustclaw/agent/strip-tool-echoes";
 import { toPlainRecordSafe } from "~/server/api/routers/trustclaw/agent/context/build-context";
@@ -55,7 +59,9 @@ function describeToolCall(tc: {
   return "Working on it...";
 }
 
-export const maxDuration = 60;
+// The route ACKs 200 immediately and runs the agent in after(); the budget
+// must cover the background run, not the ACK. 60s killed long agent turns.
+export const maxDuration = 300;
 
 export async function POST(request: Request) {
   if (!env.TELEGRAM_BOT_TOKEN || !env.TELEGRAM_WEBHOOK_SECRET) {
@@ -256,7 +262,7 @@ async function handleRegularMessage(
     // Send final text only if it wasn't already sent via onStepFinish
     const finalText = stripToolResultEchoes(result.text).trim();
     if (!accumulatedText && finalText) {
-      await sendTelegramMessage(chatId, finalText.slice(0, 4096));
+      await sendTelegramMessageChunked(chatId, finalText);
     } else if (!accumulatedText && !finalText) {
       await sendTelegramMessage(chatId, "I processed your request.");
     }

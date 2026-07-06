@@ -35,6 +35,9 @@ export function DashboardPanels({
         defaultSize="256px"
         minSize="200px"
         maxSize="480px"
+        // Keep the sidebar's PIXEL width across window resizes - the default
+        // percentage behavior ratchets it to its clamps on narrow->wide cycles.
+        groupResizeBehavior="preserve-pixel-size"
         // className lands on the panel's INNER div; hiding on mobile must hit
         // the outer element via data-mobile-hidden (see globals.css).
         data-mobile-hidden=""

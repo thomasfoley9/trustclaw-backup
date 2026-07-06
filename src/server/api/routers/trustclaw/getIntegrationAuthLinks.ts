@@ -40,43 +40,32 @@ export const getIntegrationAuthLinks = protectedProcedure.query(
             name: t.name,
             logo: t.logo,
             connected: false,
-            redirectUrl: null as string | null,
           })),
         };
       }
       throw error;
     }
 
+    // STATUS ONLY - this query is polled every 5s by the onboarding step, so
+    // it must be side-effect free. Auth links are minted on demand by the
+    // toolkits.getAuthLink mutation when the user clicks Connect (the old
+    // per-poll session.authorize() spammed a new INITIATED connection request
+    // into the user's Composio project on every tick).
     const { client, composioUserId } = composio;
     const session = await client.create(composioUserId, {});
     const toolkitsInfo = await session.toolkits({
       toolkits: ONBOARDING_TOOLKITS.map((t) => t.slug),
     });
 
-    const integrations = await Promise.all(
-      ONBOARDING_TOOLKITS.map(async (toolkit) => {
-        const info = toolkitsInfo.items.find((i) => i.slug === toolkit.slug);
-        const connected = !!info?.connection?.isActive;
-
-        let redirectUrl: string | null = null;
-        if (!connected) {
-          try {
-            const connectionRequest = await session.authorize(toolkit.slug);
-            redirectUrl = connectionRequest.redirectUrl ?? null;
-          } catch {
-            // OAuth URL generation failed -- user can skip
-          }
-        }
-
-        return {
-          toolkit: toolkit.slug,
-          name: toolkit.name,
-          logo: toolkit.logo,
-          connected,
-          redirectUrl,
-        };
-      }),
-    );
+    const integrations = ONBOARDING_TOOLKITS.map((toolkit) => {
+      const info = toolkitsInfo.items.find((i) => i.slug === toolkit.slug);
+      return {
+        toolkit: toolkit.slug,
+        name: toolkit.name,
+        logo: toolkit.logo,
+        connected: !!info?.connection?.isActive,
+      };
+    });
 
     return { keyMissing: false, integrations };
   },

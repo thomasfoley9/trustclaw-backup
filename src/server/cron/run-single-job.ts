@@ -3,7 +3,10 @@ import { prepareAgentRun } from "~/server/api/routers/trustclaw/agent/setup";
 import { parseAgentError } from "~/server/api/routers/trustclaw/agent/error-parser";
 import { computeNextRunSafe } from "~/server/api/routers/trustclaw/agent/tools/cron-utils";
 import { stripToolResultEchoes } from "~/server/api/routers/trustclaw/agent/strip-tool-echoes";
-import { sendTelegramMessage } from "~/server/clients/telegram";
+import {
+  sendTelegramMessage,
+  sendTelegramMessageChunked,
+} from "~/server/clients/telegram";
 import { scheduleNextFire, cancelScheduledFire } from "~/server/clients/qstash";
 
 // One scheduled job = one agent run = one CronRun record. Replaces the old
@@ -46,6 +49,7 @@ export async function runSingleCronJob({
       expression: true,
       prompt: true,
       timezone: true,
+      enabled: true,
       lockedBy: true,
       consecutiveFailures: true,
       instance: { select: { telegramChatId: true } },
@@ -103,11 +107,11 @@ export async function runSingleCronJob({
     });
 
     if (job.instance.telegramChatId && text) {
-      const truncated =
-        text.length > 4096 ? text.slice(0, 4093) + "..." : text;
-      await sendTelegramMessage(job.instance.telegramChatId, truncated).catch(
-        (error) =>
-          console.error("[cron/run] telegram delivery failed:", error),
+      await sendTelegramMessageChunked(
+        job.instance.telegramChatId,
+        text,
+      ).catch((error) =>
+        console.error("[cron/run] telegram delivery failed:", error),
       );
     }
   } catch (error) {
@@ -137,6 +141,9 @@ interface FinalizeContext {
     instanceId: string;
     expression: string;
     timezone: string;
+    // Enabled state at run start. Manual runs on a paused job must not
+    // re-arm the schedule or re-send the auto-pause notice.
+    enabled: boolean;
     consecutiveFailures: number;
     instance: { telegramChatId: string | null };
   };
@@ -158,7 +165,10 @@ async function finalizeSuccess({
   inputTokens: number;
   outputTokens: number;
 }): Promise<void> {
-  const nextRunAt = computeNextRunSafe(job.expression, job.timezone);
+  // A paused job stays paused: no next fire, nextRunAt stays null.
+  const nextRunAt = job.enabled
+    ? computeNextRunSafe(job.expression, job.timezone)
+    : null;
 
   await db.$transaction([
     db.cronRun.update({
@@ -186,7 +196,9 @@ async function finalizeSuccess({
     }),
   ]);
 
-  await scheduleNextFire(job.id, nextRunAt);
+  if (job.enabled) {
+    await scheduleNextFire(job.id, nextRunAt);
+  }
 }
 
 async function finalizeFailure({
@@ -197,10 +209,13 @@ async function finalizeFailure({
   error,
 }: FinalizeContext & { error: string }): Promise<void> {
   const failures = job.consecutiveFailures + 1;
-  const autoPause = failures >= AUTO_PAUSE_THRESHOLD;
-  const nextRunAt = autoPause
-    ? null
-    : computeNextRunSafe(job.expression, job.timezone);
+  // Auto-pause only fires on the enabled -> paused transition. A manual run
+  // on an already-paused job must not re-send the notice or touch QStash.
+  const autoPause = job.enabled && failures >= AUTO_PAUSE_THRESHOLD;
+  const nextRunAt =
+    job.enabled && !autoPause
+      ? computeNextRunSafe(job.expression, job.timezone)
+      : null;
 
   await db.$transaction([
     db.cronRun.update({
@@ -233,7 +248,7 @@ async function finalizeFailure({
         `A scheduled task failed ${AUTO_PAUSE_THRESHOLD} times in a row and has been paused. Last error: ${error.slice(0, 300)}\n\nFix it in Settings > Scheduled tasks and flip it back on.`,
       ).catch(() => undefined);
     }
-  } else {
+  } else if (job.enabled) {
     await scheduleNextFire(job.id, nextRunAt);
   }
 }

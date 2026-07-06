@@ -135,8 +135,15 @@ export function SkillsSettings() {
 
   const saving = createMutation.isPending || updateMutation.isPending;
   const validInstructions = instructions.some((i) => i.trim().length > 0);
+  // A half-filled input row would be silently dropped on save - block instead.
+  const hasPartialInput = requiredInputs.some(
+    (r) => (r.name.trim().length > 0) !== (r.description.trim().length > 0),
+  );
   const canSave =
-    name.trim().length > 0 && whenToUse.trim().length > 0 && validInstructions;
+    name.trim().length > 0 &&
+    whenToUse.trim().length > 0 &&
+    validInstructions &&
+    !hasPartialInput;
 
   return (
     <Card>
@@ -363,6 +370,11 @@ export function SkillsSettings() {
                   </Button>
                 </div>
               ))}
+              {hasPartialInput && (
+                <p className="text-destructive text-xs">
+                  Fill both fields or remove the row.
+                </p>
+              )}
               <Button
                 type="button"
                 size="sm"

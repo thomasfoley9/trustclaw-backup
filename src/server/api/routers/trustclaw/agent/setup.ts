@@ -119,7 +119,10 @@ export async function prepareAgentRun(
 
   const userTimezone = user?.timezone ?? "UTC";
 
-  const incognito = instance.incognitoMode;
+  // Incognito is an interactive-surface privacy mode. Cron runs are unattended
+  // and depend on memory/knowledge injection - a forgotten ghost toggle must
+  // not silently gut scheduled tasks or hide their output.
+  const incognito = instance.incognitoMode && source !== "cron";
   const activeBucket = instance.activeMemoryBucket;
 
   // Resolve which session this run writes to, in priority order:
@@ -227,11 +230,14 @@ export async function prepareAgentRun(
   // assistant turns in this session anchor the model to the old tone; a
   // recency-positioned note on the new user turn forces the new voice. Only
   // for visible user turns - cron/incognito triggers don't need tone notes.
+  // lastPersonalityId uses the sentinel "none" (not null) once a turn has run
+  // with no persona, so off->on transitions are detectable; null still means
+  // "no prior tracked turn" (fresh conversation - no note needed).
   const personaSwitched =
     !incognito &&
     !userMessageType &&
     !!conversation.lastPersonalityId &&
-    conversation.lastPersonalityId !== currentPersonalityId;
+    conversation.lastPersonalityId !== (currentPersonalityId ?? "none");
 
   // When a persona is active it owns the voice. The onboarding-generated
   // identity prompt hard-codes "**Personality:**" / "**Writing Style:**" lines
@@ -273,16 +279,24 @@ export async function prepareAgentRun(
       skills,
       hasCompactionSummary: !!conversation.lastCompactionSummary,
       userTimezone,
-      uncensored: isHouseModel(instance.anthropicModel),
+      // The unhinged house persona is the DEFAULT skin for house models, not a
+      // hard mode: an explicitly selected personality wins on any model.
+      // Otherwise the personality toggle silently does nothing for everyone on
+      // free Kimi/DeepSeek (the mainstream path since key-less onboarding).
+      uncensored: isHouseModel(instance.anthropicModel) && !personaApplies,
+      incognito,
     }),
   );
 
   // The model sees a switch note when the persona just changed; the persisted
-  // user message (below) stays the raw text.
-  let modelUserMessage =
-    personaSwitched && activePersonalityName
+  // user message (below) stays the raw text. Turning a persona OFF needs the
+  // note just as much - the prior turns anchor the old voice.
+  let modelUserMessage = userMessage;
+  if (personaSwitched) {
+    modelUserMessage = activePersonalityName
       ? `[Your active personality was just switched to "${activePersonalityName}". Starting with this reply, fully adopt the ${activePersonalityName} voice and drop the previous tone entirely.]\n\n${userMessage}`
-      : userMessage;
+      : `[Your active personality was just turned off. Starting with this reply, drop that voice entirely and return to your default voice.]\n\n${userMessage}`;
+  }
 
   // Build attachment parts. Images/PDFs are native model parts (Claude reads
   // them directly); text-like files are inlined into the message text. The
@@ -344,7 +358,7 @@ export async function prepareAgentRun(
   // Used to scrub the note from post-response tasks (memory flush) so the
   // switch instruction can never be saved as a durable "memory".
   const personaSwitchNoteRe =
-    /^\[Your active personality was just switched[^\]]*\]\n\n/;
+    /^\[Your active personality was just (?:switched|turned off)[^\]]*\]\n\n/;
 
   const dbMessages = incognito
     ? []
@@ -393,23 +407,25 @@ export async function prepareAgentRun(
     },
   });
 
-  // Track the persona used on every non-incognito turn (hidden cron triggers
-  // included, so a stale value can't re-trigger switch notes later). Title
-  // and recency only update for visible user messages.
+  // Title and recency update up front for visible user messages. The persona
+  // tracker (lastPersonalityId) is deliberately NOT advanced here - a run can
+  // still fail at the Composio/model preconditions below, and advancing early
+  // would consume the one-shot switch note so the retry loses the new voice.
+  // It moves forward in onFinish, after a reply actually landed.
   if (!incognito) {
     const isVisible = !effectiveMessageType;
     const isFirstTitle = conversation.title === "New chat";
-    await db.conversation.update({
-      where: { id: conversationId },
-      data: {
-        lastPersonalityId: currentPersonalityId,
-        ...(isVisible && { lastMessageAt: new Date() }),
-        ...(isVisible &&
-          isFirstTitle && {
+    if (isVisible) {
+      await db.conversation.update({
+        where: { id: conversationId },
+        data: {
+          lastMessageAt: new Date(),
+          ...(isFirstTitle && {
             title: userMessage.trim().slice(0, 60) || "New chat",
           }),
-      },
-    });
+        },
+      });
+    }
   }
 
   // The Composio session (key load → connection setup → tool fetch) and the
@@ -539,6 +555,17 @@ export async function prepareAgentRun(
             cacheWriteTokens,
           },
         });
+
+        // A reply landed - NOW advance the persona tracker ("none" sentinel
+        // when no persona is active) so the switch note fired exactly once.
+        if (!incognito) {
+          await db.conversation
+            .update({
+              where: { id: conversationId },
+              data: { lastPersonalityId: currentPersonalityId ?? "none" },
+            })
+            .catch(() => undefined);
+        }
 
         // Fire-and-forget post-response tasks.
         // Context size = the FINAL step's usage (its inputTokens already span

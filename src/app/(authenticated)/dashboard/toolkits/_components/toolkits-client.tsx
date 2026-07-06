@@ -19,6 +19,11 @@ export function ToolkitsClient() {
 
   const isConnectedFilter = filter === "connected" ? true : undefined;
 
+  // The backend silently ignores search terms under 3 chars (the grid would
+  // show the full catalog as if it matched), so hold the search back until
+  // the debounced query is long enough and hint at the threshold instead.
+  const searchReady = search.length >= 3;
+
   const {
     data,
     isLoading,
@@ -29,7 +34,11 @@ export function ToolkitsClient() {
     fetchNextPage,
     isFetchingNextPage,
   } = trpc.toolkits.getToolkits.useInfiniteQuery(
-    { search: search || undefined, isConnected: isConnectedFilter, limit: 20 },
+    {
+      search: searchReady ? search : undefined,
+      isConnected: isConnectedFilter,
+      limit: 20,
+    },
     {
       getNextPageParam: (lastPage) => lastPage.nextCursor,
       placeholderData: keepPreviousData,
@@ -119,6 +128,12 @@ export function ToolkitsClient() {
         <ToolkitSearch onSearch={setSearch} isLoading={isSearching} />
       </div>
 
+      {search.length > 0 && !searchReady && (
+        <p className="text-muted-foreground text-sm">
+          Type at least 3 characters to search
+        </p>
+      )}
+
       {/* Shared SVG blur filter for glow effect */}
       <svg className="sr-only" xmlns="http://www.w3.org/2000/svg">
         <filter id="toolkit-blur">
@@ -130,7 +145,7 @@ export function ToolkitsClient() {
         {allItems.length === 0 && !isFetching ? (
           <div className="flex flex-col items-center justify-center gap-2 py-16 text-center">
             <p className="text-muted-foreground">
-              {search
+              {searchReady
                 ? "No toolkits match your search"
                 : filter === "connected"
                   ? "No connected toolkits yet"

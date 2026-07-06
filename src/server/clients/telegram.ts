@@ -50,6 +50,40 @@ export async function sendTelegramMessage(
   }
 }
 
+// Telegram rejects sendMessage payloads over 4096 characters.
+const TELEGRAM_MAX_MESSAGE_CHARS = 4096;
+
+// Split text into <=4096-char pieces, preferring newline boundaries, then
+// word boundaries, then a hard cut.
+function chunkTelegramText(text: string): string[] {
+  const chunks: string[] = [];
+  let remaining = text;
+  while (remaining.length > TELEGRAM_MAX_MESSAGE_CHARS) {
+    const window = remaining.slice(0, TELEGRAM_MAX_MESSAGE_CHARS);
+    let splitAt = window.lastIndexOf("\n");
+    if (splitAt <= 0) splitAt = window.lastIndexOf(" ");
+    if (splitAt <= 0) splitAt = TELEGRAM_MAX_MESSAGE_CHARS;
+    chunks.push(remaining.slice(0, splitAt));
+    // Drop the boundary character itself (not on hard cuts).
+    const skip = splitAt < TELEGRAM_MAX_MESSAGE_CHARS ? 1 : 0;
+    remaining = remaining.slice(splitAt + skip);
+  }
+  if (remaining) chunks.push(remaining);
+  return chunks;
+}
+
+// Long replies used to be truncated mid-content at 4096 chars. Send them as
+// sequential chunks instead. Same best-effort posture as sendTelegramMessage:
+// each chunk send swallows its own failure, so this never throws.
+export async function sendTelegramMessageChunked(
+  chatId: string,
+  text: string,
+): Promise<void> {
+  for (const chunk of chunkTelegramText(text)) {
+    await sendTelegramMessage(chatId, chunk);
+  }
+}
+
 export async function sendChatAction(
   chatId: string,
   action: "typing",

@@ -5,7 +5,10 @@ import { motion } from "framer-motion";
 import { Check, ExternalLink, Loader2 } from "lucide-react";
 import { trpc } from "~/clients/trpc";
 import { Button } from "~/components/ui/button";
-import { showSuccessToast } from "~/components/core/toast-notifications";
+import {
+  showSuccessToast,
+  trpcToastOnError,
+} from "~/components/core/toast-notifications";
 import { IntegrationsStepSkeleton } from "./integrations-step.skeleton";
 import Image from "next/image";
 import { INTEGRATION_DESCRIPTIONS } from "./onboarding.consts";
@@ -25,6 +28,12 @@ export function IntegrationsStep({
   const [pendingToolkits, setPendingToolkits] = useState<Set<string>>(
     new Set(),
   );
+  // Minted auth links, kept so "reopen" doesn't create another connection
+  // request in Composio.
+  const [authUrls, setAuthUrls] = useState<Record<string, string>>({});
+  const getAuthLink = trpc.toolkits.getAuthLink.useMutation({
+    onError: trpcToastOnError,
+  });
   const prevConnectedRef = useRef<Set<string>>(new Set());
   const initializedRef = useRef(false);
 
@@ -109,9 +118,30 @@ export function IntegrationsStep({
   const connectedCount = integrations.filter((i) => i.connected).length;
   const total = integrations.length;
 
-  const handleConnect = (toolkit: string, redirectUrl: string) => {
+  // Auth links are minted on click (the polled status query is side-effect
+  // free). The tab must open synchronously in the click handler - opening
+  // after the await would trip popup blockers - so open blank and steer it.
+  const handleConnect = async (toolkit: string) => {
+    const known = authUrls[toolkit];
+    if (known) {
+      window.open(known, "_blank", "noopener,noreferrer");
+      return;
+    }
     setPendingToolkits((prev) => new Set(prev).add(toolkit));
-    window.open(redirectUrl, "_blank", "noopener,noreferrer");
+    const popup = window.open("about:blank", "_blank");
+    try {
+      const { redirectUrl } = await getAuthLink.mutateAsync({ toolkit });
+      setAuthUrls((prev) => ({ ...prev, [toolkit]: redirectUrl }));
+      if (popup) popup.location.href = redirectUrl;
+      else window.open(redirectUrl, "_blank", "noopener,noreferrer");
+    } catch {
+      popup?.close();
+      setPendingToolkits((prev) => {
+        const next = new Set(prev);
+        next.delete(toolkit);
+        return next;
+      });
+    }
   };
 
   return (
@@ -164,37 +194,27 @@ export function IntegrationsStep({
                   <Check className="h-4 w-4" />
                   Connected
                 </div>
-              ) : isPending && integration.redirectUrl ? (
+              ) : isPending ? (
                 <button
                   type="button"
-                  onClick={() =>
-                    handleConnect(integration.toolkit, integration.redirectUrl!)
-                  }
+                  onClick={() => void handleConnect(integration.toolkit)}
                   className="text-muted-foreground hover:text-foreground ml-3 flex min-h-[44px] shrink-0 items-center gap-1.5 text-sm"
                   title="Reopen the connection window"
                 >
                   <Loader2 className="h-4 w-4 animate-spin" />
                   Waiting... reopen
                 </button>
-              ) : integration.redirectUrl ? (
+              ) : (
                 <Button
                   variant="outline"
                   size="sm"
                   className="ml-3 min-h-[44px] shrink-0"
-                  onClick={() =>
-                    handleConnect(
-                      integration.toolkit,
-                      integration.redirectUrl!,
-                    )
-                  }
+                  disabled={getAuthLink.isPending}
+                  onClick={() => void handleConnect(integration.toolkit)}
                 >
                   Connect
                   <ExternalLink className="ml-1 h-3 w-3" />
                 </Button>
-              ) : (
-                <span className="text-muted-foreground ml-3 text-xs">
-                  Unavailable
-                </span>
               )}
             </div>
           );

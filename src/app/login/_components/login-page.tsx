@@ -25,6 +25,22 @@ interface LoginPageProps {
   // Which tab opens first. The landing "Get started" CTAs deep-link with
   // ?tab=register so a new visitor lands on the sign-up form, not login.
   defaultTab?: "login" | "register";
+  // better-auth error code from ?error=<code>, set when errorCallbackURL
+  // bounces a refused OAuth sign-in back to /login.
+  errorCode?: string;
+}
+
+function authErrorMessage(code: string): string {
+  const normalized = code.trim().toLowerCase();
+  // "unable_to_create_user" is what better-auth emits when the signup gate
+  // (user.create.before hook) rejects an OAuth sign-up.
+  if (
+    normalized.includes("signup") ||
+    normalized === "unable_to_create_user"
+  ) {
+    return "Sign-in was refused: sign-up is restricted to @composio.dev emails.";
+  }
+  return `Sign-in was refused: ${normalized.replace(/_/g, " ")}.`;
 }
 
 function GoogleIcon() {
@@ -43,6 +59,7 @@ export function LoginPage({
   googleEnabled = false,
   signupOpen = true,
   defaultTab,
+  errorCode,
 }: LoginPageProps) {
   const router = useRouter();
   const [pending, setPending] = useState(false);
@@ -50,10 +67,20 @@ export function LoginPage({
   const handleGoogle = async () => {
     setPending(true);
     try {
-      await authClient.signIn.social({
+      const result = await authClient.signIn.social({
         provider: "google",
         callbackURL: "/dashboard",
+        // Gate-rejected OAuth users land back here (with ?error=<code>)
+        // instead of better-auth's bare error page.
+        errorCallbackURL: "/login",
       });
+      if (result.error) {
+        showErrorToast(result.error.message ?? "Google sign-in failed - try again");
+        setPending(false);
+        return;
+      }
+      // Success resolves with the Google redirect URL and the browser is about
+      // to navigate away - stay pending (see handleLogin).
     } catch {
       showErrorToast("Google sign-in failed - try again");
       setPending(false);
@@ -145,6 +172,12 @@ export function LoginPage({
         <div className="mb-8 flex justify-center">
           <TrustClawBrand size="lg" logoLink="/" />
         </div>
+
+        {errorCode && (
+          <div className="bg-destructive/10 text-destructive mb-4 rounded-xl px-4 py-3 text-sm">
+            {authErrorMessage(errorCode)}
+          </div>
+        )}
 
         <div className="glass elevated rounded-2xl p-6 sm:p-7">
           {googleEnabled && (

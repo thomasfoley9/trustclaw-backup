@@ -60,6 +60,12 @@ export function ToolCallSegment({
     { toolkits: allToolkits },
     {
       enabled: allToolkits.length > 0,
+      // OAuth completes in another tab with no way to notify this one: the
+      // 30s global staleTime would otherwise gate the focus refetch, and the
+      // poll covers the user finishing OAuth without ever refocusing.
+      refetchOnWindowFocus: "always",
+      refetchInterval: (query) =>
+        query.state.data?.statuses.every((s) => s.connected) ? false : 5000,
     },
   );
 

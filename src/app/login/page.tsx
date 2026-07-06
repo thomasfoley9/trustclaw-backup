@@ -9,9 +9,9 @@ import { ErrorDisplay } from "~/components/core/error-display";
 export default async function Page({
   searchParams,
 }: {
-  searchParams: Promise<{ tab?: string }>;
+  searchParams: Promise<{ tab?: string; error?: string }>;
 }) {
-  const { tab } = await searchParams;
+  const { tab, error } = await searchParams;
   const defaultTab = tab === "register" ? "register" : undefined;
   let session;
   try {
@@ -49,6 +49,7 @@ export default async function Page({
       googleEnabled={googleEnabled}
       signupOpen={signupOpen}
       defaultTab={defaultTab}
+      errorCode={error}
     />
   );
 }

@@ -66,15 +66,19 @@ export function createScheduleTool(
         }
 
         case "list": {
+          // Paused jobs are included so the agent can report on and delete
+          // them - filtering to enabled-only made them invisible.
           const jobs = await db.cronJob.findMany({
-            where: { instanceId, enabled: true },
+            where: { instanceId },
             select: {
               id: true,
               expression: true,
               prompt: true,
               timezone: true,
+              enabled: true,
               lastRunAt: true,
               nextRunAt: true,
+              lastError: true,
             },
             orderBy: { nextRunAt: "asc" },
           });
@@ -85,8 +89,10 @@ export function createScheduleTool(
               expression: j.expression,
               prompt: j.prompt,
               timezone: j.timezone,
+              enabled: j.enabled,
               lastRunAt: j.lastRunAt?.toISOString() ?? null,
               nextRunAt: j.nextRunAt?.toISOString() ?? null,
+              lastError: j.lastError,
             })),
           };
         }

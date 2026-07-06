@@ -62,10 +62,17 @@ export function MemoryBucketControl() {
 
       <Tooltip>
         <TooltipTrigger asChild>
+          {/* A faint icon tint is far too easy to miss for a mode that
+              silently disables all memory - when on, show an explicit
+              labeled pill instead of a bare icon. */}
           <Button
             variant="ghost"
-            size="icon"
-            className={`h-9 w-9 ${incognito ? "bg-accent text-foreground" : ""}`}
+            size={incognito ? "sm" : "icon"}
+            className={
+              incognito
+                ? "h-9 gap-1.5 border border-destructive/40 bg-destructive/10 px-2.5 text-destructive hover:bg-destructive/20 hover:text-destructive"
+                : "h-9 w-9"
+            }
             onClick={() =>
               void updateSettings.mutateAsync({ incognitoMode: !incognito })
             }
@@ -73,11 +80,14 @@ export function MemoryBucketControl() {
             aria-pressed={incognito}
           >
             <Ghost className="h-4 w-4" />
+            {incognito && (
+              <span className="text-xs font-medium">Incognito</span>
+            )}
           </Button>
         </TooltipTrigger>
         <TooltipContent>
           {incognito
-            ? "Incognito on - not saving or recalling memory"
+            ? "Incognito on - memory is OFF (not saving or recalling). Click to turn back on."
             : "Go incognito (no memory)"}
         </TooltipContent>
       </Tooltip>

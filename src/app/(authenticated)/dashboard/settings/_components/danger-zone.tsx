@@ -20,10 +20,13 @@ export function DangerZone() {
   const [open, setOpen] = useState(false);
   const [confirmText, setConfirmText] = useState("");
   const router = useRouter();
+  const utils = trpc.useUtils();
 
   const deleteInstance = trpc.trustclaw.deleteInstance.useMutation({
-    onSuccess: () => {
+    onSuccess: async () => {
       showSuccessToast("Claw instance deleted");
+      // Drop all cached instance state so onboarding doesn't render stale data.
+      await utils.invalidate();
       router.push("/dashboard");
     },
     onError: trpcToastOnError,

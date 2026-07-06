@@ -17,28 +17,24 @@ export const getMemories = protectedProcedure
       return { items: [], nextCursor: undefined };
     }
 
-    const cursorDate = input.cursor ? new Date(input.cursor) : undefined;
-
     const rows = await db.memory.findMany({
-      where: {
-        instanceId: instance.id,
-        ...(cursorDate ? { createdAt: { lt: cursorDate } } : {}),
-      },
+      where: { instanceId: instance.id },
       select: { id: true, content: true, category: true, createdAt: true },
-      orderBy: { createdAt: "desc" },
+      // id tiebreak: createdAt is not unique, and cursor paging over a
+      // non-unique sort key can skip or duplicate rows.
+      orderBy: [{ createdAt: "desc" }, { id: "desc" }],
       take: input.limit + 1,
+      ...(input.cursor ? { cursor: { id: input.cursor }, skip: 1 } : {}),
     });
 
-    const hasNextPage = rows.length > input.limit;
-    const sliced = hasNextPage ? rows.slice(0, input.limit) : rows;
-    const items = z.array(memoryRow).parse(sliced);
-    const nextCursor =
-      hasNextPage && sliced.length > 0
-        ? sliced[sliced.length - 1]!.createdAt.toISOString()
-        : undefined;
+    let nextCursor: string | undefined;
+    if (rows.length > input.limit) {
+      const nextItem = rows.pop();
+      nextCursor = nextItem?.id;
+    }
 
     return {
-      items,
+      items: z.array(memoryRow).parse(rows),
       nextCursor,
     };
   });

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { Loader2 } from "lucide-react";
 import type { z } from "zod";
@@ -138,7 +138,15 @@ export function Onboarding({
   const utils = trpc.useUtils();
 
   const { data: statusData } = trpc.trustclaw.getStatus.useQuery();
-  const telegramConfigured = statusData?.telegramConfigured ?? true;
+  // Default FALSE while getStatus is unresolved: routing a user into the
+  // telegram step on a deployment without a bot renders a blank dead end.
+  const telegramConfigured = statusData?.telegramConfigured ?? false;
+
+  // Whether a key is actually on the instance - instanceCreated is NOT a
+  // proxy for this (key validation can fail after the instance exists, and
+  // the wizard would then falsely show "already saved" and let the user
+  // finish keyless on a Claude model).
+  const { data: keyStatus } = trpc.trustclaw.getAnthropicKeyStatus.useQuery();
 
   const createInstance = trpc.trustclaw.createInstance.useMutation({
     onSuccess: () => {
@@ -147,7 +155,12 @@ export function Onboarding({
     },
   });
 
-  const setAnthropicKey = trpc.trustclaw.setAnthropicApiKey.useMutation();
+  const setAnthropicKey = trpc.trustclaw.setAnthropicApiKey.useMutation({
+    onSuccess: () =>
+      void utils.trustclaw.getAnthropicKeyStatus.invalidate(),
+  });
+
+  const updateModel = trpc.trustclaw.updateSettings.useMutation();
 
   const saveState = trpc.trustclaw.saveOnboardingState.useMutation();
 
@@ -186,10 +199,21 @@ export function Onboarding({
     const isHouse = wizardState.anthropicModel.startsWith("house/");
     try {
       if (!instanceCreated) {
+        // The instance bakes identity/soul prompts from onboardingState, so
+        // the state write must COMMIT first - the per-step persists are
+        // fire-and-forget and can lose the race on slow connections.
+        await persistState("model", wizardState);
         await createInstance.mutateAsync({
           anthropicModel: wizardState.anthropicModel,
         });
         setInstanceCreated(true);
+      } else {
+        // Returning to this step after the instance exists: keep the
+        // instance's model in sync with the wizard selection instead of
+        // silently ignoring the change.
+        await updateModel.mutateAsync({
+          anthropicModel: wizardState.anthropicModel,
+        });
       }
       // Validate + save the user's Anthropic key. Not needed for house models
       // (owner-funded), and skippable if one is already on the instance.
@@ -212,6 +236,8 @@ export function Onboarding({
           ...wizardState,
           anthropicModel: "house/kimi-k2",
         };
+        // Commit the wizard state before the instance bakes prompts from it.
+        await persistState("model", nextState);
         await createInstance.mutateAsync({ anthropicModel: "house/kimi-k2" });
         setInstanceCreated(true);
         setWizardState(nextState);
@@ -228,6 +254,21 @@ export function Onboarding({
   const handleComplete = () => {
     onComplete();
   };
+
+  // A persisted currentStep of "telegram" on a deployment without a bot would
+  // render nothing forever - finish onboarding instead (fires once).
+  const autoCompletedRef = useRef(false);
+  useEffect(() => {
+    if (
+      step === "telegram" &&
+      statusData &&
+      !statusData.telegramConfigured &&
+      !autoCompletedRef.current
+    ) {
+      autoCompletedRef.current = true;
+      onComplete();
+    }
+  }, [step, statusData, onComplete]);
 
   const writingStyleItem = wizardState.writingStyle
     ? (WRITING_STYLE_ITEM_MAP[wizardState.writingStyle] ?? null)
@@ -365,8 +406,12 @@ export function Onboarding({
               onApiKeyChange={(anthropicApiKey) =>
                 setWizardState((prev) => ({ ...prev, anthropicApiKey }))
               }
-              keyAlreadySet={instanceCreated}
-              saving={createInstance.isPending || setAnthropicKey.isPending}
+              keyAlreadySet={keyStatus?.hasKey ?? false}
+              saving={
+                createInstance.isPending ||
+                setAnthropicKey.isPending ||
+                updateModel.isPending
+              }
               onNext={() => void handleModelNext()}
               onBack={goBack}
               onSkip={() => void handleModelSkip()}

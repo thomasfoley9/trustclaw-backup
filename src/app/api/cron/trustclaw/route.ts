@@ -15,11 +15,18 @@ function safeEqual(a: string, b: string): boolean {
   return timingSafeEqual(ab, bb);
 }
 
+// The sweeper itself must outlive its staggered dispatch fan-out (up to 15s
+// of jitter plus one fetch per job) - on the default ceiling it can be killed
+// mid-dispatch, stranding claimed jobs until the stale-lock reclaim.
+export const maxDuration = 300;
+
 const LOCK_TIMEOUT_MS = 10 * 60 * 1000;
 
 const claimedJobRow = z.object({
   id: z.string(),
   instanceId: z.string(),
+  expression: z.string(),
+  timezone: z.string(),
 });
 
 const staleJobRow = z.object({
@@ -79,7 +86,7 @@ export async function GET(request: Request) {
           (cj."nextRunAt" <= ${now} AND cj."lockedAt" IS NULL)
           OR (cj."lockedAt" IS NOT NULL AND cj."lockedAt" < ${lockTimeout})
         )
-      RETURNING cj.id, cj."instanceId"
+      RETURNING cj.id, cj."instanceId", cj.expression, cj.timezone
     `,
   );
 
@@ -112,30 +119,18 @@ export async function GET(request: Request) {
     }
   }
 
-  // QStash chain-heal: jobs that are scheduled for the future but have no
-  // pending one-shot (a delivery was lost, or QStash was enabled after the
-  // job existed) get their next fire re-armed. The claim query above already
-  // covers PAST-due jobs, so together the sweeper fully self-heals the push
-  // path. Bounded per tick; anything beyond heals on the next tick.
-  if (isQstashEnabled()) {
-    const orphans = await db.cronJob.findMany({
-      where: {
-        enabled: true,
-        lockedAt: null,
-        qstashMessageId: null,
-        nextRunAt: { gt: now },
-      },
-      select: { id: true, nextRunAt: true },
-      take: 100,
-    });
-    for (const orphan of orphans) {
-      await scheduleNextFire(orphan.id, orphan.nextRunAt);
-    }
-  }
-
-  if (claimedJobs.length === 0) {
-    return NextResponse.json({ dispatched: 0, results: [], now: now.toISOString() });
-  }
+  // Orphaned run rows: the function died mid-run (deploy, crash, timeout)
+  // before finalize could flip the status, so the row spins as "running"
+  // forever in run history. Runs self-abort at 240s, so anything still
+  // "running" past the lock timeout is dead - mark it failed.
+  await db.cronRun.updateMany({
+    where: { status: "running", startedAt: { lt: lockTimeout } },
+    data: {
+      status: "failed",
+      finishedAt: now,
+      error: "Run interrupted (function terminated)",
+    },
+  });
 
   const executeUrl = `${env.NEXT_PUBLIC_APP_URL}/api/cron/trustclaw/execute`;
 
@@ -176,6 +171,45 @@ export async function GET(request: Request) {
         ? "dispatched"
         : "dispatch_failed",
   }));
+
+  // Compensating fenced release: a failed dispatch leaves the job claimed
+  // with nextRunAt=NULL, invisible to the sweeper until the 10-min stale
+  // reclaim. Release our lock and re-arm the schedule now instead. Fenced on
+  // invocationId so a reclaimed lock can't be stomped.
+  for (const [i, entry] of dispatched.entries()) {
+    if (entry.status !== "dispatch_failed") continue;
+    const job = claimedJobs[i]!;
+    await db.cronJob.updateMany({
+      where: { id: job.id, lockedBy: invocationId },
+      data: {
+        lockedAt: null,
+        lockedBy: null,
+        nextRunAt: computeNextRunSafe(job.expression, job.timezone),
+      },
+    });
+  }
+
+  // QStash chain-heal: jobs that are scheduled for the future but have no
+  // pending one-shot (a delivery was lost, or QStash was enabled after the
+  // job existed) get their next fire re-armed. Runs after dispatch so it
+  // never delays due jobs. The claim query above already covers PAST-due
+  // jobs, so together the sweeper fully self-heals the push path. Bounded
+  // per tick; anything beyond heals on the next tick.
+  if (isQstashEnabled()) {
+    const orphans = await db.cronJob.findMany({
+      where: {
+        enabled: true,
+        lockedAt: null,
+        qstashMessageId: null,
+        nextRunAt: { gt: now },
+      },
+      select: { id: true, nextRunAt: true },
+      take: 100,
+    });
+    for (const orphan of orphans) {
+      await scheduleNextFire(orphan.id, orphan.nextRunAt);
+    }
+  }
 
   return NextResponse.json({
     dispatched: claimedJobs.length,
