@@ -264,6 +264,9 @@ async def entrypoint(ctx: JobContext):
     # before any model/session setup so pings cost nothing.
     if config.get("keepalive"):
         logger.info("keepalive ping - staying warm")
+        # Explicit shutdown keeps the framework from logging a "completed
+        # without establishing a connection" warning on every ping.
+        ctx.shutdown(reason="keepalive")
         return
 
     user_id = config.get("userId")
