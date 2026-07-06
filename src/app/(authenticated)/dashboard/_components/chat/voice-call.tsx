@@ -1,7 +1,14 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Room, ConnectionState, RoomEvent } from "livekit-client";
+import {
+  Room,
+  ConnectionState,
+  RoomEvent,
+  Track,
+  createLocalAudioTrack,
+  type LocalAudioTrack,
+} from "livekit-client";
 import {
   RoomContext,
   RoomAudioRenderer,
@@ -115,16 +122,13 @@ export function VoiceCall({
     };
     liveRoom.on("disconnected", onDisconnected);
 
-    // Prewarm the mic permission in parallel with the token round-trip: the
-    // browser's permission prompt + device grab otherwise serialize AFTER
-    // room.connect (inside setMicrophoneEnabled), adding seconds to call
-    // start. Tracks stop immediately - only the grant is being cached. Errors
-    // are ignored here; the real (user-facing) failure path stays at
-    // setMicrophoneEnabled below.
-    void navigator.mediaDevices
-      ?.getUserMedia({ audio: true })
-      .then((stream) => stream.getTracks().forEach((t) => t.stop()))
-      .catch(() => undefined);
+    // Open the REAL mic track at button press, in parallel with the token
+    // round-trip and room connect - by the time the room is joined the track
+    // is already live and publishing it is near-instant. On failure this
+    // resolves null and the post-connect code falls back to
+    // setMicrophoneEnabled, which owns the user-facing permission errors.
+    const micTrackPromise: Promise<LocalAudioTrack | null> =
+      createLocalAudioTrack().catch(() => null);
 
     void (async () => {
       try {
@@ -164,12 +168,29 @@ export function VoiceCall({
         if (cancelled) return;
 
         try {
-          // Honor a mute toggled DURING setup: the mute-sync effect below
-          // early-returns until the room is Connected, so enabling the mic
-          // unconditionally here would leave it hot behind a "Muted" UI.
-          await liveRoom.localParticipant.setMicrophoneEnabled(
-            !mutedRef.current,
-          );
+          const micTrack = await micTrackPromise;
+          if (cancelled) {
+            micTrack?.stop();
+            return;
+          }
+          if (micTrack) {
+            // Track opened at button press - publish is near-instant. Honor a
+            // mute toggled DURING setup: the mute-sync effect below
+            // early-returns until the room is Connected, so publishing hot
+            // unconditionally would leave the mic live behind a "Muted" UI.
+            if (mutedRef.current) await micTrack.mute();
+            // Tag as the microphone source so the mute-sync effect's
+            // setMicrophoneEnabled() finds and controls this track.
+            await liveRoom.localParticipant.publishTrack(micTrack, {
+              source: Track.Source.Microphone,
+            });
+          } else {
+            // Pre-open failed (permission prompt dismissed, device busy) -
+            // retry through the standard path, which owns the error UX.
+            await liveRoom.localParticipant.setMicrophoneEnabled(
+              !mutedRef.current,
+            );
+          }
         } catch (err) {
           const name = err instanceof Error ? err.name : "";
           const detail =
@@ -206,6 +227,10 @@ export function VoiceCall({
       cancelled = true;
       tokenAbort.abort();
       liveRoom.off("disconnected", onDisconnected);
+      // Release the pre-opened mic if the call tears down before publish -
+      // otherwise the browser's recording indicator stays on. Idempotent for
+      // published tracks (disconnect below stops those).
+      void micTrackPromise.then((t) => t?.stop());
       void liveRoom.disconnect();
       // No setRoom(null) here: the next effect pass handles it (the !active
       // branch nulls it; a re-activate replaces it), avoiding a null flap that
