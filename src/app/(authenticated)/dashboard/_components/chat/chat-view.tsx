@@ -9,7 +9,8 @@ import {
   useMemo,
 } from "react";
 import type { UIMessage } from "@ai-sdk/react";
-import { Loader2, ArrowDown } from "lucide-react";
+import { Loader2, ArrowDown, RefreshCw } from "lucide-react";
+import { trpc } from "~/clients/trpc";
 import { ErrorBoundary } from "~/components/core/error-boundary";
 import { Button } from "~/components/ui/button";
 import {
@@ -42,10 +43,21 @@ import { env } from "~/env";
 import { TerminalPane } from "../terminal/terminal-pane";
 import { OpenClawLogo } from "~/app/_components/openclaw-logo";
 
-const SAMPLE_PROMPTS = [
-  "Summarize my emails for today",
-  "What's on my calendar for tomorrow",
-  "Catch me up on latest messages on Slack",
+// Starter prompts keyed by connected toolkit; anything not connected falls
+// back to prompts that work with zero integrations.
+const TOOLKIT_PROMPTS: Record<string, string> = {
+  gmail: "Summarize my emails from today",
+  googlecalendar: "What's on my calendar tomorrow?",
+  slack: "Catch me up on Slack",
+  github: "What's new in my GitHub notifications?",
+  notion: "Find my most recent Notion notes",
+  linear: "Which Linear issues are assigned to me?",
+};
+
+const FALLBACK_PROMPTS = [
+  "What can you do?",
+  "Remember that I prefer short, direct answers",
+  "Set up a daily 8am summary of my day",
 ];
 
 const NEAR_BOTTOM_PX = 80;
@@ -84,11 +96,12 @@ export function ChatView({
   hasOlderMessages,
   isFetchingOlderMessages,
 }: ChatViewProps) {
-  const { sendMessage, stop, messages, status, setMessages } = useChatHook({
-    initialMessages,
-    streamId,
-    conversationId,
-  });
+  const { sendMessage, stop, regenerate, messages, status, error, setMessages } =
+    useChatHook({
+      initialMessages,
+      streamId,
+      conversationId,
+    });
   const terminalOpen = useTerminalStore((s) => s.terminalOpen);
   const setTerminalOpen = useTerminalStore((s) => s.setTerminalOpen);
 
@@ -144,6 +157,21 @@ export function ChatView({
     return [...messages, ...ephemeral];
   }, [messages, voiceTranscripts]);
   const isEmpty = displayMessages.length === 0;
+
+  // Starter prompts derived from what's actually connected; a user with no
+  // integrations gets prompts that work without any. A failed fetch (e.g. no
+  // Composio key yet) just means the fallback list.
+  const toolkitsQuery = trpc.toolkits.getToolkits.useQuery(
+    { isConnected: true, limit: 50 },
+    { enabled: isEmpty, retry: false, staleTime: 5 * 60 * 1000 },
+  );
+  const samplePrompts = useMemo(() => {
+    const connected = toolkitsQuery.data?.items ?? [];
+    const derived = connected
+      .map((t) => TOOLKIT_PROMPTS[t.slug])
+      .filter((p): p is string => !!p);
+    return [...derived, ...FALLBACK_PROMPTS].slice(0, 3);
+  }, [toolkitsQuery.data]);
 
   const {
     enabled: voiceEnabled,
@@ -233,7 +261,19 @@ export function ChatView({
           (p) => p.type === "text" && p.text.trim().length > 0,
         );
       if (incomingEmpty && localHasContent) return;
-      setMessages(initialMessages);
+      // Merge, don't replace: the server page holds only the newest N rows, so
+      // wholesale adoption truncates locally-known older messages (they
+      // silently vanish after every turn once the conversation outgrows a
+      // page). Keep the local prefix that predates the server window; from the
+      // first shared id onward the server page is the truth (this also dedups
+      // optimistic client-side rows against their persisted versions).
+      setMessages((current) => {
+        const serverIds = new Set(initialMessages.map((m) => m.id));
+        const firstSharedIdx = current.findIndex((m) => serverIds.has(m.id));
+        const olderLocal =
+          firstSharedIdx <= 0 ? [] : current.slice(0, firstSharedIdx);
+        return [...olderLocal, ...initialMessages];
+      });
     }
   }, [initialMessages, isStreaming, messages, setMessages]);
 
@@ -439,7 +479,7 @@ export function ChatView({
                 </p>
               </div>
               <div className="flex max-w-md flex-wrap justify-center gap-2">
-                {SAMPLE_PROMPTS.map((prompt) => (
+                {samplePrompts.map((prompt) => (
                   <button
                     key={prompt}
                     onClick={() => {
@@ -484,6 +524,11 @@ export function ChatView({
                           message.id === lastMessage?.id ? status : "ready"
                         }
                         onOpenTerminal={handleOpenTerminal}
+                        onRegenerate={
+                          message.id === lastMessage?.id && !isStreaming
+                            ? regenerate
+                            : undefined
+                        }
                       />
                     )}
                   </ErrorBoundary>
@@ -512,10 +557,27 @@ export function ChatView({
           )}
         </div>
 
+        {error && !isStreaming && (
+          <div className="border-destructive/30 bg-destructive/10 mx-auto mb-2 flex w-full max-w-2xl items-center justify-between gap-3 rounded-xl border px-4 py-2.5">
+            <p className="text-destructive min-w-0 truncate text-sm">
+              The response failed. Your message is still here - retry it.
+            </p>
+            <Button
+              variant="outline"
+              size="sm"
+              className="shrink-0"
+              onClick={regenerate}
+            >
+              <RefreshCw className="size-3.5" />
+              Retry
+            </Button>
+          </div>
+        )}
         <ChatInput
           onSend={handleSend}
           onStop={stop}
           status={status}
+          conversationId={conversationId}
           backgroundBusy={backgroundBusy}
           voiceEnabled={voiceEnabled}
           voiceSpeaking={voiceSpeaking}

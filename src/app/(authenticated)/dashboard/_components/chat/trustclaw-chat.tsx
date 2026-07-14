@@ -66,6 +66,13 @@ export function TrustClawChat() {
       id: msg.id,
       role: msg.role,
       parts: msg.content as UIMessage["parts"],
+      // Timestamp + token totals ride along for the message footers. Live
+      // streamed messages have no metadata until the post-finish refetch.
+      metadata: {
+        createdAt: msg.createdAt.toISOString(),
+        inputTokens: msg.inputTokens,
+        outputTokens: msg.outputTokens,
+      },
     }));
 
   const streamId = streamingQuery.data?.messageId ?? null;

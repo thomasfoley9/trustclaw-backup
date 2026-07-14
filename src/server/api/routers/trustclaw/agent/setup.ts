@@ -76,6 +76,10 @@ interface PrepareAgentRunParams {
   // Files attached to this turn. Images/PDFs become native model parts;
   // text-like files (csv/txt/json/md) are inlined as text.
   attachments?: Array<{ name: string; mediaType: string; data: string }>;
+  // Re-run of the conversation's last user turn: the user row is already in
+  // the DB, so don't persist it again or append it to the built context (the
+  // loaded history already ends with it). The caller removes the old reply.
+  regenerate?: boolean;
 }
 
 interface PrepareAgentRunResult {
@@ -102,6 +106,7 @@ export async function prepareAgentRun(
     conversationId: pinnedConversationId,
     dedicatedConversationTitle,
     attachments = [],
+    regenerate = false,
   } = params;
 
   const instance = await db.composioClawInstance.findUnique({
@@ -366,7 +371,9 @@ export async function prepareAgentRun(
   const aiMessages = buildContext(
     dbMessages,
     incognito ? null : conversation.lastCompactionSummary,
-    userContent,
+    // On regenerate the loaded history already ends with this user turn -
+    // appending it again would send it to the model twice.
+    regenerate ? null : userContent,
   );
 
   const contextWindow = getContextWindow(instance.anthropicModel);
@@ -393,26 +400,28 @@ export async function prepareAgentRun(
   // context loading or chat history on subsequent turns.
   const effectiveMessageType = incognito ? "hidden" : userMessageType;
 
-  await db.message.create({
-    data: {
-      instanceId,
-      conversationId,
-      role: "user",
-      content: [
-        { type: "text", text: userMessage },
-        ...attachmentMarkers,
-      ],
-      source,
-      ...(effectiveMessageType && { messageType: effectiveMessageType }),
-    },
-  });
+  if (!regenerate) {
+    await db.message.create({
+      data: {
+        instanceId,
+        conversationId,
+        role: "user",
+        content: [
+          { type: "text", text: userMessage },
+          ...attachmentMarkers,
+        ],
+        source,
+        ...(effectiveMessageType && { messageType: effectiveMessageType }),
+      },
+    });
+  }
 
   // Title and recency update up front for visible user messages. The persona
   // tracker (lastPersonalityId) is deliberately NOT advanced here - a run can
   // still fail at the Composio/model preconditions below, and advancing early
   // would consume the one-shot switch note so the retry loses the new voice.
   // It moves forward in onFinish, after a reply actually landed.
-  if (!incognito) {
+  if (!incognito && !regenerate) {
     const isVisible = !effectiveMessageType;
     const isFirstTitle = conversation.title === "New chat";
     if (isVisible) {

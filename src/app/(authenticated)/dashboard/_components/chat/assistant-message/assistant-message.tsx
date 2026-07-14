@@ -1,16 +1,35 @@
 "use client";
 
 import { useState, useRef, useEffect, useMemo } from "react";
-import Markdown from "react-markdown";
+import Markdown, { type Components } from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { Copy, Check } from "lucide-react";
+import rehypeHighlight from "rehype-highlight";
+import moment from "moment";
+import { Copy, Check, RefreshCw } from "lucide-react";
 import type { UIMessage } from "@ai-sdk/react";
 import type { ChatStatus, DynamicToolUIPart, ToolUIPart } from "ai";
 import { isToolUIPart } from "ai";
 import { ThinkingIndicator } from "./thinking-indicator";
 import { ToolCallSegment } from "./tool-call-segment";
+import { CodeBlock } from "./code-block";
+import { messageMeta } from "../message-metadata";
 import { stripToolResultEchoes } from "~/server/api/routers/trustclaw/agent/strip-tool-echoes";
 import { PROSE_CLASSES } from "./prose-classes";
+
+// Assistant replies regularly contain external links and code - links must
+// never navigate the chat away, and tables must scroll instead of blowing out
+// the bubble width.
+const MARKDOWN_COMPONENTS: Components = {
+  a: ({ node: _node, ...props }) => (
+    <a {...props} target="_blank" rel="noopener noreferrer" />
+  ),
+  pre: ({ node: _node, ...props }) => <CodeBlock {...props} />,
+  table: ({ node: _node, ...props }) => (
+    <div className="overflow-x-auto">
+      <table {...props} />
+    </div>
+  ),
+};
 
 type TextUIPart = { type: "text"; text: string };
 
@@ -43,12 +62,15 @@ interface AssistantMessageProps {
   message: UIMessage;
   status: ChatStatus;
   onOpenTerminal: () => void;
+  // Set only on the last assistant message while idle - re-runs the turn.
+  onRegenerate?: () => void;
 }
 
 export function AssistantMessage({
   message,
   status,
   onOpenTerminal,
+  onRegenerate,
 }: AssistantMessageProps) {
   const [copied, setCopied] = useState(false);
   const copyTimeoutRef = useRef<ReturnType<typeof setTimeout>>(null);
@@ -62,6 +84,9 @@ export function AssistantMessage({
   // Re-segmenting on every parent re-render (frequent during streaming + voice
   // transcript updates) is wasted work when this message's parts are unchanged.
   const segments = useMemo(() => segmentParts(message.parts), [message.parts]);
+
+  const meta = messageMeta(message);
+  const tokenTotal = (meta.inputTokens ?? 0) + (meta.outputTokens ?? 0);
 
   const getFullTextContent = () =>
     segments
@@ -113,7 +138,13 @@ export function AssistantMessage({
           return (
             <div key={`text-${idx}`}>
               <div className={`min-w-0 flex-1 ${PROSE_CLASSES}`}>
-                <Markdown remarkPlugins={[remarkGfm]}>{textContent}</Markdown>
+                <Markdown
+                  remarkPlugins={[remarkGfm]}
+                  rehypePlugins={[rehypeHighlight]}
+                  components={MARKDOWN_COMPONENTS}
+                >
+                  {textContent}
+                </Markdown>
               </div>
             </div>
           );
@@ -129,17 +160,35 @@ export function AssistantMessage({
       })}
 
       {hasTextContent && (
-        <button
-          onClick={handleCopy}
-          aria-label={copied ? "Copied" : "Copy reply"}
-          className="text-muted-foreground/50 hover:text-muted-foreground -m-2 p-2 transition-colors"
-        >
-          {copied ? (
-            <Check className="size-3.5" />
-          ) : (
-            <Copy className="size-3.5" />
+        <div className="-m-2 flex items-center gap-1">
+          <button
+            onClick={handleCopy}
+            aria-label={copied ? "Copied" : "Copy reply"}
+            className="text-muted-foreground/50 hover:text-muted-foreground p-2 transition-colors"
+          >
+            {copied ? (
+              <Check className="size-3.5" />
+            ) : (
+              <Copy className="size-3.5" />
+            )}
+          </button>
+          {onRegenerate && (
+            <button
+              onClick={onRegenerate}
+              aria-label="Regenerate reply"
+              className="text-muted-foreground/50 hover:text-muted-foreground p-2 transition-colors"
+            >
+              <RefreshCw className="size-3.5" />
+            </button>
           )}
-        </button>
+          {(meta.createdAt !== undefined || tokenTotal > 0) && (
+            <span className="text-muted-foreground/50 pl-1 text-xs">
+              {meta.createdAt && moment(meta.createdAt).format("h:mm A")}
+              {meta.createdAt && tokenTotal > 0 && " · "}
+              {tokenTotal > 0 && `${tokenTotal.toLocaleString()} tokens`}
+            </span>
+          )}
+        </div>
       )}
     </div>
   );

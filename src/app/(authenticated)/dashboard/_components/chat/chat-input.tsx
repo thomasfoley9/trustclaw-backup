@@ -32,6 +32,9 @@ interface ChatInputProps {
   onSend: (message: string, files?: ChatFilePart[]) => void;
   onStop: () => void;
   status: ChatStatus;
+  // Keys the per-conversation draft, so switching chats never destroys what
+  // was typed.
+  conversationId: string;
   // A server-side background run is executing for this session (no local
   // stream). Input is blocked and the stop button targets the server run.
   backgroundBusy?: boolean;
@@ -61,11 +64,40 @@ const CONVERSATION_STATUS: Record<
 
 // Both caps must match app/api/chat/route.ts (MAX_MESSAGE_CHARS and the
 // TOTAL attachment budget) - a looser client cap lets users compose sends
-// the server then rejects without persisting anything.
+// the server then rejects without persisting anything. The 3MB budget is
+// decoded bytes: attachments ship base64-encoded in the JSON POST body, and
+// Vercel rejects request bodies over 4.5MB at the edge with an error the
+// client can't parse - so the advertised cap must keep the ENCODED body under
+// that platform limit.
 const MAX_MESSAGE_LENGTH = 32_000;
-const MAX_FILE_BYTES = 25 * 1024 * 1024;
-const MAX_TOTAL_ATTACHMENT_BYTES = 25 * 1024 * 1024;
+const MAX_FILE_BYTES = 3 * 1024 * 1024;
+const MAX_TOTAL_ATTACHMENT_BYTES = 3 * 1024 * 1024;
 const MAX_FILES = 8;
+
+// Drafts survive conversation switches (the composer remounts per chat).
+// Session-scoped: a draft is work in progress, not something to resurrect
+// days later.
+function draftKey(conversationId: string): string {
+  return `trustclaw-draft:${conversationId}`;
+}
+
+function loadDraft(conversationId: string): string {
+  if (typeof window === "undefined") return "";
+  try {
+    return sessionStorage.getItem(draftKey(conversationId)) ?? "";
+  } catch {
+    return "";
+  }
+}
+
+function saveDraft(conversationId: string, value: string): void {
+  try {
+    if (value) sessionStorage.setItem(draftKey(conversationId), value);
+    else sessionStorage.removeItem(draftKey(conversationId));
+  } catch {
+    // Storage full or unavailable (private mode) - drafts are best-effort.
+  }
+}
 
 interface Attachment {
   id: string;
@@ -88,6 +120,7 @@ export function ChatInput({
   onSend,
   onStop,
   status,
+  conversationId,
   backgroundBusy = false,
   voiceEnabled,
   voiceSpeaking,
@@ -100,7 +133,7 @@ export function ChatInput({
   onStopConversation,
   onToggleMute,
 }: ChatInputProps) {
-  const [input, setInput] = useState("");
+  const [input, setInput] = useState(() => loadDraft(conversationId));
   const [attachments, setAttachments] = useState<Attachment[]>([]);
   const [dragOver, setDragOver] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -122,6 +155,10 @@ export function ChatInput({
     }
   }, [input]);
 
+  useEffect(() => {
+    saveDraft(conversationId, input);
+  }, [conversationId, input]);
+
   const handleDictationFinal = useCallback((text: string) => {
     setInput((prev) => (prev ? `${prev} ${text}` : text));
     textareaRef.current?.focus();
@@ -137,20 +174,6 @@ export function ChatInput({
   useEffect(() => {
     if (isStreaming && isListening) stopDictation();
   }, [isStreaming, isListening, stopDictation]);
-
-  // Restore focus to the composer when a reply finishes, so the next message
-  // doesn't require re-clicking the box. Skip on coarse pointers (touch) to
-  // avoid popping the mobile keyboard open unprompted.
-  const wasStreamingRef = useRef(false);
-  useEffect(() => {
-    const finePointer =
-      typeof window !== "undefined" &&
-      window.matchMedia?.("(pointer: fine)").matches;
-    if (wasStreamingRef.current && !isStreaming && finePointer) {
-      textareaRef.current?.focus();
-    }
-    wasStreamingRef.current = isStreaming;
-  }, [isStreaming]);
 
   // Stop push-to-talk dictation when the hands-free loop starts, so two
   // SpeechRecognition instances don't fight over the mic.
@@ -174,12 +197,12 @@ export function ChatInput({
       );
       for (const file of files.slice(0, room)) {
         if (file.size > MAX_FILE_BYTES) {
-          showErrorToast(`"${file.name}" is over 25MB`);
+          showErrorToast(`"${file.name}" is over 3MB`);
           continue;
         }
         if (totalBytes + Math.ceil((file.size * 4) / 3) > MAX_TOTAL_ATTACHMENT_BYTES) {
           showErrorToast(
-            `"${file.name}" would push attachments over the 25MB total limit`,
+            `"${file.name}" would push attachments over the 3MB total limit`,
           );
           continue;
         }
@@ -226,6 +249,10 @@ export function ChatInput({
   }, [onStop]);
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    // IME composition: Enter commits the candidate, it doesn't send. Without
+    // this guard CJK input sends half-typed messages. keyCode 229 covers
+    // browsers that fire the key event before compositionend.
+    if (e.nativeEvent.isComposing || e.keyCode === 229) return;
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       if (isStreaming) return;
@@ -376,7 +403,6 @@ export function ChatInput({
             size="icon"
             className="size-9 shrink-0 rounded-xl"
             onClick={() => fileInputRef.current?.click()}
-            disabled={isStreaming}
             aria-label="Attach files"
           >
             <Paperclip className="size-4" />
@@ -465,11 +491,8 @@ export function ChatInput({
             placeholder={
               backgroundBusy
                 ? "Answering in the background..."
-                : isStreaming
-                  ? "Waiting for response..."
-                  : "Ask me anything..."
+                : "Ask me anything..."
             }
-            disabled={isStreaming}
             rows={1}
             className={cn(
               "border-border bg-card/60 max-h-[200px] min-h-[44px] resize-none rounded-2xl text-base md:text-sm",

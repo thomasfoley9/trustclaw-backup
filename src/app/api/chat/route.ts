@@ -20,12 +20,19 @@ import {
   clearStreamingMessage,
   isRedisConfigured,
   slidingWindowAllow,
+  isRunAbortRequested,
+  clearRunAbortRequest,
 } from "~/server/clients/redis";
+import { stripToolResultEchoes } from "~/server/api/routers/trustclaw/agent/strip-tool-echoes";
+import { toPlainRecordSafe, toPrismaJson } from "~/server/api/routers/trustclaw/agent/context/build-context";
 import { getStreamContext } from "./stream-store";
 
 const MAX_MESSAGE_CHARS = 32_000;
 const MAX_ATTACHMENTS = 8;
-const MAX_ATTACHMENT_BYTES = 25 * 1024 * 1024;
+// Attachments travel base64-encoded inside the JSON POST body, and Vercel caps
+// request bodies at 4.5MB - so the real budget is decoded bytes * 4/3 + text.
+// 3MB decoded keeps the encoded body safely under the platform limit.
+const MAX_ATTACHMENT_BYTES = 3 * 1024 * 1024;
 // Max simultaneous background runs per account.
 const MAX_CONCURRENT_RUNS = 3;
 
@@ -71,6 +78,9 @@ const chatRequestBody = z.object({
     }),
   ),
   conversationId: z.string(),
+  // Sent by the AI SDK transport: "regenerate-message" re-runs the last user
+  // turn without persisting a duplicate user row.
+  trigger: z.enum(["submit-message", "regenerate-message"]).optional(),
 });
 
 async function getAuthenticatedInstance(request: Request) {
@@ -194,7 +204,7 @@ export async function POST(request: Request) {
     });
   }
   if (attachmentBytes > MAX_ATTACHMENT_BYTES) {
-    return new Response("Attachments too large (max 25MB total)", {
+    return new Response("Attachments too large (max 3MB total)", {
       status: 413,
     });
   }
@@ -224,6 +234,40 @@ export async function POST(request: Request) {
   }
   const { controller: runController, claimedAt } = claim;
   let closeMcp: () => Promise<void> = () => Promise.resolve();
+
+  // Regenerate re-runs the conversation's last user turn: drop the replies it
+  // already got (so the new one doesn't stack on the old) and skip
+  // re-persisting the user row. Only honored when the persisted last user turn
+  // actually matches this request - if the original send failed BEFORE its
+  // user row was persisted (409/429/setup error), the retry must run as a
+  // normal submit or the turn is silently lost.
+  let isRegenerate = false;
+  if (body.data.trigger === "regenerate-message") {
+    const lastUser = await db.message.findFirst({
+      where: { conversationId, role: "user", messageType: "regular" },
+      orderBy: { createdAt: "desc" },
+      select: { createdAt: true, content: true },
+    });
+    const lastUserText = Array.isArray(lastUser?.content)
+      ? (lastUser.content as Array<{ type?: unknown; text?: unknown }>)
+          .filter((p) => p?.type === "text" && typeof p.text === "string")
+          .map((p) => p.text as string)
+          .join("\n")
+      : "";
+    if (lastUser && lastUserText === userText) {
+      isRegenerate = true;
+      await db.message
+        .deleteMany({
+          where: {
+            conversationId,
+            role: "assistant",
+            createdAt: { gte: lastUser.createdAt },
+          },
+        })
+        .catch(() => undefined);
+    }
+  }
+
   try {
     const prepareResult = await prepareAgentRun({
       instanceId,
@@ -231,6 +275,7 @@ export async function POST(request: Request) {
       source: "web",
       conversationId,
       attachments,
+      regenerate: isRegenerate,
     });
 
     const { agent, messages } = prepareResult.result;
@@ -281,25 +326,72 @@ export async function POST(request: Request) {
   // Drive the run to completion independently of the client connection, then
   // settle the pre-created assistant row: onFinish fills it on success; on
   // failure it becomes a visible error bubble (silent no-reply failures are
-  // worse than ugly ones); on user-initiated stop it's removed.
+  // worse than ugly ones); on user-initiated stop the partial streamed so far
+  // is persisted (the UI keeps showing it, so a reload must not lose it).
   after(async () => {
     let runError: unknown = null;
+    // Everything streamed so far, in persisted-message shape. On abort this is
+    // the ground truth for the partial reply: onFinish never fires, and
+    // onAbort's steps miss the in-flight step's text.
+    const partialToolParts: Array<Record<string, unknown>> = [];
+    const toolPartByCallId = new Map<string, Record<string, unknown>>();
+    let partialText = "";
+    // Stop must reach runs on other serverless instances: /api/chat/stop sets
+    // a Redis flag (it can't touch this process's AbortController), and this
+    // poller turns the flag into a local abort.
+    const abortPoll = isRedisConfigured()
+      ? setInterval(() => {
+          isRunAbortRequested(conversationId)
+            .then((requested) => {
+              if (requested) runController.abort();
+            })
+            .catch(() => undefined);
+        }, 2000)
+      : null;
     try {
       // Drive the run to completion ourselves and read provider errors
       // directly off the source stream (they arrive as 'error' PARTS, which
       // consumeStream's onError does not surface).
       for await (const part of result.fullStream) {
-        if (
-          typeof part === "object" &&
-          part !== null &&
-          (part as { type?: unknown }).type === "error"
-        ) {
-          runError = (part as { error?: unknown }).error ?? part;
+        switch (part.type) {
+          case "text-start":
+            if (partialText) partialText += "\n\n";
+            break;
+          case "text-delta":
+            partialText += part.text;
+            break;
+          case "tool-call": {
+            const toolPart: Record<string, unknown> = {
+              type: "dynamic-tool",
+              toolCallId: part.toolCallId,
+              toolName: part.toolName,
+              state: "input-available",
+              input: toPlainRecordSafe(part.input),
+              output: {},
+            };
+            partialToolParts.push(toolPart);
+            toolPartByCallId.set(part.toolCallId, toolPart);
+            break;
+          }
+          case "tool-result": {
+            const toolPart = toolPartByCallId.get(part.toolCallId);
+            if (toolPart) {
+              toolPart.state = "output-available";
+              toolPart.output = toPlainRecordSafe(part.output);
+            }
+            break;
+          }
+          case "error":
+            runError = part.error ?? part;
+            break;
+          default:
+            break;
         }
       }
     } catch (error) {
       runError = error;
     } finally {
+      if (abortPoll) clearInterval(abortPoll);
       runError = runError ?? capturedError;
       const emptyRowFilter = {
         conversationId,
@@ -308,13 +400,29 @@ export async function POST(request: Request) {
         content: { equals: [] },
       };
       // Branch on ROW STATE, not error plumbing: onFinish fills the row on
-      // success, so a still-empty row means the run produced nothing. Unless
-      // the user stopped it, turn it into a visible error bubble - silent
-      // no-reply failures are worse than ugly ones.
+      // success, so a still-empty row means the run either produced nothing or
+      // was stopped mid-stream.
       if (runController.signal.aborted) {
-        await db.message
-          .deleteMany({ where: emptyRowFilter })
-          .catch(() => undefined);
+        // Persist the partial the user watched stream in. The empty-row filter
+        // makes this a no-op if onAbort already settled the row.
+        const text = stripToolResultEchoes(partialText).trim();
+        const stoppedParts: Array<Record<string, unknown>> = [
+          ...partialToolParts,
+          ...(text ? [{ type: "text", text }] : []),
+        ];
+        if (stoppedParts.length > 0) {
+          await db.message
+            .updateMany({
+              where: emptyRowFilter,
+              data: { content: toPrismaJson(stoppedParts) },
+            })
+            .catch(() => undefined);
+        } else {
+          // Stopped before anything streamed - nothing to keep.
+          await db.message
+            .deleteMany({ where: emptyRowFilter })
+            .catch(() => undefined);
+        }
       } else {
         const text = runError
           ? parseAgentError(runError)
@@ -329,6 +437,7 @@ export async function POST(request: Request) {
       // Abort and zero-step failures never reach onFinish's mcp.close -
       // idempotent, so double-close on the happy path is fine.
       await closeMcp().catch(() => undefined);
+      await clearRunAbortRequest(conversationId).catch(() => undefined);
       await clearStreamingMessage(instanceId, conversationId, streamId).catch(
         () => undefined,
       );

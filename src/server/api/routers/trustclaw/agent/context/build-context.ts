@@ -134,7 +134,8 @@ type UserContent = Extract<ReconstructedMessage, { role: "user" }>["content"];
 export function buildContext(
   dbMessages: Awaited<ReturnType<typeof loadContextMessages>>,
   lastCompactionSummary: string | null,
-  userContent: UserContent,
+  // null on regenerate: the loaded history already ends with the user turn.
+  userContent: UserContent | null,
 ): ReconstructedMessage[] {
   const aiMessages = deepSanitize(reconstructMessages(dbMessages));
 
@@ -159,13 +160,15 @@ export function buildContext(
 
   // userContent is a plain string for text-only turns, or an array of content
   // parts (text + image/file) when files are attached.
-  aiMessages.push({
-    role: "user" as const,
-    content:
-      typeof userContent === "string"
-        ? sanitizeString(userContent)
-        : userContent,
-  });
+  if (userContent !== null) {
+    aiMessages.push({
+      role: "user" as const,
+      content:
+        typeof userContent === "string"
+          ? sanitizeString(userContent)
+          : userContent,
+    });
+  }
 
   return aiMessages;
 }

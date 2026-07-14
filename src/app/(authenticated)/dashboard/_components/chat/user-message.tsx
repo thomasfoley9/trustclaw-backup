@@ -1,8 +1,10 @@
 "use client";
 
 import { useState, useRef, useEffect, useMemo } from "react";
+import moment from "moment";
 import { Copy, Check, FileText } from "lucide-react";
 import type { UIMessage } from "@ai-sdk/react";
+import { messageMeta } from "./message-metadata";
 
 interface UserMessageProps {
   message: UIMessage;
@@ -56,6 +58,7 @@ export function UserMessage({ message }: UserMessageProps) {
     .join("\n");
 
   const fileAttachments = useMemo(() => extractAttachments(message), [message]);
+  const { createdAt } = messageMeta(message);
 
   const handleCopy = () => {
     void navigator.clipboard.writeText(textContent);
@@ -99,17 +102,24 @@ export function UserMessage({ message }: UserMessageProps) {
       )}
 
       {textContent && (
-        <button
-          onClick={handleCopy}
-          aria-label={copied ? "Copied" : "Copy message"}
-          className="text-muted-foreground/50 hover:text-muted-foreground -m-2 mt-1 mr-1 p-2 transition-colors"
-        >
-          {copied ? (
-            <Check className="size-3.5" />
-          ) : (
-            <Copy className="size-3.5" />
+        <div className="-m-2 mt-1 mr-1 flex items-center gap-1">
+          {createdAt && (
+            <span className="text-muted-foreground/50 pr-1 text-xs">
+              {moment(createdAt).format("h:mm A")}
+            </span>
           )}
-        </button>
+          <button
+            onClick={handleCopy}
+            aria-label={copied ? "Copied" : "Copy message"}
+            className="text-muted-foreground/50 hover:text-muted-foreground p-2 transition-colors"
+          >
+            {copied ? (
+              <Check className="size-3.5" />
+            ) : (
+              <Copy className="size-3.5" />
+            )}
+          </button>
+        </div>
       )}
     </div>
   );

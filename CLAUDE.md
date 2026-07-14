@@ -422,52 +422,15 @@ const createItem = trpc.items.create.useMutation({
 //await createItem.mutateAsync({ name: "New Item" });
 ```
 
-**tRPC subscriptions (SSE):**
+**Chat streaming (Route Handler, NOT a tRPC subscription):**
 
-Used for real-time streaming (e.g., agent chat). The client uses `splitLink` to route subscriptions via `httpSubscriptionLink`:
+Agent chat streams through a dedicated Route Handler at `app/api/chat/route.ts` using the AI SDK's UI message stream, not tRPC. The client consumes it via `useChat` from `@ai-sdk/react` with a `DefaultChatTransport` pinned to the conversation (see `_components/use-chat-hook.ts`). Key properties of this path:
 
-```typescript
-// Client setup (in trpc client config) - route subscriptions separately
-import { splitLink, httpSubscriptionLink, httpBatchStreamLink } from "@trpc/client";
+- The run is driven server-side by `after()` and survives the viewer disconnecting; reconnection goes through the resumable-stream store (`app/api/chat/stream-store.ts`, Redis-backed) via the route's GET handler.
+- Stop is explicit: `POST /api/chat/stop` aborts a run in the same process directly, or sets a Redis `abort:<conversationId>` flag that the run's driver polls for cross-instance stops.
+- Run claims are atomic per conversation (`agent/run-registry.ts` + `Conversation.activeRunStartedAt`).
 
-splitLink({
-  condition: (op) => op.type === "subscription",
-  true: httpSubscriptionLink({ url: getBaseUrl() + "/api/trpc", transformer: SuperJSON }),
-  false: httpBatchStreamLink({ url: getBaseUrl() + "/api/trpc", transformer: SuperJSON }),
-});
-```
-
-```typescript
-// Server - define a subscription procedure with observable
-import { observable } from "@trpc/server/observable";
-
-export const chat = protectedProcedure
-  .input(chatInput)
-  .subscription(({ input, ctx }) => {
-    return observable<StreamEvent>((emit) => {
-      const abortController = new AbortController();
-
-      runStream({ input, emit, signal: abortController.signal })
-        .catch((error) => {
-          emit.next({ type: "error", message: error.message });
-          emit.complete();
-        });
-
-      return () => abortController.abort(); // cleanup on unsubscribe
-    });
-  });
-```
-
-```typescript
-// Client - consume with useSubscription (controlled via enabled flag)
-const [isActive, setIsActive] = useState(false);
-
-trpc.domain.procedure.useSubscription(input, {
-  enabled: isActive,
-  onData: (event) => { /* handle streaming events */ },
-  onError: (err) => { /* handle errors */ },
-});
-```
+Everything else (queries, mutations) stays on tRPC. Do not add tRPC subscriptions for streaming - the Route Handler pattern above is the house pattern.
 
 ### Database (Prisma)
 

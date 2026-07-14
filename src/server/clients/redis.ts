@@ -113,6 +113,46 @@ export async function clearStreamingMessage(
   await r.del(streamingKey(instanceId, conversationId));
 }
 
+// ─── Cross-Instance Run Abort ───────────────────────────────────────────────
+//
+// /api/chat/stop and /api/chat are separate routes, so on serverless they land
+// on different instances and the in-process AbortController map can't reach
+// the run. The stop route sets this flag; the run's driver polls it and aborts
+// its local controller. TTL covers the route's maxDuration so a flag for a
+// run that already died can't linger into a future run.
+
+const ABORT_FLAG_TTL = 300; // seconds - matches /api/chat maxDuration
+
+function abortKey(conversationId: string): string {
+  return `abort:${conversationId}`;
+}
+
+export async function requestRunAbort(conversationId: string): Promise<void> {
+  const r = getRedis();
+  if (!r) return;
+  await r.set(abortKey(conversationId), "1", "EX", ABORT_FLAG_TTL);
+}
+
+export async function isRunAbortRequested(
+  conversationId: string,
+): Promise<boolean> {
+  const r = getRedis();
+  if (!r) return false;
+  try {
+    return (await r.get(abortKey(conversationId))) === "1";
+  } catch {
+    return false;
+  }
+}
+
+export async function clearRunAbortRequest(
+  conversationId: string,
+): Promise<void> {
+  const r = getRedis();
+  if (!r) return;
+  await r.del(abortKey(conversationId)).catch(() => undefined);
+}
+
 // ─── Telegram Deduplication ─────────────────────────────────────────────────
 
 const TELEGRAM_DEDUP_TTL = 300; // 5 minutes

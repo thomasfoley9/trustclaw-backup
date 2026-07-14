@@ -347,3 +347,84 @@
     display: none !important;
   }
 }
+
+/* Syntax highlighting for assistant code blocks (rehype-highlight emits
+   hljs-* token classes). Two compact palettes tuned to sit on bg-muted in
+   each theme - a full highlight.js theme import would hardcode one mode. */
+.hljs-comment,
+.hljs-quote {
+  color: oklch(0.55 0.02 280);
+  font-style: italic;
+}
+.hljs-keyword,
+.hljs-selector-tag,
+.hljs-doctag,
+.hljs-meta {
+  color: oklch(0.5 0.22 300);
+}
+.hljs-string,
+.hljs-regexp,
+.hljs-addition {
+  color: oklch(0.5 0.13 150);
+}
+.hljs-number,
+.hljs-literal,
+.hljs-symbol,
+.hljs-deletion {
+  color: oklch(0.52 0.17 30);
+}
+.hljs-title,
+.hljs-name,
+.hljs-section,
+.hljs-function {
+  color: oklch(0.48 0.15 250);
+}
+.hljs-built_in,
+.hljs-type,
+.hljs-class {
+  color: oklch(0.5 0.12 213);
+}
+.hljs-attr,
+.hljs-attribute,
+.hljs-variable,
+.hljs-template-variable {
+  color: oklch(0.5 0.1 60);
+}
+.dark .hljs-comment,
+.dark .hljs-quote {
+  color: oklch(0.65 0.02 280);
+}
+.dark .hljs-keyword,
+.dark .hljs-selector-tag,
+.dark .hljs-doctag,
+.dark .hljs-meta {
+  color: oklch(0.75 0.15 300);
+}
+.dark .hljs-string,
+.dark .hljs-regexp,
+.dark .hljs-addition {
+  color: oklch(0.78 0.12 150);
+}
+.dark .hljs-number,
+.dark .hljs-literal,
+.dark .hljs-symbol,
+.dark .hljs-deletion {
+  color: oklch(0.78 0.13 55);
+}
+.dark .hljs-title,
+.dark .hljs-name,
+.dark .hljs-section,
+.dark .hljs-function {
+  color: oklch(0.78 0.11 250);
+}
+.dark .hljs-built_in,
+.dark .hljs-type,
+.dark .hljs-class {
+  color: oklch(0.78 0.1 213);
+}
+.dark .hljs-attr,
+.dark .hljs-attribute,
+.dark .hljs-variable,
+.dark .hljs-template-variable {
+  color: oklch(0.8 0.08 80);
+}

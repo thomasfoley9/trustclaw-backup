@@ -100,6 +100,18 @@ export function useChatHook({ initialMessages, streamId, conversationId }: {
     [],
   );
 
+  const regenerateRef = useRef(chat.regenerate);
+  regenerateRef.current = chat.regenerate;
+  const clearErrorRef = useRef(chat.clearError);
+  clearErrorRef.current = chat.clearError;
+
+  // Re-run the last user turn. The server sees trigger:"regenerate-message"
+  // and replaces the old reply instead of stacking a duplicate turn.
+  const regenerate = useCallback(() => {
+    clearErrorRef.current();
+    void regenerateRef.current();
+  }, []);
+
   const stopRef = useRef(chat.stop);
   stopRef.current = chat.stop;
 
@@ -118,6 +130,7 @@ export function useChatHook({ initialMessages, streamId, conversationId }: {
   return {
     sendMessage,
     stop: stableStop,
+    regenerate,
     // Return initialMessages until seeded to avoid flash of empty state
     messages: isSeeded ? chat.messages : initialMessages,
     status: chat.status,
