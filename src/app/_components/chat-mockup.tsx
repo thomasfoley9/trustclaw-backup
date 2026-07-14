@@ -41,7 +41,7 @@ function SearchResult({ delay }: { delay: number }) {
           <div>
             <div className="text-2xs text-muted-foreground/60">USE CASE</div>
             <div className="text-2xs font-semibold uppercase text-foreground/90">
-              Fetch and categorize emails
+              Fetch and triage emails
             </div>
           </div>
         </div>
@@ -55,7 +55,7 @@ function SearchResult({ delay }: { delay: number }) {
               <span className="text-chart-2">●</span>
               <span className="text-chart-2">CONNECTED</span>
               <span className="text-muted-foreground/60">
-                → sarah@company.com
+                → your account, via OAuth
               </span>
             </div>
           </div>
@@ -150,7 +150,8 @@ export function ChatMockup() {
           <div className="flex justify-end">
             <div className="max-w-[80%] rounded-xl rounded-tr-sm bg-muted px-3.5 py-2.5">
               <p className="text-sm text-foreground">
-                plz handle my customer complaints and log in notion
+                triage this morning&apos;s inbox and log the action items in
+                notion
               </p>
             </div>
           </div>
@@ -181,8 +182,8 @@ export function ChatMockup() {
             style={{ animation: "fade-in 0.4s ease-out 2.5s both" }}
           >
             <p className="text-sm text-foreground">
-              Drafted 3 replies and logged each complaint in your Notion
-              tracker.
+              Triaged 12 emails, drafted 3 replies for your review, and logged
+              the action items in Notion.
             </p>
           </div>
         </div>

@@ -1,7 +1,7 @@
 import Image from "next/image";
+import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import { Button } from "~/components/ui/button";
-import Link from "next/link";
 import { AnimateOnView } from "~/components/core/animate-on-view";
 
 export function BottomCtaSection() {
@@ -18,22 +18,33 @@ export function BottomCtaSection() {
         className="pointer-events-none absolute -right-6 bottom-10 hidden h-20 w-20 opacity-15 md:right-20 md:h-28 md:w-28 dark:block"
       />
 
-      <AnimateOnView className="relative z-10 mx-auto flex max-w-2xl flex-col items-center gap-6 text-center">
+      <AnimateOnView className="relative z-10 mx-auto flex max-w-4xl flex-col items-start gap-6">
         <h2 className="text-foreground text-2xl font-bold tracking-tight md:text-3xl lg:text-4xl">
-          Ready to meet your personal assistant?
+          Run your own agent.
         </h2>
-        <p className="text-muted-foreground text-base md:text-lg">
-          Your AI is waiting. Set it up in seconds.
+        <p className="text-muted-foreground max-w-[65ch] text-base md:text-lg">
+          Sign up, add your own key or start on the free house models, and
+          hand Claw its first job tonight.
         </p>
-        <Link href="/login">
+        <div className="flex flex-col items-start gap-4 sm:flex-row sm:items-center">
           <Button
+            asChild
             size="lg"
-            className="h-12 w-full px-8 text-base sm:w-auto"
+            variant="brand"
+            className="h-12 px-7 text-base"
           >
-            Get Started Free
-            <ArrowRight className="h-4 w-4" />
+            <Link href="/login?tab=register">
+              Get started
+              <ArrowRight className="size-4" />
+            </Link>
           </Button>
-        </Link>
+          <Link
+            href="/login"
+            className="text-muted-foreground hover:text-foreground text-sm transition-colors duration-fast ease-out-quad"
+          >
+            Already aboard? Log in →
+          </Link>
+        </div>
       </AnimateOnView>
     </section>
   );

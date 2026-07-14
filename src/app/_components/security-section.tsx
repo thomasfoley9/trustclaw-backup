@@ -1,26 +1,48 @@
-import { AlertTriangle } from "lucide-react";
+import {
+  Code,
+  Database,
+  KeyRound,
+  ShieldCheck,
+  type LucideIcon,
+} from "lucide-react";
 import { AnimateOnView } from "~/components/core/animate-on-view";
 
-const RISKS = [
+const GUARANTEES: {
+  icon: LucideIcon;
+  label: string;
+  description: string;
+  detail: string;
+}[] = [
   {
-    label: "UNTRUSTED SKILLS",
+    icon: KeyRound,
+    label: "KEY STORAGE",
     description:
-      "5,700+ unvetted community skills on ClawHub. Malicious ones were found within weeks.",
-    answer: "Claw runs on Composio's managed tool surface instead.",
+      "API keys are encrypted with AES-256-GCM before they are stored. The database never holds a plaintext key.",
+    detail:
+      "Bring your own Anthropic key, or start on the free house models and store no key at all.",
   },
   {
-    label: "EXPOSED CREDENTIALS",
+    icon: Database,
+    label: "DATA LOCATION",
     description:
-      "API keys stored in plaintext on your machine. 900+ instances found leaking tokens.",
-    answer: "Claw never gives the agent a raw key.",
+      "Chat history and vector memory live in your own Postgres database, on infrastructure you control.",
+    detail: "Deploy to Vercel with Postgres, or run everything locally.",
   },
   {
-    label: "UNSAFE CODE EXECUTION",
+    icon: ShieldCheck,
+    label: "SCOPED TOOL ACCESS",
     description:
-      "Scripts run locally with your permissions. One prompt injection from an email can trigger destructive commands.",
-    answer: "Claw sandboxes all execution remotely.",
+      "Tool connections are per-user OAuth grants brokered by Composio. The agent never handles your passwords.",
+    detail: "Revoke a connection and the agent's access ends with it.",
   },
-] as const;
+  {
+    icon: Code,
+    label: "OPEN CODEBASE",
+    description:
+      "The code is open and auditable. You can read exactly what the agent can do before you hand it your inbox.",
+    detail: "No black box between your prompt and your data.",
+  },
+];
 
 export function SecuritySection() {
   return (
@@ -28,35 +50,38 @@ export function SecuritySection() {
       <div className="mx-auto max-w-4xl">
         <AnimateOnView className="mb-10 md:mb-16">
           <p className="text-muted-foreground mb-4 font-mono text-xs font-medium uppercase tracking-widest">
-            Why not vanilla OpenClaw?
+            Security model
           </p>
           <h2 className="text-foreground text-2xl font-bold tracking-tight md:text-3xl lg:text-4xl">
-            OpenClaw is powerful.
+            Your keys stay encrypted.
             <br />
-            Its default setup is a security liability.
+            Your data stays in your database.
           </h2>
         </AnimateOnView>
 
         <div className="divide-border divide-y">
-          {RISKS.map((risk, index) => (
+          {GUARANTEES.map((item, index) => (
             <AnimateOnView
-              key={risk.label}
+              key={item.label}
               className="flex flex-col gap-4 py-8 first:pt-0 last:pb-0 md:flex-row md:gap-12"
               delay={index * 0.1}
               margin="-50px"
             >
               <div className="flex shrink-0 items-center gap-3 md:w-64">
-                <AlertTriangle className="text-muted-foreground h-5 w-5 shrink-0" />
+                <item.icon
+                  className="text-muted-foreground h-5 w-5 shrink-0"
+                  aria-hidden
+                />
                 <span className="text-muted-foreground font-mono text-xs font-medium tracking-wider">
-                  {risk.label}
+                  {item.label}
                 </span>
               </div>
-              <div className="flex flex-col gap-3">
+              <div className="flex max-w-[65ch] flex-col gap-3">
                 <p className="text-foreground leading-relaxed">
-                  {risk.description}
+                  {item.description}
                 </p>
                 <p className="text-muted-foreground leading-relaxed">
-                  {risk.answer}
+                  {item.detail}
                 </p>
               </div>
             </AnimateOnView>

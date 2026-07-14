@@ -1,82 +1,60 @@
-import { ArrowRight, CircleCheck, CircleX, AlertTriangle } from "lucide-react";
-import { Button } from "~/components/ui/button";
-import Link from "next/link";
 import { AnimateOnView } from "~/components/core/animate-on-view";
-
-type Indicator = "check" | "warn" | "x";
 
 interface ComparisonRow {
   category: string;
-  trustclaw: string;
-  vanilla: string;
-  vanillaIndicator: Indicator;
+  selfHosted: string;
+  hosted: string;
 }
 
 const ROWS: ComparisonRow[] = [
   {
-    category: "Setup",
-    trustclaw: "Seconds",
-    vanilla: "30-60 min (Node, Tailscale, tunnels)",
-    vanillaIndicator: "warn",
+    category: "Where your data lives",
+    selfHosted: "Your Postgres database, on your infrastructure",
+    hosted: "The vendor's cloud",
   },
   {
-    category: "Credentials",
-    trustclaw: "Encrypted, managed by Composio",
-    vanilla: "Plaintext in local config",
-    vanillaIndicator: "warn",
+    category: "Model API keys",
+    selfHosted: "Yours, encrypted with AES-256-GCM at rest",
+    hosted: "Held and managed by the vendor",
   },
   {
-    category: "Code Execution",
-    trustclaw: "Remote sandbox",
-    vanilla: "On your local machine",
-    vanillaIndicator: "warn",
+    category: "Memory",
+    selfHosted: "pgvector tables you can query, export, or delete",
+    hosted: "Stored on the vendor's side",
   },
   {
-    category: "Integrations",
-    trustclaw: "500+ with managed OAuth",
-    vanilla: "Manual API key setup per app",
-    vanillaIndicator: "warn",
+    category: "Code",
+    selfHosted: "Open and auditable",
+    hosted: "Usually closed source",
   },
   {
-    category: "Skill Security",
-    trustclaw: "Managed tool surface",
-    vanilla: "Unvetted public registry",
-    vanillaIndicator: "x",
+    category: "Model choice",
+    selfHosted: "Any model your key unlocks, or the free house models",
+    hosted: "The vendor's menu",
   },
   {
-    category: "Audit Trails",
-    trustclaw: "Full action log",
-    vanilla: "None",
-    vanillaIndicator: "x",
-  },
-  {
-    category: "Revocation",
-    trustclaw: "One click",
-    vanilla: "Find and delete config files",
-    vanillaIndicator: "warn",
+    category: "Who can switch it off",
+    selfHosted: "Only you",
+    hosted: "The vendor",
   },
 ];
-
-function IndicatorIcon({ type }: { type: Indicator }) {
-  switch (type) {
-    case "check":
-      return <CircleCheck className="h-5 w-5 shrink-0 text-primary" />;
-    case "warn":
-      return <AlertTriangle className="h-5 w-5 shrink-0 text-muted-foreground" />;
-    case "x":
-      return <CircleX className="h-5 w-5 shrink-0 text-destructive" />;
-  }
-}
 
 export function ComparisonSection() {
   return (
     <section className="px-4 py-16 md:px-6 md:py-24 lg:py-32">
       <div className="mx-auto max-w-4xl">
-        <AnimateOnView
-          as="h2"
-          className="text-foreground mb-10 text-center text-2xl font-bold tracking-tight md:mb-16 md:text-3xl lg:text-4xl"
-        >
-          Why is Claw better?
+        <AnimateOnView className="mb-10 md:mb-16">
+          <p className="text-muted-foreground mb-4 font-mono text-xs font-medium uppercase tracking-widest">
+            Self-hosted vs hosted
+          </p>
+          <h2 className="text-foreground text-2xl font-bold tracking-tight md:text-3xl lg:text-4xl">
+            What self-hosting actually changes.
+          </h2>
+          <p className="text-muted-foreground mt-3 max-w-[65ch] text-base md:text-lg">
+            Hosted assistants are convenient, and for plenty of people the
+            right choice. Here is what moves to your side of the table when
+            you run the agent yourself.
+          </p>
         </AnimateOnView>
 
         <AnimateOnView
@@ -84,59 +62,34 @@ export function ComparisonSection() {
           delay={0.1}
           margin="-50px"
         >
-          <table className="w-full min-w-[500px] border-collapse">
+          <table className="w-full min-w-[560px] border-collapse">
             <thead>
               <tr className="border-border border-b">
                 <th className="py-4 pr-4 text-left" />
-                <th className="text-foreground px-4 py-4 text-center text-sm font-semibold md:text-base">
-                  Claw
+                <th className="text-foreground px-4 py-4 text-left text-sm font-semibold md:text-base">
+                  Self-hosted Claw
                 </th>
-                <th className="text-muted-foreground px-4 py-4 text-center text-sm font-semibold md:text-base">
-                  Vanilla OpenClaw
+                <th className="text-muted-foreground px-4 py-4 text-left text-sm font-semibold md:text-base">
+                  Typical hosted assistant
                 </th>
               </tr>
             </thead>
             <tbody>
               {ROWS.map((row) => (
                 <tr key={row.category} className="border-border border-b">
-                  <td className="text-foreground py-4 pr-4 text-sm font-medium md:text-base">
+                  <td className="text-foreground py-4 pr-4 align-top text-sm font-medium md:text-base">
                     {row.category}
                   </td>
-                  <td className="px-4 py-4">
-                    <div className="flex flex-col items-center gap-1.5 text-center">
-                      <IndicatorIcon type="check" />
-                      <span className="text-muted-foreground text-xs md:text-sm">
-                        {row.trustclaw}
-                      </span>
-                    </div>
+                  <td className="text-foreground px-4 py-4 align-top text-xs md:text-sm">
+                    {row.selfHosted}
                   </td>
-                  <td className="px-4 py-4">
-                    <div className="flex flex-col items-center gap-1.5 text-center">
-                      <IndicatorIcon type={row.vanillaIndicator} />
-                      <span className="text-muted-foreground text-xs md:text-sm">
-                        {row.vanilla}
-                      </span>
-                    </div>
+                  <td className="text-muted-foreground px-4 py-4 align-top text-xs md:text-sm">
+                    {row.hosted}
                   </td>
                 </tr>
               ))}
             </tbody>
           </table>
-        </AnimateOnView>
-
-        <AnimateOnView
-          className="mt-10 flex justify-center md:mt-16"
-          delay={0.2}
-        >
-          <Link href="/login">
-            <Button
-              size="lg"
-              className="h-12 w-full px-8 text-base sm:w-auto"
-            >
-              Get Started
-              <ArrowRight className="h-4 w-4" />
-            </Button>
-          </Link>
         </AnimateOnView>
       </div>
     </section>

@@ -1,24 +1,25 @@
 import Image from "next/image";
-import { ArrowRight, Zap } from "lucide-react";
-import { Button } from "~/components/ui/button";
 import Link from "next/link";
-import { AnimateOnView } from "~/components/core/animate-on-view";
+import {
+  ArrowRight,
+  Blocks,
+  BrainCircuit,
+  CalendarClock,
+  Drama,
+  Mail,
+  TrainFront,
+  type LucideIcon,
+} from "lucide-react";
+import { Button } from "~/components/ui/button";
 import { ChatMockup } from "./chat-mockup";
 
-const TOOL_LOGOS = [
-  "gmail",
-  "github",
-  "jira",
-  "notion",
-  "googlecalendar",
-  "linear",
-  "figma",
-  "asana",
-  "trello",
-  "googledrive",
-  "discord",
-  "dropbox",
-] as const;
+const CAPABILITIES: { icon: LucideIcon; label: string }[] = [
+  { icon: Mail, label: "Reads & sends your email" },
+  { icon: CalendarClock, label: "Runs on a schedule" },
+  { icon: BrainCircuit, label: "Remembers everything" },
+  { icon: Drama, label: "Swappable personalities" },
+  { icon: Blocks, label: "500+ tools, one chat" },
+];
 
 const SCATTERED_LOGOS = [
   { slug: "gmail", top: "5%", left: "55%" },
@@ -50,9 +51,14 @@ const SCATTER_TIMING = [
   { delay: 2, duration: 6.4 },
 ] as const;
 
+/**
+ * Above-the-fold content renders statically visible: no AnimateOnView, no
+ * opacity gating. The H1 is the LCP element and must never depend on JS.
+ * Decorative flourishes (scattered logos, mockup slide-in) are pure CSS.
+ */
 export function HeroSection() {
   return (
-    <section className="relative px-4 py-20 md:px-6 md:py-32 lg:py-40">
+    <section className="relative px-4 pt-24 pb-16 md:px-6 md:pt-32 md:pb-24 lg:pb-32">
       <Image
         src="/images/elements/rays_left.svg"
         alt=""
@@ -75,7 +81,7 @@ export function HeroSection() {
             style={{
               top: pos.top,
               left: pos.left,
-              animation: `scatter-in 2s ease-out ${timing.delay + 0.5}s both, float-y ${timing.duration}s ease-in-out ${timing.delay + 0.5}s infinite`,
+              animation: `scatter-in 2s var(--ease-out-quad) ${timing.delay + 0.5}s both, float-y ${timing.duration}s ease-in-out ${timing.delay + 0.5}s infinite`,
             }}
           >
             <Image
@@ -93,78 +99,57 @@ export function HeroSection() {
       <div className="pointer-events-none absolute inset-0 hidden lg:block lg:z-[5] lg:bg-[radial-gradient(ellipse_120%_140%_at_0%_50%,_var(--background)_40%,_transparent_100%)]" />
 
       <div className="relative z-10 mx-auto flex max-w-6xl flex-col items-center gap-12 lg:flex-row lg:items-center lg:gap-16">
-        <AnimateOnView
-          className="flex flex-1 flex-col items-center gap-6 text-center lg:items-start lg:text-left"
-          duration={0.6}
-        >
-          <AnimateOnView
-            as="h1"
-            className="text-3xl font-bold leading-tight tracking-tight text-foreground md:text-5xl lg:text-6xl"
-            delay={0.1}
-          >
-            Your AI that does things while you sleep.{" "}
-            <span className="italic">Securely.</span>
-          </AnimateOnView>
+        <div className="flex flex-1 flex-col items-center gap-6 text-center lg:items-start lg:text-left">
+          <span className="border-border bg-card/60 text-muted-foreground inline-flex items-center gap-2 rounded-full border px-4 py-1.5 text-xs font-medium backdrop-blur">
+            <TrainFront className="size-3.5" aria-hidden />
+            Self-hosted personal AI agent
+          </span>
 
-          <AnimateOnView
-            className="flex items-center justify-center lg:hidden"
-            animation="fade-in"
-            delay={0.15}
-          >
-            <div className="flex -space-x-2">
-              {TOOL_LOGOS.map((slug) => (
-                <div
-                  key={slug}
-                  className="relative h-10 w-10 rounded-full border-2 border-background bg-card p-1.5 shadow-sm"
-                >
-                  <Image
-                    src={`/images/logos/${slug}.svg`}
-                    alt=""
-                    aria-hidden
-                    width={24}
-                    height={24}
-                    style={{ width: "100%", height: "100%" }}
-                  />
-                </div>
-              ))}
-            </div>
-          </AnimateOnView>
+          <h1 className="text-foreground text-4xl font-bold leading-tight tracking-tight text-balance md:text-5xl lg:text-6xl">
+            <span className="text-gradient">Claw</span> ships while you sleep.
+          </h1>
 
-          <AnimateOnView
-            as="p"
-            className="max-w-2xl text-base text-muted-foreground md:text-lg lg:text-xl"
-            delay={0.2}
-          >
-            Claw is a 24/7 AI assistant with 1000+ tools via{" "}
-            <strong>OAuth</strong> and <strong>sandboxed execution</strong>.
-            Built on the ideas behind OpenClaw, rebuilt from scratch for
-            security.
-          </AnimateOnView>
+          <p className="text-muted-foreground max-w-[65ch] text-base text-pretty md:text-lg">
+            A personal AI agent that runs on your own infrastructure. Bring
+            your own Anthropic key or use the free house models, keep your
+            data in your own Postgres, and read every line of the open
+            codebase.
+          </p>
 
-          <AnimateOnView delay={0.25}>
+          <div className="flex flex-col items-center gap-4 sm:flex-row">
+            <Button
+              asChild
+              size="lg"
+              variant="brand"
+              className="h-12 px-7 text-base"
+            >
+              <Link href="/login?tab=register">
+                Get started
+                <ArrowRight className="size-4" />
+              </Link>
+            </Button>
             <Link
               href="/login"
-              className="inline-flex items-center gap-2 text-lg font-semibold text-foreground underline underline-offset-4 md:text-xl lg:text-2xl"
+              className="text-muted-foreground hover:text-foreground text-sm transition-colors duration-fast ease-out-quad"
             >
-              <Zap className="h-5 w-5 md:h-6 md:w-6" />
-              Deploy in seconds.
+              Already aboard? Log in →
             </Link>
-          </AnimateOnView>
+          </div>
 
-          <AnimateOnView delay={0.3}>
-            <Link href="/login">
-              <Button
-                size="lg"
-                className="h-12 w-full px-8 text-base sm:w-auto"
+          <ul className="mt-2 flex flex-wrap justify-center gap-x-5 gap-y-2.5 lg:justify-start">
+            {CAPABILITIES.map(({ icon: Icon, label }) => (
+              <li
+                key={label}
+                className="text-muted-foreground flex items-center gap-2 text-sm"
               >
-                Get Started
-                <ArrowRight className="h-4 w-4" />
-              </Button>
-            </Link>
-          </AnimateOnView>
-        </AnimateOnView>
+                <Icon className="text-primary size-4 shrink-0" aria-hidden />
+                {label}
+              </li>
+            ))}
+          </ul>
+        </div>
 
-        <div className="flex flex-1 justify-center lg:justify-end">
+        <div className="flex w-full flex-1 justify-center lg:w-auto lg:justify-end">
           <ChatMockup />
         </div>
       </div>

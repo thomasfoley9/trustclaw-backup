@@ -1,110 +1,34 @@
 import Image from "next/image";
-import type { ReactNode } from "react";
 import {
-  Cloud,
-  Clock,
-  Shield,
-  Zap,
-  MessageCircle,
+  AudioLines,
+  BrainCircuit,
+  CalendarClock,
+  KeyRound,
   Layers,
+  Server,
   type LucideIcon,
 } from "lucide-react";
 import { AnimateOnView } from "~/components/core/animate-on-view";
+import { GradientCard } from "./gradient-card";
 
-interface Feature {
-  icon: LucideIcon;
-  title: string;
-  description: ReactNode;
-}
-
-const SMALL_FEATURES: Feature[] = [
-  {
-    icon: Shield,
-    title: "OAuth Only",
-    description: (
-      <>
-        Connects through <strong>OAuth</strong>. No passwords stored or shared.
-      </>
-    ),
-  },
-  {
-    icon: Zap,
-    title: "Zero Setup",
-    description: (
-      <>
-        <strong>Sign up</strong>, chat, done. No API keys or config files.
-      </>
-    ),
-  },
-  {
-    icon: Clock,
-    title: "Works While You Sleep",
-    description: (
-      <>
-        <strong>Schedule</strong> tasks and let your agent handle them on autopilot.
-      </>
-    ),
-  },
-  {
-    icon: Cloud,
-    title: "Sandboxed Execution",
-    description: (
-      <>
-        Every action runs in an <strong>isolated cloud environment</strong> that&apos;s gone when the task is done.
-      </>
-    ),
-  },
-];
-
-const MESSAGING_PLATFORMS: {
-  name: string;
-  slug: string;
-  disabled: boolean;
-}[] = [
-  { name: "Telegram", slug: "telegram", disabled: false },
-  { name: "WhatsApp", slug: "whatsapp", disabled: true },
-  { name: "Discord", slug: "discord", disabled: true },
-  { name: "Slack", slug: "slack", disabled: true },
-];
-
-function FeatureCard({
-  feature,
-  index,
-}: {
-  feature: Feature;
-  index: number;
-}) {
+function FeatureIcon({ icon: Icon }: { icon: LucideIcon }) {
   return (
-    <AnimateOnView delay={index * 0.1}>
-      <div className="from-border via-border/50 h-full rounded-xl bg-linear-to-br to-transparent p-px">
-        <div className="bg-card flex h-full flex-col gap-4 rounded-xl p-6">
-          <div className="bg-muted flex h-10 w-10 items-center justify-center rounded-full shadow-[0_0_15px_color-mix(in_oklch,var(--primary)_20%,transparent)]">
-            <feature.icon className="text-foreground h-5 w-5" />
-          </div>
-          <div className="flex flex-col gap-1.5">
-            <h3 className="text-foreground font-semibold">{feature.title}</h3>
-            {feature.description && (
-              <p className="text-muted-foreground text-sm leading-relaxed">
-                {feature.description}
-              </p>
-            )}
-          </div>
-        </div>
-      </div>
-    </AnimateOnView>
+    <div className="bg-muted flex h-10 w-10 shrink-0 items-center justify-center rounded-full shadow-[0_0_15px_color-mix(in_oklch,var(--primary)_20%,transparent)]">
+      <Icon className="text-foreground h-5 w-5" aria-hidden />
+    </div>
   );
 }
 
 const INTEGRATION_TOOLS: { slug: string; name: string }[] = [
   { slug: "gmail", name: "Gmail" },
+  { slug: "googlecalendar", name: "Google Calendar" },
+  { slug: "slack", name: "Slack" },
   { slug: "github", name: "GitHub" },
   { slug: "notion", name: "Notion" },
-  { slug: "figma", name: "Figma" },
   { slug: "linear", name: "Linear" },
   { slug: "jira", name: "Jira" },
-  { slug: "discord", name: "Discord" },
+  { slug: "figma", name: "Figma" },
   { slug: "googledrive", name: "Google Drive" },
-  { slug: "googlecalendar", name: "Google Calendar" },
   { slug: "todoist", name: "Todoist" },
   { slug: "asana", name: "Asana" },
   { slug: "trello", name: "Trello" },
@@ -113,90 +37,146 @@ const INTEGRATION_TOOLS: { slug: string; name: string }[] = [
   { slug: "airtable", name: "Airtable" },
 ];
 
-function IntegrationsFeatureCard({ index }: { index: number }) {
+function IntegrationsCard({ index }: { index: number }) {
   return (
-    <AnimateOnView delay={index * 0.1}>
-      <div className="from-border via-border/50 h-full rounded-xl bg-linear-to-br to-transparent p-px">
-        <div className="bg-card flex h-full flex-col gap-4 rounded-xl p-6">
-          <div className="bg-muted flex h-10 w-10 items-center justify-center rounded-full shadow-[0_0_15px_color-mix(in_oklch,var(--primary)_20%,transparent)]">
-            <Layers className="text-foreground h-5 w-5" />
-          </div>
-          <div className="flex flex-col gap-1.5">
-            <h3 className="text-foreground font-semibold">
-              1000+ Integrations
-            </h3>
-            <p className="text-muted-foreground text-sm leading-relaxed">
-              Connect to all of your favourite apps in a single click.
-            </p>
-          </div>
-          <div className="grid grid-cols-5 gap-2 pt-1">
-            {INTEGRATION_TOOLS.map((tool) => (
-              <div
-                key={tool.slug}
-                className="border-border bg-background flex items-center justify-center rounded-lg border p-1.5"
-                title={tool.name}
-              >
-                <Image
-                  src={`/images/logos/${tool.slug}.svg`}
-                  alt={tool.name}
-                  width={20}
-                  height={20}
-                  className="h-5 w-5"
-                />
-              </div>
-            ))}
-          </div>
-          <p className="text-muted-foreground text-center text-xs">
-            + 985 more
+    <AnimateOnView delay={index * 0.1} className="md:col-span-2">
+      <GradientCard>
+        <FeatureIcon icon={Layers} />
+        <div className="flex flex-col gap-1.5">
+          <h3 className="text-foreground font-semibold">
+            500+ tools, one chat
+          </h3>
+          <p className="text-muted-foreground max-w-[65ch] text-sm leading-relaxed">
+            Connect Gmail, Calendar, Slack, GitHub, Notion, Linear, and
+            hundreds more through Composio. Every connection is an OAuth grant
+            scoped to your account, revocable in one click.
           </p>
         </div>
-      </div>
+        <div className="grid grid-cols-5 gap-2 pt-1 sm:grid-cols-8 lg:grid-cols-[repeat(15,minmax(0,1fr))]">
+          {INTEGRATION_TOOLS.map((tool) => (
+            <div
+              key={tool.slug}
+              className="border-border bg-background flex aspect-square items-center justify-center rounded-lg border p-1.5"
+              title={tool.name}
+            >
+              <Image
+                src={`/images/logos/${tool.slug}.svg`}
+                alt={tool.name}
+                width={20}
+                height={20}
+                className="h-5 w-5"
+              />
+            </div>
+          ))}
+        </div>
+      </GradientCard>
     </AnimateOnView>
   );
 }
 
-function MessagingFeatureCard({ index }: { index: number }) {
+function ChannelsCard({ index }: { index: number }) {
   return (
     <AnimateOnView delay={index * 0.1}>
-      <div className="from-border via-border/50 h-full rounded-xl bg-linear-to-br to-transparent p-px">
-        <div className="bg-card flex h-full flex-col gap-4 rounded-xl p-6">
-          <div className="bg-muted flex h-10 w-10 items-center justify-center rounded-full shadow-[0_0_15px_color-mix(in_oklch,var(--primary)_20%,transparent)]">
-            <MessageCircle className="text-foreground h-5 w-5" />
+      <GradientCard>
+        <FeatureIcon icon={AudioLines} />
+        <div className="flex flex-col gap-1.5">
+          <h3 className="text-foreground font-semibold">Beyond the browser</h3>
+          <p className="text-muted-foreground text-sm leading-relaxed">
+            Message Claw from its Telegram bot, or talk to it on a realtime
+            voice call. Same agent, same memory, same tools.
+          </p>
+        </div>
+        <div className="grid grid-cols-2 gap-2 pt-1">
+          <div className="border-border bg-background flex items-center gap-2 rounded-lg border px-3 py-2">
+            <Image
+              src="/images/logos/telegram.svg"
+              alt=""
+              aria-hidden
+              width={20}
+              height={20}
+              style={{ width: 20, height: 20 }}
+            />
+            <span className="text-muted-foreground text-sm font-medium">
+              Telegram
+            </span>
           </div>
-          <div className="flex flex-col gap-1.5">
-            <h3 className="text-foreground font-semibold">
-              Every Messaging App
-            </h3>
-            <p className="text-muted-foreground text-sm leading-relaxed">
-              Chat with your AI on Telegram, WhatsApp, Discord, or
-              Slack. Same agent, same tools, wherever you are.
-            </p>
-          </div>
-          <div className="grid grid-cols-2 gap-2 pt-1">
-            {MESSAGING_PLATFORMS.map((platform) => (
-              <div
-                key={platform.name}
-                className={`border-border bg-background flex items-center gap-2 rounded-lg border px-3 py-2${platform.disabled ? " opacity-40" : ""}`}
-              >
-                <Image
-                  src={`/images/logos/${platform.slug}.svg`}
-                  alt=""
-                  aria-hidden
-                  width={20}
-                  height={20}
-                />
-                <span className="text-muted-foreground text-sm font-medium">
-                  {platform.name}
-                  {platform.disabled && <span className="text-muted-foreground/60 ml-1 text-xs">Soon</span>}
-                </span>
-              </div>
-            ))}
-            <div className="border-border bg-background flex items-center justify-center rounded-lg border border-dashed px-3 py-2">
-              <span className="text-muted-foreground text-xs font-medium">More coming soon</span>
-            </div>
+          <div className="border-border bg-background flex items-center gap-2 rounded-lg border px-3 py-2">
+            <AudioLines className="text-primary size-5 shrink-0" aria-hidden />
+            <span className="text-muted-foreground text-sm font-medium">
+              Voice calls
+            </span>
           </div>
         </div>
-      </div>
+      </GradientCard>
+    </AnimateOnView>
+  );
+}
+
+interface SimpleFeature {
+  icon: LucideIcon;
+  title: string;
+  description: string;
+}
+
+const SIMPLE_FEATURES: SimpleFeature[] = [
+  {
+    icon: KeyRound,
+    title: "Your keys, encrypted",
+    description:
+      "Bring your own Anthropic key or start on the free house models. Keys are encrypted with AES-256-GCM before they ever touch the database.",
+  },
+  {
+    icon: BrainCircuit,
+    title: "Remembers everything",
+    description:
+      "Persistent vector memory in your own Postgres. Claw recalls decisions, preferences, and context across every conversation.",
+  },
+  {
+    icon: CalendarClock,
+    title: "Runs on a schedule",
+    description:
+      "Cron-style scheduled tasks in your timezone: morning briefings, weekly digests, follow-up nudges. Claw runs them while you are away.",
+  },
+];
+
+function SimpleFeatureCard({
+  feature,
+  index,
+}: {
+  feature: SimpleFeature;
+  index: number;
+}) {
+  return (
+    <AnimateOnView delay={index * 0.1}>
+      <GradientCard>
+        <FeatureIcon icon={feature.icon} />
+        <div className="flex flex-col gap-1.5">
+          <h3 className="text-foreground font-semibold">{feature.title}</h3>
+          <p className="text-muted-foreground text-sm leading-relaxed">
+            {feature.description}
+          </p>
+        </div>
+      </GradientCard>
+    </AnimateOnView>
+  );
+}
+
+function SelfHostCard({ index }: { index: number }) {
+  return (
+    <AnimateOnView delay={index * 0.1} className="md:col-span-2 lg:col-span-3">
+      <GradientCard innerClassName="md:flex-row md:items-center md:gap-6">
+        <FeatureIcon icon={Server} />
+        <div className="flex flex-col gap-1.5">
+          <h3 className="text-foreground font-semibold">
+            Runs on your infrastructure
+          </h3>
+          <p className="text-muted-foreground max-w-[65ch] text-sm leading-relaxed">
+            Deploy to Vercel with Postgres, or run everything locally. The
+            codebase is open, so you can audit exactly what your agent can do
+            before you hand it your inbox.
+          </p>
+        </div>
+      </GradientCard>
     </AnimateOnView>
   );
 }
@@ -221,27 +201,26 @@ export function FeaturesSection() {
       />
 
       <div className="relative z-10 mx-auto max-w-6xl">
-        <div className="mb-10 text-center md:mb-16">
-          <h2 className="text-foreground text-2xl font-bold tracking-tight md:text-3xl lg:text-4xl">
-            Stop giving OpenClaw your passwords.
-          </h2>
-          <p className="text-muted-foreground mx-auto mt-3 max-w-2xl text-base md:text-lg">
-            Everything OpenClaw can do and more, rebuilt from scratch with
-            security at the foundation.
+        <AnimateOnView className="mb-10 md:mb-16">
+          <p className="text-muted-foreground mb-4 font-mono text-xs font-medium uppercase tracking-widest">
+            What it does
           </p>
-        </div>
+          <h2 className="text-foreground text-2xl font-bold tracking-tight md:text-3xl lg:text-4xl">
+            A full personal agent, on your terms.
+          </h2>
+          <p className="text-muted-foreground mt-3 max-w-[65ch] text-base md:text-lg">
+            Email, calendar, code, and docs in one chat, with memory that
+            persists and jobs that run whether or not you are at the keyboard.
+          </p>
+        </AnimateOnView>
 
-        {/* Top row -- 2 big cards */}
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 md:gap-6">
-          <MessagingFeatureCard index={0} />
-          <IntegrationsFeatureCard index={1} />
-        </div>
-
-        {/* Bottom row -- 4 small cards */}
-        <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2 md:mt-6 md:gap-6 lg:grid-cols-4">
-          {SMALL_FEATURES.map((feature, index) => (
-            <FeatureCard key={feature.title} feature={feature} index={index + 2} />
-          ))}
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 md:gap-6 lg:grid-cols-3">
+          <IntegrationsCard index={0} />
+          <SimpleFeatureCard feature={SIMPLE_FEATURES[1]!} index={1} />
+          <SimpleFeatureCard feature={SIMPLE_FEATURES[0]!} index={2} />
+          <SimpleFeatureCard feature={SIMPLE_FEATURES[2]!} index={3} />
+          <ChannelsCard index={4} />
+          <SelfHostCard index={5} />
         </div>
       </div>
     </section>
