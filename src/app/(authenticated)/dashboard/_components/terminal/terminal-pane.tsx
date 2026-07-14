@@ -48,6 +48,12 @@ interface EntryCacheItem {
   entries: TerminalLogEntryData[];
 }
 
+// Windowed receipts: only the newest RECEIPTS_WINDOW entries are rendered by
+// default; "Show older" reveals more in window-sized steps (same pattern as
+// the chat message list). New entries always land at the tail, inside the
+// window, so the tool-focus highlight keeps working.
+const RECEIPTS_WINDOW = 200;
+
 interface TerminalPaneProps {
   messages: UIMessage[];
   status: ChatStatus;
@@ -119,6 +125,14 @@ export function TerminalPane({
     return entries;
   }, [messages, status, liveEvents]);
   const toolCount = logEntries.length;
+
+  const [receiptsVisibleCount, setReceiptsVisibleCount] =
+    useState(RECEIPTS_WINDOW);
+  const visibleLogEntries =
+    logEntries.length > receiptsVisibleCount
+      ? logEntries.slice(logEntries.length - receiptsVisibleCount)
+      : logEntries;
+  const hiddenLogCount = logEntries.length - visibleLogEntries.length;
 
   // Drop the per-call timestamp cache once the call ends (liveEvents cleared) so
   // it doesn't accumulate stale ids across calls in a long session.
@@ -211,7 +225,24 @@ export function TerminalPane({
             </div>
           </div>
         ) : (
-          logEntries.map((log) => <TerminalLogEntry key={log.id} log={log} />)
+          <>
+            {hiddenLogCount > 0 && (
+              <div className="flex justify-center py-2">
+                <button
+                  type="button"
+                  onClick={() =>
+                    setReceiptsVisibleCount((c) => c + RECEIPTS_WINDOW)
+                  }
+                  className="focus-visible:ring-ring/50 text-primary rounded-md px-2 py-1 font-mono text-xs outline-none hover:underline focus-visible:ring-2"
+                >
+                  Show older ({hiddenLogCount})
+                </button>
+              </div>
+            )}
+            {visibleLogEntries.map((log) => (
+              <TerminalLogEntry key={log.id} log={log} />
+            ))}
+          </>
         )}
       </div>
     </div>

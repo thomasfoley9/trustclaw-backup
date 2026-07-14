@@ -45,6 +45,10 @@ export function VoicePicker({ disabled }: { disabled?: boolean }) {
         <div className="text-muted-foreground px-2 py-1.5 text-xs font-medium">
           Assistant voice
         </div>
+        <p className="text-muted-foreground/80 px-2 pb-1.5 text-xs">
+          Live calls use it directly; read-aloud uses its closest Smallest.ai
+          match.
+        </p>
         <div className="max-h-64 overflow-y-auto">
           {voices.map((voice) => {
             const active = voice.id === current;

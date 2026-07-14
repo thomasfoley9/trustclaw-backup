@@ -29,6 +29,7 @@ import { useIsMobile } from "~/lib/use-is-mobile";
 import { usePersistedPanelLayout } from "~/lib/use-persisted-panel-layout";
 import { useTerminalStore } from "../terminal-store";
 import { useChatHook, type ChatFilePart } from "../use-chat-hook";
+import { useVoiceCallStore } from "./voice-call-store";
 import { UserMessage } from "./user-message";
 import { AssistantMessage } from "./assistant-message/assistant-message";
 import { ThinkingIndicator } from "./assistant-message/thinking-indicator";
@@ -39,6 +40,7 @@ import type {
   VoiceCockpitEvent,
   VoiceTranscriptEntry,
 } from "./voice-call";
+import type { AgentState } from "@livekit/components-react";
 import { env } from "~/env";
 import { TerminalPane } from "../terminal/terminal-pane";
 import { OpenClawLogo } from "~/app/_components/openclaw-logo";
@@ -453,6 +455,19 @@ export function ChatView({
   const liveKitConfigured = !!env.NEXT_PUBLIC_LIVEKIT_URL;
   const [liveCallActive, setLiveCallActive] = useState(false);
   const [liveCallMuted, setLiveCallMuted] = useState(false);
+  // The agent's live lifecycle state (listening/thinking/speaking), reported
+  // by VoiceCall - drives a truthful status pill during a real call.
+  const [agentState, setAgentState] = useState<AgentState | null>(null);
+
+  // Mirror the call state into the shared store so the conversation sidebar
+  // (a different subtree) can warn when a chat switch will end the call.
+  // The cleanup covers the remount-on-switch path, where this view unmounts
+  // while the flag is still true.
+  const setSharedCallActive = useVoiceCallStore((s) => s.setLiveCallActive);
+  useEffect(() => {
+    setSharedCallActive(liveCallActive);
+    return () => setSharedCallActive(false);
+  }, [liveCallActive, setSharedCallActive]);
   // Mount latch for the code-split VoiceCall: it must be mounted to react to
   // `active` flipping true, but mounting it eagerly would fetch the LiveKit
   // chunk on every dashboard load. Latched on the first call and kept mounted
@@ -468,6 +483,7 @@ export function ChatView({
       // duplicate-session bug. Toggling OFF goes through onStopConversation.
       if (liveCallActive) return;
       clearVoiceOverlay(); // start each call with a fresh transcript + action feed
+      setAgentState(null); // no stale phase from a previous call
       setLiveCallMuted(false); // each call starts unmuted
       setTerminalOpen(true); // surface the Live pane so actions are visible
       setHasEverCalled(true); // mount the code-split VoiceCall (no-op after the first call)
@@ -491,19 +507,24 @@ export function ChatView({
     stopSpeaking(); // cut any reply still being spoken when the user ends the call
     clearVoiceOverlay(); // don't leave a stale transcript / action feed behind
     setLiveCallActive(false);
+    setAgentState(null);
     stopConversationLoop();
   }, [stopSpeaking, stopConversationLoop, clearVoiceOverlay]);
 
-  // Mobile has no room for the side pane, so tool chips open a bottom Sheet
-  // instead. Its own state (defaults closed) so the desktop pane's default-open
-  // never auto-pops the sheet on a phone.
+  // Mobile has no room for the side pane, so tool chips (and the navbar
+  // toggle) open a bottom Sheet instead. Its own store flag (defaults closed,
+  // never persisted) so the desktop pane's default-open never auto-pops the
+  // sheet on a phone. Lives in the terminal store so the navbar can drive it.
   const isMobile = useIsMobile();
   const {
     groupRef: panelGroupRef,
     onLayoutChanged: onPanelLayoutChanged,
     applyStoredLayout,
   } = usePersistedPanelLayout("trustclaw-panels-chat");
-  const [mobileTerminalOpen, setMobileTerminalOpen] = useState(false);
+  const mobileTerminalOpen = useTerminalStore((s) => s.mobileTerminalOpen);
+  const setMobileTerminalOpen = useTerminalStore(
+    (s) => s.setMobileTerminalOpen,
+  );
 
   // Stable callback so memoized AssistantMessage rows don't re-render on every
   // streaming/voice tick just because this arrow was recreated. Opens the
@@ -514,7 +535,7 @@ export function ChatView({
     // viewport later crosses below md (e.g. tablet rotation).
     if (isMobile) setMobileTerminalOpen(true);
     else setTerminalOpen(true);
-  }, [isMobile, setTerminalOpen]);
+  }, [isMobile, setTerminalOpen, setMobileTerminalOpen]);
 
   // Reopening the cockpit remounts its panel with the DEFAULT width - the
   // mount-time layout apply ran while the panel was absent and its share was
@@ -530,15 +551,26 @@ export function ChatView({
   const handleVoiceEnded = useCallback(() => {
     clearVoiceOverlay();
     setLiveCallActive(false);
+    setAgentState(null);
   }, [clearVoiceOverlay]);
 
   // Call-button state reflects either path. A muted live call must not read
-  // "Listening" - the mic is off.
+  // "Listening" - the mic is off. For LiveKit calls the phase comes from the
+  // agent's real state (plus running Agent B tools, which count as thinking)
+  // instead of a hardcoded "listening".
   const callActive = conversationActive || liveCallActive;
+  const voiceToolsRunning = voiceEvents.some((e) => e.status === "running");
   const callPhase = liveCallActive
     ? liveCallMuted
       ? "muted"
-      : "listening"
+      : agentState === "speaking"
+        ? "speaking"
+        : agentState === "thinking" ||
+            agentState === "connecting" ||
+            agentState === "initializing" ||
+            voiceToolsRunning
+          ? "thinking"
+          : "listening"
     : conversationPhase;
   // One mute button drives whichever voice path is live: the LiveKit mic on a
   // real-time call, otherwise the browser conversation loop.
@@ -703,6 +735,7 @@ export function ChatView({
             onEnded={handleVoiceEnded}
             onCockpitEvent={handleCockpitEvent}
             onTranscript={handleTranscript}
+            onAgentStateChange={setAgentState}
           />
         )}
         </div>

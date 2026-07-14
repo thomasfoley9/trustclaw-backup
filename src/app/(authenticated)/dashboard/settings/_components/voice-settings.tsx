@@ -45,6 +45,16 @@ export function VoiceSettings() {
   const [testing, setTesting] = useState(false);
   const [speed, setSpeed] = useState(1);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  // The current Test clip's blob URL - revoked before minting a new one (rapid
+  // Test clicks previously leaked a URL per click) and on unmount.
+  const testUrlRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    return () => {
+      audioRef.current?.pause();
+      if (testUrlRef.current) URL.revokeObjectURL(testUrlRef.current);
+    };
+  }, []);
 
   // Read the saved playback speed on mount (localStorage is client-only).
   useEffect(() => {
@@ -102,11 +112,18 @@ export function VoiceSettings() {
         return;
       }
       const blob = await res.blob();
+      if (testUrlRef.current) URL.revokeObjectURL(testUrlRef.current);
       const url = URL.createObjectURL(blob);
+      testUrlRef.current = url;
       const audio = audioRef.current ?? new Audio();
       audioRef.current = audio;
       audio.src = url;
-      audio.onended = () => URL.revokeObjectURL(url);
+      audio.onended = () => {
+        if (testUrlRef.current === url) {
+          URL.revokeObjectURL(url);
+          testUrlRef.current = null;
+        }
+      };
       applyVoiceSpeed(audio);
       await audio.play();
     } catch {
@@ -124,8 +141,10 @@ export function VoiceSettings() {
           Voice
         </CardTitle>
         <CardDescription>
-          Choose a voice for the assistant. Read-aloud replies use your own
-          Smallest.ai key, or the shared voice if you don&apos;t add one.
+          Choose a voice for the assistant. Live voice calls use it directly;
+          read-aloud replies are spoken by the closest matching Smallest.ai
+          voice, using your own key or the shared voice if you don&apos;t add
+          one.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -270,7 +289,8 @@ export function VoiceSettings() {
               </Button>
             </div>
             <p className="text-muted-foreground text-xs">
-              Works whether you use your own key or the shared voice.
+              Live calls use this voice as-is. Test and read-aloud play its
+              closest Smallest.ai match, with your key or the shared voice.
             </p>
           </div>
 

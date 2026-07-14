@@ -9,6 +9,7 @@ import {
   sendChatAction,
 } from "~/server/clients/telegram";
 import { prepareAgentRun } from "~/server/api/routers/trustclaw/agent/setup";
+import { parseAgentError } from "~/server/api/routers/trustclaw/agent/error-parser";
 import { stripToolResultEchoes } from "~/server/api/routers/trustclaw/agent/strip-tool-echoes";
 import { toPlainRecordSafe } from "~/server/api/routers/trustclaw/agent/context/build-context";
 import { parseManageConnectionsResult } from "~/app/(authenticated)/dashboard/_components/tool-results/connections/schema";
@@ -110,14 +111,21 @@ export async function POST(request: Request) {
   // Agent runs can take 30-120+ seconds - exceeding Telegram's ~60s webhook
   // timeout - which previously caused Telegram to retry and duplicate messages.
   after(
-    handleRegularMessage(chatId, text, update_id).catch((err: unknown) => {
-      // The 200 is already sent; swallow + log so a failed turn can't surface
-      // as an unhandled rejection.
-      console.error(
-        "[telegram] handleRegularMessage failed",
-        err instanceof Error ? err.message : err,
-      );
-    }),
+    handleRegularMessage(chatId, text, update_id).catch(
+      async (err: unknown) => {
+        // The 200 is already sent; log so a failed turn can't surface as an
+        // unhandled rejection. Run failures are messaged from inside
+        // handleRegularMessage - this last resort covers everything before or
+        // around that guarded path, so the user still hears SOMETHING.
+        console.error(
+          "[telegram] handleRegularMessage failed",
+          err instanceof Error ? err.message : err,
+        );
+        await sendTelegramMessage(chatId, parseAgentError(err)).catch(
+          () => undefined,
+        );
+      },
+    ),
   );
   return NextResponse.json({ ok: true });
 }
@@ -205,21 +213,26 @@ async function handleRegularMessage(
 
   await sendChatAction(chatId, "typing");
 
-  // Telegram chats live in their own dedicated session so phone messages
-  // never teleport into whatever web chat the user has open.
-  const prepareResult = await prepareAgentRun({
-    instanceId: instance.id,
-    userMessage: text,
-    source: "telegram",
-    dedicatedConversationTitle: "Telegram",
-  });
-
-  const { agent, messages, closeMcp } = prepareResult.result;
-
   let accumulatedText = "";
   const abortController = new AbortController();
+  let closeMcp: (() => Promise<void>) | null = null;
 
   try {
+    // prepareAgentRun lives INSIDE the guarded path: its failures (including
+    // PRECONDITION_FAILED when no Anthropic key is set) must reach the user
+    // as a Telegram message, not die silently in the background.
+    // Telegram chats live in their own dedicated session so phone messages
+    // never teleport into whatever web chat the user has open.
+    const prepareResult = await prepareAgentRun({
+      instanceId: instance.id,
+      userMessage: text,
+      source: "telegram",
+      dedicatedConversationTitle: "Telegram",
+    });
+
+    const { agent, messages } = prepareResult.result;
+    closeMcp = prepareResult.result.closeMcp;
+
     const result = await agent.generate({
       prompt: messages,
       abortSignal: abortController.signal,
@@ -272,9 +285,17 @@ async function handleRegularMessage(
       await sendTelegramMessage(chatId, "-");
       return;
     }
-    throw error;
+    // Tell the user the run failed - parseAgentError passes our own
+    // precondition messages through verbatim ("Add your Anthropic API key in
+    // Settings to start chatting.") and maps provider errors to plain
+    // sentences. Without this the failure only ever reached the server logs.
+    console.error(
+      "[telegram] agent run failed",
+      error instanceof Error ? error.message : error,
+    );
+    await sendTelegramMessage(chatId, parseAgentError(error));
   } finally {
     // Aborted/errored runs never reach onFinish's mcp.close - idempotent.
-    await closeMcp().catch(() => undefined);
+    await closeMcp?.().catch(() => undefined);
   }
 }

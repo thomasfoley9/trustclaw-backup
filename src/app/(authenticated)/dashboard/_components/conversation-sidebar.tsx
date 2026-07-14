@@ -8,8 +8,12 @@ import { Skeleton } from "~/components/ui/skeleton";
 import { Switch } from "~/components/ui/switch";
 import { cn } from "~/lib/utils";
 import { formatCronExpression, formatCronDate } from "~/lib/cron-format";
-import { trpcToastOnError } from "~/components/core/toast-notifications";
+import {
+  showInfoToast,
+  trpcToastOnError,
+} from "~/components/core/toast-notifications";
 import { AlertDialog } from "~/components/core/confirm-dialog";
+import { useVoiceCallStore } from "./chat/voice-call-store";
 import { SaveToKnowledgeDialog } from "./save-to-knowledge-dialog";
 import { Spinner } from "~/components/ui/spinner";
 
@@ -42,6 +46,14 @@ export function ConversationSidebarContent({
 }) {
   const utils = trpc.useUtils();
   const [view, setView] = useState<View>("chats");
+  // Switching (or creating) a chat remounts the chat view, which tears down
+  // any in-progress LiveKit call - say so instead of dropping it silently.
+  const liveCallActive = useVoiceCallStore((s) => s.liveCallActive);
+  const warnIfCallEnds = () => {
+    if (liveCallActive) {
+      showInfoToast("Switching chats ended the voice call.");
+    }
+  };
 
   const { data, error, isLoading, refetch } =
     trpc.trustclaw.getConversations.useQuery(undefined, {
@@ -160,6 +172,7 @@ export function ConversationSidebarContent({
               variant="brand"
               className="w-full justify-start gap-2 shadow-md"
               onClick={() => {
+                warnIfCallEnds();
                 void createConversation.mutateAsync();
                 onNavigate?.();
               }}
@@ -255,8 +268,10 @@ export function ConversationSidebarContent({
                         type="button"
                         disabled={busy}
                         onClick={() => {
-                          if (!isActive)
+                          if (!isActive) {
+                            warnIfCallEnds();
                             void setActive.mutateAsync({ id: c.id });
+                          }
                           onNavigate?.();
                         }}
                         className="flex min-w-0 flex-1 items-center gap-2 px-2.5 py-2 text-left text-sm"

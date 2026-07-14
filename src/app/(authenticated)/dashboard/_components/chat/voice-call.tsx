@@ -15,6 +15,8 @@ import {
   useDataChannel,
   useTranscriptions,
   useLocalParticipant,
+  useVoiceAssistant,
+  type AgentState,
 } from "@livekit/components-react";
 import { Volume2 } from "lucide-react";
 import { z } from "zod";
@@ -68,7 +70,14 @@ interface VoiceCallProps {
   onCockpitEvent?: (event: VoiceCockpitEvent) => void;
   // Live STT/TTS transcript of the call → the chat message list.
   onTranscript?: (entries: VoiceTranscriptEntry[]) => void;
+  // The agent's live state (listening/thinking/speaking) so the parent can
+  // show a truthful call-status pill instead of a hardcoded "listening".
+  onAgentStateChange?: (state: AgentState) => void;
 }
+
+// If the room connects but no agent audio ever arrives, the worker is dead or
+// misconfigured - fail visibly instead of leaving a silent open call.
+const AGENT_JOIN_TIMEOUT_MS = 15_000;
 
 // Real-time voice: connects the browser to the user's LiveKit room (token minted
 // server-side at /api/livekit-token, which also dispatches the Agent A worker),
@@ -81,6 +90,7 @@ export function VoiceCall({
   onEnded,
   onCockpitEvent,
   onTranscript,
+  onAgentStateChange,
 }: VoiceCallProps) {
   // A fresh Room is created per call (in the connect effect) and held here so
   // the RoomContext + audio renderer can read it. Reusing ONE Room across
@@ -248,6 +258,48 @@ export function VoiceCall({
       .catch((err) => console.error("[voice] mute toggle failed -", err));
   }, [muted, room]);
 
+  // Dead-worker watchdog: the token route dispatches the agent, but nothing
+  // guarantees it boots (worker down, missing model key). If no remote audio
+  // track shows up within the timeout, end the call with a clear error instead
+  // of leaving the user talking into silence.
+  useEffect(() => {
+    if (!room) return;
+    let timer: number | null = null;
+    const clear = () => {
+      if (timer !== null) {
+        window.clearTimeout(timer);
+        timer = null;
+      }
+    };
+    const hasAgentAudio = () => {
+      for (const p of room.remoteParticipants.values()) {
+        if (p.audioTrackPublications.size > 0) return true;
+      }
+      return false;
+    };
+    const onTrackSubscribed = () => clear();
+    const arm = () => {
+      if (timer !== null || hasAgentAudio()) return;
+      timer = window.setTimeout(() => {
+        timer = null;
+        if (hasAgentAudio()) return;
+        showErrorToast(
+          "The voice agent didn't join - check the worker deployment.",
+        );
+        // disconnect fires 'disconnected', which routes to onEnded.
+        void room.disconnect();
+      }, AGENT_JOIN_TIMEOUT_MS);
+    };
+    room.on(RoomEvent.TrackSubscribed, onTrackSubscribed);
+    room.on(RoomEvent.Connected, arm);
+    if (room.state === ConnectionState.Connected) arm();
+    return () => {
+      clear();
+      room.off(RoomEvent.TrackSubscribed, onTrackSubscribed);
+      room.off(RoomEvent.Connected, arm);
+    };
+  }, [room]);
+
   // Hold music: a browser-played loop (mobile-safe, see use-hold-music) that runs
   // while Agent B is actually doing work - keyed off the SAME cockpit b_tool
   // running/done events the receipts pane uses, so it's deterministic and never
@@ -294,6 +346,27 @@ export function VoiceCall({
     holdMusic.stop();
   }, [active, holdMusic, clearStopGrace]);
 
+  // Never leave the grace timer running past unmount.
+  useEffect(() => {
+    return () => clearStopGrace();
+  }, [clearStopGrace]);
+
+  // Belt and braces for a lost "done" event: the agent only speaks a result
+  // AFTER Agent B's tools finish, so agent speech means the turn is over -
+  // drain the running set and kill the hold music so it can't loop forever.
+  // Also feeds the parent's call-status pill.
+  const handleAgentState = useCallback(
+    (state: AgentState) => {
+      if (state === "speaking") {
+        runningToolsRef.current.clear();
+        clearStopGrace();
+        holdMusic.stop();
+      }
+      onAgentStateChange?.(state);
+    },
+    [holdMusic, clearStopGrace, onAgentStateChange],
+  );
+
   // Prime the AudioContext on the first user tap of the call - mobile blocks
   // audio created outside a gesture, and the music's start() fires later off a
   // data event, not a tap. The tap-to-enable-sound button primes it too.
@@ -336,6 +409,7 @@ export function VoiceCall({
       <RoomAudioRenderer />
       <CockpitBridge onCockpitEvent={handleCockpitEvent} />
       <TranscriptBridge onTranscript={onTranscript} />
+      <AgentStateBridge onAgentStateChange={handleAgentState} />
       {needsAudioUnlock && (
         <button
           type="button"
@@ -353,6 +427,22 @@ export function VoiceCall({
       )}
     </RoomContext.Provider>
   );
+}
+
+// Watches the agent participant's lifecycle state (published as the
+// lk.agent.state attribute by the worker's AgentSession) and hands each change
+// up - the source for both the truthful status pill and the hold-music
+// turn-over backstop.
+function AgentStateBridge({
+  onAgentStateChange,
+}: {
+  onAgentStateChange: (state: AgentState) => void;
+}) {
+  const { state } = useVoiceAssistant();
+  useEffect(() => {
+    onAgentStateChange(state);
+  }, [state, onAgentStateChange]);
+  return null;
 }
 
 // Reads LiveKit transcription text streams (agent STT/TTS) and hands them up as

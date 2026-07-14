@@ -76,8 +76,26 @@ export async function POST(request: Request) {
 
   const stream = new ReadableStream<Uint8Array>({
     async start(controller) {
-      const send = (obj: unknown) => controller.enqueue(sse(obj));
+      const send = (obj: unknown) => {
+        try {
+          controller.enqueue(sse(obj));
+        } catch {
+          // Stream already closed (client disconnected) - drop the event.
+        }
+      };
       let closeMcp: () => Promise<void> = () => Promise.resolve();
+      // Tools we've told the client are "running". Any id still here when the
+      // stream winds down (abort, error, or a stream that ended without its
+      // result part) gets a terminal "done" marker - the client's hold-music
+      // loop keys off running/done pairs, and an undrained id would keep the
+      // arpeggio looping for the rest of the call.
+      const runningTools = new Map<string, string>(); // toolCallId -> toolName
+      const flushRunningTools = () => {
+        for (const [id, name] of runningTools) {
+          send({ type: "b_tool", id, name, status: "done" });
+        }
+        runningTools.clear();
+      };
       try {
         // Inside the stream so prep/setup failures (missing key, DB, Composio)
         // surface as a spoken "that didn't work" instead of an unformatted 500.
@@ -111,6 +129,7 @@ export async function POST(request: Request) {
           if (request.signal.aborted) break;
           switch (part.type) {
             case "tool-input-start":
+              runningTools.set(part.id, part.toolName);
               send({
                 type: "b_tool",
                 id: part.id,
@@ -120,6 +139,7 @@ export async function POST(request: Request) {
               break;
             case "tool-call":
               toolNames.add(part.toolName);
+              runningTools.set(part.toolCallId, part.toolName);
               send({
                 type: "b_tool",
                 id: part.toolCallId,
@@ -130,6 +150,7 @@ export async function POST(request: Request) {
               break;
             case "tool-result":
               toolsSucceeded += 1;
+              runningTools.delete(part.toolCallId);
               send({
                 type: "b_tool",
                 id: part.toolCallId,
@@ -139,6 +160,7 @@ export async function POST(request: Request) {
               break;
             case "tool-error":
               toolsErrored += 1;
+              runningTools.delete(part.toolCallId);
               send({
                 type: "b_tool",
                 id: part.toolCallId,
@@ -148,6 +170,8 @@ export async function POST(request: Request) {
               break;
           }
         }
+        // However the loop exited, close out any tools still marked running.
+        flushRunningTools();
         // Caller bailed - don't wait on result.text or emit into a dead stream
         // (the finally still closes the controller).
         if (request.signal.aborted) return;
@@ -174,6 +198,7 @@ export async function POST(request: Request) {
         });
         send({ type: "done" });
       } catch (err) {
+        flushRunningTools();
         send({
           type: "error",
           message: err instanceof Error ? err.message : "Agent error",

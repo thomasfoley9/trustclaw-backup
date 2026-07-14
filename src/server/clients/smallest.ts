@@ -18,9 +18,10 @@ export const CURATED_VOICES = [
 export const DEFAULT_VOICE_ID = "marin";
 
 // The read-aloud path (/api/voice/tts) still synthesizes via Smallest, whose
-// voice catalog is disjoint from the OpenAI ids the picker now stores. Any id
-// Smallest doesn't know (an OpenAI id, or garbage) resolves to its default so
-// read-aloud keeps working no matter what's in `voiceId`.
+// voice catalog is disjoint from the OpenAI ids the picker now stores. Raw
+// Smallest ids (legacy stored values) resolve to themselves; anything else
+// unknown resolves to the default so read-aloud keeps working no matter
+// what's in `voiceId`.
 const SMALLEST_VOICES = new Set([
   "avery",
   "mia",
@@ -36,10 +37,27 @@ const SMALLEST_VOICES = new Set([
 ]);
 const SMALLEST_DEFAULT_VOICE = "avery";
 
+// Curated OpenAI voice -> closest Smallest voice, so the user's pick audibly
+// changes read-aloud TTS too (live calls use the OpenAI voice natively; this
+// mapped voice covers typed-chat read-aloud and the Settings Test button).
+// Pairings are editorial - matched on each voice's documented gender/tone.
+const OPENAI_TO_SMALLEST: Record<string, string> = {
+  marin: "avery", // natural, expressive female
+  cedar: "john", // deep, natural male
+  ash: "robert", // clear, direct male
+  ballad: "liam", // warm, expressive male
+  coral: "mia", // bright, conversational female
+  sage: "christine", // calm, measured female
+  alloy: "quinn", // balanced, neutral
+  echo: "ronald", // deep, resonant male
+  shimmer: "poppy", // light, upbeat female
+  verse: "noah", // rich, articulate male
+};
+
 export function resolveSmallestVoice(voiceId: string | null | undefined): string {
-  return voiceId && SMALLEST_VOICES.has(voiceId)
-    ? voiceId
-    : SMALLEST_DEFAULT_VOICE;
+  if (!voiceId) return SMALLEST_DEFAULT_VOICE;
+  if (SMALLEST_VOICES.has(voiceId)) return voiceId;
+  return OPENAI_TO_SMALLEST[voiceId] ?? SMALLEST_DEFAULT_VOICE;
 }
 
 export type SmallestKeyCheck = "ok" | "unauthorized" | "unreachable" | "error";

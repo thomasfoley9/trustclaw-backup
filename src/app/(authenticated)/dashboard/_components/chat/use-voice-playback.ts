@@ -1,7 +1,10 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { showErrorToast } from "~/components/core/toast-notifications";
+import {
+  showErrorToast,
+  showInfoToast,
+} from "~/components/core/toast-notifications";
 import { applyVoiceSpeed } from "./voice-speed";
 
 const STORAGE_KEY = "trustclaw-voice-enabled";
@@ -61,6 +64,22 @@ export function useVoicePlayback() {
   // whose token is superseded bails after each await instead of clobbering the
   // current call's audio or reviving cancelled/orphaned playback.
   const genRef = useRef(0);
+  // Autoplay-blocked recovery: when play() throws NotAllowedError (voice was
+  // persisted-on across a reload, so no gesture has unlocked the element yet),
+  // the utterance is kept and replayed inside the NEXT user gesture instead of
+  // being dropped silently. Holds the one-time gesture handler so it can be
+  // detached on stop/unmount.
+  const pendingGestureRetryRef = useRef<(() => void) | null>(null);
+  // The "tap to enable audio" hint should show once, not per blocked reply.
+  const autoplayHintShownRef = useRef(false);
+
+  const clearPendingGestureRetry = useCallback(() => {
+    const handler = pendingGestureRetryRef.current;
+    if (!handler) return;
+    pendingGestureRetryRef.current = null;
+    document.removeEventListener("pointerdown", handler);
+    document.removeEventListener("keydown", handler);
+  }, []);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -90,6 +109,7 @@ export function useVoicePlayback() {
 
   const stop = useCallback(() => {
     genRef.current++; // invalidate any in-flight speak()
+    clearPendingGestureRetry(); // a stopped utterance must not replay later
     const audio = audioRef.current;
     if (audio) {
       audio.pause();
@@ -98,7 +118,7 @@ export function useVoicePlayback() {
     revoke();
     setIsSpeaking(false);
     setIsPreparing(false);
-  }, [revoke]);
+  }, [revoke, clearPendingGestureRetry]);
 
   // Prime the <audio> element inside a user gesture so a later (non-gesture)
   // reply is allowed to autoplay. Called on every send - handles the case where
@@ -201,24 +221,54 @@ export function useVoicePlayback() {
         applyVoiceSpeed(audio);
         setIsSpeaking(true);
         await audio.play();
-      } catch {
+      } catch (err) {
         // Don't clobber a newer/superseding call's state.
-        if (genRef.current === myGen) {
-          setIsPreparing(false);
-          setIsSpeaking(false);
-          revoke();
+        if (genRef.current !== myGen) return;
+        setIsPreparing(false);
+        setIsSpeaking(false);
+        // Autoplay blocked (no unlocking gesture yet - e.g. a resumed stream
+        // finishing right after a reload). Keep the loaded clip and replay it
+        // inside the next gesture, which browsers always allow.
+        if (
+          err instanceof Error &&
+          err.name === "NotAllowedError" &&
+          urlRef.current
+        ) {
+          if (!autoplayHintShownRef.current) {
+            autoplayHintShownRef.current = true;
+            showInfoToast(
+              "Tap anywhere to enable audio, then replies will be spoken.",
+            );
+          }
+          clearPendingGestureRetry();
+          const retry = () => {
+            clearPendingGestureRetry();
+            if (genRef.current !== myGen) return; // superseded / stopped
+            setIsSpeaking(true);
+            audio.play().catch(() => {
+              if (genRef.current !== myGen) return;
+              setIsSpeaking(false);
+              revoke();
+            });
+          };
+          pendingGestureRetryRef.current = retry;
+          document.addEventListener("pointerdown", retry);
+          document.addEventListener("keydown", retry);
+          return;
         }
+        revoke();
       }
     },
-    [ensureAudio, persist, revoke],
+    [ensureAudio, persist, revoke, clearPendingGestureRetry],
   );
 
   useEffect(() => {
     return () => {
+      clearPendingGestureRetry();
       audioRef.current?.pause();
       if (urlRef.current) URL.revokeObjectURL(urlRef.current);
     };
-  }, []);
+  }, [clearPendingGestureRetry]);
 
   return { enabled, isSpeaking, isPreparing, toggle, speak, stop, unlock };
 }

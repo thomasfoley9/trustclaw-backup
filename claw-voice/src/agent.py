@@ -16,6 +16,7 @@ import asyncio
 import json
 import logging
 import os
+import sys
 
 from dotenv import load_dotenv
 from livekit import agents
@@ -282,9 +283,17 @@ async def entrypoint(ctx: JobContext):
 
     voice_id = config.get("voiceId") or DEFAULT_VOICE
     logger.info("voice session using voice=%s", voice_id)
-    session = AgentSession(
-        llm=build_realtime_model(voice_id),
-    )
+    try:
+        session = AgentSession(
+            llm=build_realtime_model(voice_id),
+        )
+    except RuntimeError as e:
+        # Missing model key (the boot-time guard covers `start`/`dev`, but the
+        # env can still rot on a running worker). Fail the job LOUDLY and shut
+        # it down so the client sees a disconnect - never a silent open call.
+        logger.critical("cannot start voice session: %s", e)
+        ctx.shutdown(reason="voice agent misconfigured (no model key)")
+        return
 
     # Turn-level breadcrumbs: one line per finalized user/assistant item, and
     # any session error. This is what makes "the call was silent" diagnosable
@@ -340,4 +349,16 @@ async def entrypoint(ctx: JobContext):
 
 
 if __name__ == "__main__":
+    # Fail fast at worker boot: without a model key every call would join and
+    # sit silent, which is undebuggable from the client. Only gate the worker
+    # modes - build-time invocations (e.g. `download-files` in the Dockerfile)
+    # legitimately run without secrets.
+    if any(arg in ("start", "dev") for arg in sys.argv[1:]) and not os.environ.get(
+        "OPENAI_API_KEY"
+    ):
+        logger.critical(
+            "OPENAI_API_KEY is not set - the voice agent cannot serve calls. "
+            "Set it on the worker and restart. Refusing to boot."
+        )
+        raise SystemExit(1)
     agents.cli.run_app(server)

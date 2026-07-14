@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import {
   LogOut,
@@ -20,6 +21,7 @@ import { ThemeToggle } from "~/components/core/theme-toggle";
 import { TrustClawBrand } from "~/app/_components/trustclaw-brand";
 import { trpc } from "~/clients/trpc";
 import { authClient } from "~/clients/auth/react";
+import { useIsMobile } from "~/lib/use-is-mobile";
 import { useTerminalStore } from "./terminal-store";
 import { useChatDrawerStore } from "./chat-drawer-store";
 import { MemoryBucketControl } from "./memory-bucket-control";
@@ -32,7 +34,20 @@ export function DashboardNavbar() {
   const isToolkits = pathname.startsWith("/dashboard/toolkits");
   const terminalOpen = useTerminalStore((s) => s.terminalOpen);
   const setTerminalOpen = useTerminalStore((s) => s.setTerminalOpen);
+  const mobileTerminalOpen = useTerminalStore((s) => s.mobileTerminalOpen);
+  const setMobileTerminalOpen = useTerminalStore(
+    (s) => s.setMobileTerminalOpen,
+  );
   const setDrawerOpen = useChatDrawerStore((s) => s.setDrawerOpen);
+  // On phones the desktop pane is display:none, so the toggle drives the
+  // bottom Sheet instead (same split as chat-view's handleOpenTerminal).
+  const isMobile = useIsMobile();
+  // Restore the persisted desktop open/closed flag AFTER hydration (the store
+  // uses skipHydration - see terminal-store.ts). The navbar is mounted on
+  // every dashboard page, so this runs exactly once per load.
+  useEffect(() => {
+    void useTerminalStore.persist.rehydrate();
+  }, []);
   // The mobile drawer only exists on the full chat page. During onboarding
   // and the Composio activation gate the hamburger would be a dead button
   // whose stale open state pops the drawer once the gates clear. Both queries
@@ -41,8 +56,10 @@ export function DashboardNavbar() {
   const { data: composioKey } = trpc.trustclaw.getComposioKeyStatus.useQuery();
   const drawerExists = !!status?.hasInstance && !!composioKey?.hasKey;
   const router = useRouter();
+  const activityOpen = isMobile ? mobileTerminalOpen : terminalOpen;
   const handleToggleTerminal = () => {
-    setTerminalOpen(!terminalOpen);
+    if (isMobile) setMobileTerminalOpen(!mobileTerminalOpen);
+    else setTerminalOpen(!terminalOpen);
   };
 
   const handleLogout = async () => {
@@ -132,15 +149,15 @@ export function DashboardNavbar() {
               <Button
                 variant="ghost"
                 size="icon"
-                aria-label={terminalOpen ? "Hide activity panel" : "Show activity panel"}
-                className={`hidden h-10 w-10 md:inline-flex ${terminalOpen ? "bg-primary/15 text-primary" : ""}`}
+                aria-label={activityOpen ? "Hide activity panel" : "Show activity panel"}
+                className={`h-10 w-10 ${activityOpen ? "bg-primary/15 text-primary" : ""}`}
                 onClick={handleToggleTerminal}
               >
                 <PanelRight className="h-4 w-4" />
               </Button>
             </TooltipTrigger>
             <TooltipContent>
-              {terminalOpen ? "Hide" : "Show"} Terminal
+              {activityOpen ? "Hide" : "Show"} Terminal
             </TooltipContent>
           </Tooltip>
         )}

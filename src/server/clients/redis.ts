@@ -157,6 +157,18 @@ export async function clearRunAbortRequest(
 
 const TELEGRAM_DEDUP_TTL = 300; // 5 minutes
 
+// Redis-less deployments lose Telegram dedup (retries become duplicate runs)
+// and supersede-abort - degrade loudly, once per process, so operators learn
+// it from the logs instead of from lost/duplicated messages.
+let warnedTelegramNoRedis = false;
+function warnTelegramNoRedis(): void {
+  if (warnedTelegramNoRedis) return;
+  warnedTelegramNoRedis = true;
+  console.warn(
+    "[redis] Redis not configured: Telegram dedup and abort disabled - retried updates may run twice and superseded runs won't stop.",
+  );
+}
+
 /**
  * Attempt to claim a Telegram update for processing.
  * Returns true if this is the first time we've seen this update_id
@@ -166,7 +178,10 @@ export async function claimTelegramUpdate(
   updateId: number,
 ): Promise<boolean> {
   const r = getRedis();
-  if (!r) return true; // no dedup available - always claim
+  if (!r) {
+    warnTelegramNoRedis();
+    return true; // no dedup available - always claim
+  }
   const result = await r.set(
     `telegram-update:${updateId}`,
     "1",
@@ -190,7 +205,10 @@ export async function setTelegramActive(
   updateId: number,
 ): Promise<void> {
   const r = getRedis();
-  if (!r) return;
+  if (!r) {
+    warnTelegramNoRedis();
+    return;
+  }
   await r.set(
     `telegram-active:${instanceId}`,
     String(updateId),
@@ -207,7 +225,10 @@ export async function getTelegramActive(
   instanceId: string,
 ): Promise<number | null> {
   const r = getRedis();
-  if (!r) return null;
+  if (!r) {
+    warnTelegramNoRedis();
+    return null;
+  }
   const val = await r.get(`telegram-active:${instanceId}`);
   return val ? Number(val) : null;
 }
