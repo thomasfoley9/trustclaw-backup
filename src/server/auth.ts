@@ -219,7 +219,7 @@ export const auth = betterAuth({
       // Override BOTH validators: the plugin's default (/^[a-zA-Z0-9_.]+$/)
       // rejects hyphens, and it validates the normalized username AND the
       // display username separately - so without both, a handle like
-      // "thomas-5672" fails on the display-name check even if the first passes.
+      // "casey-5672" fails on the display-name check even if the first passes.
       usernameValidator: isValidUsernameChars,
       displayUsernameValidator: isValidUsernameChars,
     }),

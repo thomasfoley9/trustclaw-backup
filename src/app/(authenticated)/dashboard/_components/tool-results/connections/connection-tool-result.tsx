@@ -2,6 +2,8 @@
 
 import { cn } from "~/lib/utils";
 import Link from "next/link";
+import { Clock, X } from "lucide-react";
+import type { ReactNode } from "react";
 import type {
   ConnectionResult,
   ConnectionToolResultData,
@@ -29,7 +31,7 @@ function statusColor(status: string): string {
   }
 }
 
-function statusDot(status: string): string {
+function statusDot(status: string): ReactNode {
   switch (status) {
     case "active":
     case "connected":
@@ -39,7 +41,7 @@ function statusDot(status: string): string {
       return "○";
     case "error":
     case "failed":
-      return "✕";
+      return <X className="inline size-3" aria-hidden />;
     default:
       return "○";
   }
@@ -121,7 +123,7 @@ export function ConnectionToolResult({ data }: ConnectionToolResultProps) {
                       <span className="text-primary/50">↗</span>
                     </Link>
                     <div className="text-muted-foreground/60 mt-1.5 flex items-center gap-1 text-[10px]">
-                      <span>⏱</span>
+                      <Clock className="size-3" aria-hidden />
                       <span>Link expires in 10 minutes</span>
                     </div>
                   </div>

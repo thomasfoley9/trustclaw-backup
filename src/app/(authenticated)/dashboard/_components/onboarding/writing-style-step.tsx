@@ -1,6 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
+import { Briefcase, PartyPopper } from "lucide-react";
 import { cn } from "~/lib/utils";
 import { WRITING_STYLES, type WritingStyleKey } from "./onboarding.consts";
 import { StepLayout, itemVariants } from "./step-layout";
@@ -59,7 +60,7 @@ export function WritingStyleStep({
     >
       <motion.div variants={itemVariants} className="space-y-2">
         <div className="flex items-center gap-2">
-          <span className="text-base">💼</span>
+          <Briefcase className="text-muted-foreground size-4" aria-hidden />
           <p className="text-sm font-medium">
             Professional voice
             <span className="text-muted-foreground ml-1.5 font-normal">
@@ -72,7 +73,7 @@ export function WritingStyleStep({
 
       <motion.div variants={itemVariants} className="space-y-2">
         <div className="flex items-center gap-2">
-          <span className="text-base">🎉</span>
+          <PartyPopper className="text-muted-foreground size-4" aria-hidden />
           <p className="text-sm font-medium">
             Fun voice
             <span className="text-muted-foreground ml-1.5 font-normal">

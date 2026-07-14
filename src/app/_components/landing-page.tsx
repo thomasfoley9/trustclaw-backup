@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { TrainFront } from "lucide-react";
 import { LandingNav } from "./landing-nav";
 import { TrainMascot } from "./train-mascot";
 import { TrustClawBrand } from "./trustclaw-brand";
@@ -24,7 +25,8 @@ export function LandingPage() {
       <main className="relative flex-1">
         <section className="mx-auto flex max-w-3xl flex-col items-center px-4 pt-20 pb-24 text-center md:pt-28">
           <span className="border-border bg-card/60 text-muted-foreground mb-8 inline-flex items-center gap-2 rounded-full border px-4 py-1.5 text-xs font-medium backdrop-blur">
-            🚂 Now boarding · Claw
+            <TrainFront className="size-3.5" aria-hidden />
+            Now boarding · Claw
           </span>
 
           <div className="animate-[float-y_6s_ease-in-out_infinite]">
@@ -32,7 +34,7 @@ export function LandingPage() {
           </div>
 
           <h1 className="font-heading mt-8 text-4xl font-bold tracking-tight text-balance sm:text-5xl md:text-6xl">
-            <span className="text-gradient">Thomas</span> ships while you sleep.
+            <span className="text-gradient">Claw</span> ships while you sleep.
           </h1>
 
           <p className="text-muted-foreground mt-5 max-w-xl text-lg text-pretty">
@@ -72,7 +74,7 @@ export function LandingPage() {
       <footer className="border-border relative border-t px-4 py-6">
         <div className="text-muted-foreground mx-auto flex max-w-3xl flex-col items-center gap-2 text-center text-xs">
           <TrustClawBrand size="sm" />
-          <p>Made by sales people. Driven by a train. Your mileage may vary.</p>
+          <p>Self-hosted. Your keys, your data, your agent.</p>
         </div>
       </footer>
     </div>

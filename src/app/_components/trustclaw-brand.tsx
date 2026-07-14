@@ -9,9 +9,9 @@ interface TrustClawBrandProps {
 }
 
 const SIZES = {
-  sm: { logo: 20, text: "text-xs", by: "text-[8px]", gap: "gap-1.5", tagline: "max-w-[180px]" },
-  md: { logo: 24, text: "text-lg", by: "text-[9px]", gap: "gap-2", tagline: "max-w-[260px]" },
-  lg: { logo: 48, text: "text-2xl", by: "text-[10px]", gap: "gap-3", tagline: "max-w-[360px]" },
+  sm: { logo: 20, text: "text-xs", by: "text-[10px]", gap: "gap-1.5", tagline: "max-w-[180px]" },
+  md: { logo: 24, text: "text-lg", by: "text-[10px]", gap: "gap-2", tagline: "max-w-[260px]" },
+  lg: { logo: 48, text: "text-2xl", by: "text-[11px]", gap: "gap-3", tagline: "max-w-[360px]" },
 } as const;
 
 export function TrustClawBrand({ size = "md", logoLink }: TrustClawBrandProps) {
@@ -37,7 +37,7 @@ export function TrustClawBrand({ size = "md", logoLink }: TrustClawBrandProps) {
         <span
           className={`${s.by} ${s.tagline} text-muted-foreground truncate font-medium`}
         >
-          Brought to you by Cracked Cookies
+          Self-hosted AI agent
         </span>
       </div>
     </div>

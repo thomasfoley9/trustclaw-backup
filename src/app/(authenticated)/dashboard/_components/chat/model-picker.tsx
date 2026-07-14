@@ -120,7 +120,7 @@ export function ModelPicker() {
         ))}
 
         <div className="text-muted-foreground mt-1 px-2 py-1.5 text-xs font-semibold">
-          On the house 🍻
+          On the house
         </div>
         {HOUSE_MODELS.map((m) => (
           <button

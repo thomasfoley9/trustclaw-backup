@@ -38,7 +38,7 @@ server = AgentServer()
 
 # Worker -> Vercel bridge.
 VOICE_TURN_URL = os.environ.get(
-    "VOICE_TURN_URL", "https://thomasclaw.vercel.app/api/voice-turn"
+    "VOICE_TURN_URL", "http://localhost:3000/api/voice-turn"
 )
 WORKER_SECRET = os.environ.get("VOICE_WORKER_SHARED_SECRET", "")
 
@@ -164,7 +164,7 @@ class ClawAgent(Agent):
                     if resp.status_code != 200:
                         logger.error("voice-turn returned %s", resp.status_code)
                         if resp.status_code == 401:
-                            return "My link to the worker isn't set up right - tell Thomas to check the secrets."
+                            return "My link to the worker isn't set up right - ask whoever runs this instance to check the secrets."
                         if resp.status_code == 404:
                             return "I lost track of this conversation - let's start fresh?"
                         return "I couldn't reach the worker just now - try again?"

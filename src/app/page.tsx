@@ -3,9 +3,9 @@ import { LandingPage } from "./_components/landing-page";
 const jsonLd = {
   "@context": "https://schema.org",
   "@type": "SoftwareApplication",
-  name: "Claw",
+  name: "TrustClaw",
   description:
-    "Made By Sales People....it probably sucks and your data is now being sold on Temu.",
+    "Self-hostable personal AI agent with vector memory, 500+ tool integrations, scheduled tasks, and a Telegram bot. Your keys, your data, your infrastructure.",
   applicationCategory: "Productivity",
   operatingSystem: "Web",
   offers: {
@@ -15,7 +15,7 @@ const jsonLd = {
   },
   creator: {
     "@type": "Organization",
-    name: "Sales People",
+    name: "Composio",
   },
 };
 

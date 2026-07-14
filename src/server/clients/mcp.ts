@@ -4,7 +4,7 @@ import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/
 import { db } from "./db";
 import { decryptSecret } from "./crypto";
 
-const CLIENT_INFO = { name: "thomas-claw", version: "1.0.0" } as const;
+const CLIENT_INFO = { name: "trustclaw", version: "1.0.0" } as const;
 const CONNECT_TIMEOUT_MS = 10_000;
 
 function withTimeout<T>(p: Promise<T>, ms: number, label: string): Promise<T> {

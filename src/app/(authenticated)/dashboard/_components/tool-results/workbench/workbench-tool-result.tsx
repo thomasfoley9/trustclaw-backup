@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { X } from "lucide-react";
 import { cn } from "~/lib/utils";
 import {
   Collapsible,
@@ -160,7 +161,7 @@ export function WorkbenchToolResult({ data }: WorkbenchToolResultProps) {
                     {hasError && (
                       <div>
                         <div className="mb-1 flex items-center gap-1.5 text-[10px] uppercase tracking-wider text-destructive">
-                          <span>✕</span>
+                          <X className="size-3" aria-hidden />
                           <span>Error</span>
                         </div>
                         <pre

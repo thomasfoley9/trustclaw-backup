@@ -6,7 +6,7 @@ export const USERNAME_MIN_LENGTH = 3;
 export const USERNAME_MAX_LENGTH = 30;
 
 // Letters, digits, and . _ - - no spaces, @, or other symbols. Hyphens are
-// allowed (common in handles, e.g. "thomas-5672").
+// allowed (common in handles, e.g. "casey-5672").
 export const USERNAME_PATTERN = /^[a-zA-Z0-9._-]+$/;
 
 export const USERNAME_HINT = "Letters, numbers, and . _ - only";

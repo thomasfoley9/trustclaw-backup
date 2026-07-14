@@ -258,7 +258,7 @@ export async function POST(request: Request) {
         },
         data: {
           content: [
-            { type: "text", text: `⚠️ ${parseAgentError(error)}` },
+            { type: "text", text: parseAgentError(error) },
           ],
         },
       })
@@ -322,7 +322,7 @@ export async function POST(request: Request) {
         await db.message
           .updateMany({
             where: emptyRowFilter,
-            data: { content: [{ type: "text", text: `⚠️ ${text}` }] },
+            data: { content: [{ type: "text", text }] },
           })
           .catch(() => undefined);
       }
@@ -343,7 +343,7 @@ export async function POST(request: Request) {
   const uiStream = result.toUIMessageStream({
     onError: (error) => {
       capturedError = error;
-      return `⚠️ ${parseAgentError(error)}`;
+      return parseAgentError(error);
     },
   });
   return createUIMessageStreamResponse({

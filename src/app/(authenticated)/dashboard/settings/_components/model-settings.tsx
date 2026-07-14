@@ -94,7 +94,7 @@ export function ModelSettings({
         ))}
       </SelectGroup>
       <SelectGroup>
-        <SelectLabel>On the house 🍻</SelectLabel>
+        <SelectLabel>On the house</SelectLabel>
         {HOUSE_MODELS.map((m) => (
           <SelectItem key={m.value} value={m.value}>
             <span>{m.label}</span>

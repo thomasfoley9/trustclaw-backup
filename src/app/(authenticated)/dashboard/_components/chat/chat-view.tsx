@@ -40,7 +40,6 @@ import {
 } from "./voice-call";
 import { env } from "~/env";
 import { TerminalPane } from "../terminal/terminal-pane";
-import { ComposioCta } from "./composio-cta";
 import { OpenClawLogo } from "~/app/_components/openclaw-logo";
 
 const SAMPLE_PROMPTS = [
@@ -427,7 +426,6 @@ export function ChatView({
     >
       <ResizablePanel id="conversation" className="min-w-0">
         <div className="flex h-full min-h-0 min-w-0 flex-col">
-          <ComposioCta />
         <div className="relative min-h-0 flex-1">
           {isEmpty ? (
             <div className="flex h-full flex-col items-center justify-center gap-6 px-4 text-center">

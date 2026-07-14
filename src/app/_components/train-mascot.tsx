@@ -18,7 +18,7 @@ export function TrainMascot({
       xmlns="http://www.w3.org/2000/svg"
       className={className}
       role="img"
-      aria-label="Thomas the train mascot"
+      aria-label="Claw train mascot"
     >
       {/* steam puffs */}
       <g className="origin-center">
