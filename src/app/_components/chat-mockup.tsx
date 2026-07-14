@@ -39,8 +39,8 @@ function SearchResult({ delay }: { delay: number }) {
             ├
           </span>
           <div>
-            <div className="text-[10px] text-muted-foreground/60">USE CASE</div>
-            <div className="text-[11px] font-semibold uppercase text-foreground/90">
+            <div className="text-2xs text-muted-foreground/60">USE CASE</div>
+            <div className="text-2xs font-semibold uppercase text-foreground/90">
               Fetch and categorize emails
             </div>
           </div>
@@ -50,8 +50,8 @@ function SearchResult({ delay }: { delay: number }) {
             ├
           </span>
           <div>
-            <div className="text-[10px] text-muted-foreground/60">GMAIL</div>
-            <div className="flex items-center gap-1.5 text-[11px]">
+            <div className="text-2xs text-muted-foreground/60">GMAIL</div>
+            <div className="flex items-center gap-1.5 text-2xs">
               <span className="text-chart-2">●</span>
               <span className="text-chart-2">CONNECTED</span>
               <span className="text-muted-foreground/60">
@@ -65,7 +65,7 @@ function SearchResult({ delay }: { delay: number }) {
             └
           </span>
           <div>
-            <div className="text-[10px] text-muted-foreground/60">
+            <div className="text-2xs text-muted-foreground/60">
               RECOMMENDED TOOL
             </div>
             <div className="flex items-center gap-3">
@@ -76,10 +76,10 @@ function SearchResult({ delay }: { delay: number }) {
                 height={12}
                 className="shrink-0"
               />
-              <span className="text-[11px] font-semibold text-foreground/90">
+              <span className="text-2xs font-semibold text-foreground/90">
                 GMAIL_FETCH_EMAILS
               </span>
-              <span className="flex items-center gap-1 text-[10px]">
+              <span className="flex items-center gap-1 text-2xs">
                 <span className="tracking-wider">
                   <span className="text-chart-2">■</span>
                   <span className="text-muted-foreground/30">■</span>
@@ -113,7 +113,7 @@ function ExecResult({ delay }: { delay: number }) {
             key={i}
             className="flex items-center gap-2 border-b border-border/30 py-1 last:border-0"
           >
-            <span className="shrink-0 text-[10px] text-muted-foreground/60">
+            <span className="shrink-0 text-2xs text-muted-foreground/60">
               └
             </span>
             <Image

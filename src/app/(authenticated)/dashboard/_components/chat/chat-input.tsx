@@ -358,7 +358,7 @@ export function ChatInput({
               type="button"
               onClick={onToggleMute}
               className={cn(
-                "flex items-center gap-1.5 rounded-lg px-2 py-1 text-xs font-medium transition-colors",
+                "flex items-center gap-1.5 rounded-lg px-2 py-1 text-xs font-medium transition-colors duration-fast ease-out-quad",
                 conversationMuted
                   ? "text-primary hover:bg-primary/10"
                   : "text-muted-foreground hover:bg-muted hover:text-foreground",
@@ -513,12 +513,12 @@ export function ChatInput({
             </Button>
           ) : (
             <Button
-              variant="default"
+              variant="brand"
               size="icon"
               aria-label="Send message"
               className={cn(
-                "bg-accent-gradient size-10 shrink-0 rounded-2xl border-0 text-white shadow-md transition-transform hover:scale-105",
-                !canSend && "opacity-50 hover:scale-100",
+                "size-10 shrink-0 rounded-2xl shadow-md",
+                !canSend && "opacity-50",
               )}
               onClick={handleSubmit}
               disabled={!canSend}

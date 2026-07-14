@@ -46,7 +46,7 @@ function ModelGrid({
           key={model.value}
           onClick={() => onSelect(model.value)}
           className={cn(
-            "flex min-h-[44px] items-center justify-between rounded-lg border p-4 text-left transition-all",
+            "flex min-h-[44px] items-center justify-between rounded-lg border p-4 text-left transition-all duration-fast ease-out-quad",
             value === model.value
               ? "border-primary ring-primary ring-2"
               : "border-border hover:border-primary/50",

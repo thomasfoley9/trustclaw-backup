@@ -46,7 +46,8 @@ export function LandingPage() {
             <Button
               asChild
               size="lg"
-              className="bg-accent-gradient h-12 rounded-2xl border-0 px-7 text-base text-white shadow-lg transition-transform hover:scale-[1.03]"
+              variant="brand"
+              className="h-12 px-7 text-base"
             >
               <Link href="/login?tab=register">Get started - it&apos;s free</Link>
             </Button>

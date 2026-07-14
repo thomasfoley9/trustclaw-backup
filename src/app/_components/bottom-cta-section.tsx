@@ -7,7 +7,7 @@ import { AnimateOnView } from "~/components/core/animate-on-view";
 export function BottomCtaSection() {
   return (
     <section className="border-border relative overflow-hidden border-t px-4 py-16 md:px-6 md:py-24 lg:py-32">
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_center,oklch(0.488_0.243_264.376/0.08),transparent_70%)]" />
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_center,color-mix(in_oklch,var(--primary)_8%,transparent),transparent_70%)]" />
       <Image
         src="/images/elements/cube.svg"
         alt=""

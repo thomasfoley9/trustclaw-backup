@@ -1,10 +1,12 @@
 "use client";
 
 import moment from "moment";
-import { AlertCircle, CheckCircle2, Loader2 } from "lucide-react";
+import { AlertCircle, CheckCircle2, History } from "lucide-react";
 import { trpc } from "~/clients/trpc";
 import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
+import { Spinner } from "~/components/ui/spinner";
+import { EmptyState } from "~/components/core/empty-state";
 
 function runDuration(startedAt: Date, finishedAt: Date | null): string | null {
   if (!finishedAt) return null;
@@ -37,7 +39,7 @@ export function CronRunHistory({ jobId }: { jobId: string }) {
   if (isLoading) {
     return (
       <div className="flex justify-center py-3">
-        <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+        <Spinner className="text-muted-foreground" />
       </div>
     );
   }
@@ -52,9 +54,12 @@ export function CronRunHistory({ jobId }: { jobId: string }) {
 
   if (runs.length === 0) {
     return (
-      <p className="py-3 text-center text-xs text-muted-foreground">
-        No runs yet. Use Run now to test this task.
-      </p>
+      <EmptyState
+        icon={History}
+        title="No runs yet"
+        description="Use Run now to test this task."
+        className="py-4"
+      />
     );
   }
 
@@ -68,7 +73,7 @@ export function CronRunHistory({ jobId }: { jobId: string }) {
             className="flex items-start gap-2 rounded-md bg-muted/50 px-3 py-2"
           >
             {run.status === "running" ? (
-              <Loader2 className="mt-0.5 h-3.5 w-3.5 shrink-0 animate-spin text-muted-foreground" />
+              <Spinner className="mt-0.5 size-3.5 shrink-0 text-muted-foreground" />
             ) : run.status === "succeeded" ? (
               <CheckCircle2 className="mt-0.5 h-3.5 w-3.5 shrink-0 text-primary" />
             ) : (
@@ -93,7 +98,7 @@ export function CronRunHistory({ jobId }: { jobId: string }) {
                   <span className="text-muted-foreground">in {duration}</span>
                 )}
                 {run.trigger === "manual" && (
-                  <Badge variant="outline" className="h-4 px-1.5 text-[10px]">
+                  <Badge variant="outline" className="h-4 px-1.5 text-2xs">
                     Manual
                   </Badge>
                 )}
@@ -120,7 +125,7 @@ export function CronRunHistory({ jobId }: { jobId: string }) {
           onClick={() => void fetchNextPage()}
         >
           {isFetchingNextPage ? (
-            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            <Spinner className="size-3.5" />
           ) : (
             "Show older runs"
           )}

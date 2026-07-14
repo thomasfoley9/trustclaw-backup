@@ -44,7 +44,7 @@ export function WorkbenchToolResult({ data }: WorkbenchToolResultProps) {
               {isLast("step") ? "└" : "├"}
             </span>
             <div className="min-w-0 flex-1">
-              <div className="mb-0.5 text-[10px] text-muted-foreground/60">
+              <div className="mb-0.5 text-2xs text-muted-foreground/60">
                 STEP
               </div>
               <div className="flex items-center gap-2 text-sm font-semibold text-foreground/90">
@@ -72,10 +72,10 @@ export function WorkbenchToolResult({ data }: WorkbenchToolResultProps) {
               {isLast("thought") ? "└" : "├"}
             </span>
             <div className="min-w-0 flex-1">
-              <div className="mb-0.5 text-[10px] text-muted-foreground/60">
+              <div className="mb-0.5 text-2xs text-muted-foreground/60">
                 THOUGHT
               </div>
-              <p className="text-[11px] leading-relaxed text-muted-foreground">
+              <p className="text-2xs leading-relaxed text-muted-foreground">
                 {data.thought}
               </p>
             </div>
@@ -90,8 +90,8 @@ export function WorkbenchToolResult({ data }: WorkbenchToolResultProps) {
             <div className="min-w-0 flex-1">
               <Collapsible open={codeOpen} onOpenChange={setCodeOpen}>
                 <CollapsibleTrigger asChild>
-                  <button className="group flex items-center gap-2 text-[10px] text-muted-foreground/60 transition-colors hover:text-muted-foreground">
-                    <span className="transition-transform duration-200 group-data-[state=open]:rotate-90">
+                  <button className="group flex items-center gap-2 text-2xs text-muted-foreground/60 transition-colors duration-fast ease-out-quad hover:text-muted-foreground">
+                    <span className="transition-transform duration-base ease-out-quad group-data-[state=open]:rotate-90">
                       ▸
                     </span>
                     <span className="uppercase tracking-wider">
@@ -100,7 +100,7 @@ export function WorkbenchToolResult({ data }: WorkbenchToolResultProps) {
                   </button>
                 </CollapsibleTrigger>
                 <CollapsibleContent>
-                  <pre className="mt-1.5 max-h-60 overflow-auto rounded border border-border p-3 text-[11px] leading-relaxed text-muted-foreground whitespace-pre-wrap">
+                  <pre className="mt-1.5 max-h-60 overflow-auto rounded border border-border p-3 text-2xs leading-relaxed text-muted-foreground whitespace-pre-wrap">
                     {data.code}
                   </pre>
                 </CollapsibleContent>
@@ -117,8 +117,8 @@ export function WorkbenchToolResult({ data }: WorkbenchToolResultProps) {
             <div className="min-w-0 flex-1">
               <Collapsible open={outputOpen} onOpenChange={setOutputOpen}>
                 <CollapsibleTrigger asChild>
-                  <button className="group flex items-center gap-2 text-[10px] text-muted-foreground/60 transition-colors hover:text-muted-foreground">
-                    <span className="transition-transform duration-200 group-data-[state=open]:rotate-90">
+                  <button className="group flex items-center gap-2 text-2xs text-muted-foreground/60 transition-colors duration-fast ease-out-quad hover:text-muted-foreground">
+                    <span className="transition-transform duration-base ease-out-quad group-data-[state=open]:rotate-90">
                       ▸
                     </span>
                     <span
@@ -136,20 +136,20 @@ export function WorkbenchToolResult({ data }: WorkbenchToolResultProps) {
                 <CollapsibleContent>
                   <div className="mt-1.5 space-y-3">
                     {hasOutput && (
-                      <pre className="max-h-80 overflow-auto rounded border border-border p-3 text-[11px] leading-relaxed text-muted-foreground whitespace-pre-wrap">
+                      <pre className="max-h-80 overflow-auto rounded border border-border p-3 text-2xs leading-relaxed text-muted-foreground whitespace-pre-wrap">
                         {data.stdout}
                       </pre>
                     )}
 
                     {hasStderr && (
                       <div>
-                        <div className="mb-1 flex items-center gap-1.5 text-[10px] uppercase tracking-wider text-destructive">
+                        <div className="mb-1 flex items-center gap-1.5 text-2xs uppercase tracking-wider text-destructive">
                           <span>!</span>
                           <span>Stderr</span>
                         </div>
                         <pre
                           className={cn(
-                            "max-h-40 overflow-auto rounded border p-3 text-[11px] leading-relaxed whitespace-pre-wrap",
+                            "max-h-40 overflow-auto rounded border p-3 text-2xs leading-relaxed whitespace-pre-wrap",
                             "border-destructive/30 text-destructive/70",
                           )}
                         >
@@ -160,13 +160,13 @@ export function WorkbenchToolResult({ data }: WorkbenchToolResultProps) {
 
                     {hasError && (
                       <div>
-                        <div className="mb-1 flex items-center gap-1.5 text-[10px] uppercase tracking-wider text-destructive">
+                        <div className="mb-1 flex items-center gap-1.5 text-2xs uppercase tracking-wider text-destructive">
                           <X className="size-3" aria-hidden />
                           <span>Error</span>
                         </div>
                         <pre
                           className={cn(
-                            "max-h-40 overflow-auto rounded border p-3 text-[11px] leading-relaxed whitespace-pre-wrap",
+                            "max-h-40 overflow-auto rounded border p-3 text-2xs leading-relaxed whitespace-pre-wrap",
                             "border-destructive/30 text-destructive/70",
                           )}
                         >

@@ -1,9 +1,10 @@
 "use client";
 
-import { Loader2, Check, X, Sparkles } from "lucide-react";
+import { Check, X, Sparkles } from "lucide-react";
 import type { ChatStatus } from "ai";
 import { cn } from "~/lib/utils";
 import type { TerminalLogEntryData } from "./types";
+import { Spinner } from "~/components/ui/spinner";
 
 // The "Live" altitude of the right pane: what the agent is doing, in human
 // terms, instead of raw tool JSON. Receipts (the raw log) stays one toggle away.
@@ -48,7 +49,7 @@ export function CockpitView({ entries, status }: CockpitViewProps) {
         >
           <span className="mt-0.5 shrink-0">
             {entry.status === "executing" ? (
-              <Loader2 className="text-primary size-4 animate-spin" />
+              <Spinner className="text-primary" />
             ) : entry.status === "error" ? (
               <X className="text-destructive size-4" />
             ) : (

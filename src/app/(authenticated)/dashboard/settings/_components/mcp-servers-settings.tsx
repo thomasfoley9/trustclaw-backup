@@ -1,8 +1,10 @@
 "use client";
 
+import { McpServersSettingsSkeleton } from "./mcp-servers-settings.skeleton";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Loader2, Plug, Plus, Trash2 } from "lucide-react";
+import { Plug, Plus, Trash2 } from "lucide-react";
+import { EmptyState } from "~/components/core/empty-state";
 import { trpc } from "~/clients/trpc";
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
@@ -31,6 +33,7 @@ import {
   addMcpServerInput,
   type AddMcpServerInput,
 } from "~/server/api/routers/trustclaw/addMcpServer.schema";
+import { Spinner } from "~/components/ui/spinner";
 
 export function McpServersSettings() {
   const utils = trpc.useUtils();
@@ -80,9 +83,7 @@ export function McpServersSettings() {
       </CardHeader>
       <CardContent className="space-y-4">
         {isLoading ? (
-          <div className="text-muted-foreground flex items-center gap-2 text-sm">
-            <Loader2 className="h-4 w-4 animate-spin" /> Loading…
-          </div>
+          <McpServersSettingsSkeleton />
         ) : error ? (
           <ErrorDisplay
             message="Failed to load MCP servers"
@@ -126,9 +127,11 @@ export function McpServersSettings() {
             ))}
           </ul>
         ) : (
-          <p className="text-muted-foreground text-sm">
-            No MCP servers connected yet.
-          </p>
+          <EmptyState
+            icon={Plug}
+            title="No MCP servers yet"
+            description="Paste a server URL below and your agent gains its tools."
+          />
         )}
 
         <Form {...form}>
@@ -177,7 +180,7 @@ export function McpServersSettings() {
             <Button type="submit" variant="outline" disabled={add.isPending}>
               {add.isPending ? (
                 <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  <Spinner className="mr-2" />
                   Connecting…
                 </>
               ) : (

@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { Loader2 } from "lucide-react";
+
 import type { z } from "zod";
 import { trpc } from "~/clients/trpc";
 import {
@@ -33,6 +33,7 @@ import { IntegrationsStep } from "./integrations-step";
 import { TelegramStep } from "./telegram-step";
 import { ProgressDots } from "./progress-dots";
 import { containerVariants, itemVariants } from "./onboarding.variants";
+import { Spinner } from "~/components/ui/spinner";
 
 type AnimationState =
   | "idle"
@@ -297,7 +298,7 @@ export function Onboarding({
             className="space-y-6 text-center"
           >
             <motion.div variants={itemVariants}>
-              <Loader2 className="text-primary mx-auto h-10 w-10 animate-spin" />
+              <Spinner className="text-primary mx-auto size-10" />
               <h2 className="mt-4 text-xl font-semibold tracking-tight">
                 Setting things up...
               </h2>

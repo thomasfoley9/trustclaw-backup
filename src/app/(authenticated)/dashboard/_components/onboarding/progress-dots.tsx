@@ -17,7 +17,7 @@ export function ProgressDots({
           <div
             key={i}
             className={cn(
-              "h-1.5 rounded-full transition-all duration-300 md:h-2",
+              "h-1.5 rounded-full transition-all duration-slow ease-out-quad md:h-2",
               i < current
                 ? "bg-primary w-3 md:w-4"
                 : "bg-muted-foreground/25 w-1.5 md:w-2",

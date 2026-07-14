@@ -1,10 +1,12 @@
 "use client";
 
+import { KnowledgeBucketsSettingsSkeleton } from "./knowledge-buckets-settings.skeleton";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import type { z } from "zod";
-import { Pencil, Plus, Trash2, FolderTree, Loader2 } from "lucide-react";
+import { Pencil, Plus, Trash2, FolderTree } from "lucide-react";
+import { EmptyState } from "~/components/core/empty-state";
 import { trpc } from "~/clients/trpc";
 import { Button } from "~/components/ui/button";
 import { Badge } from "~/components/ui/badge";
@@ -46,7 +48,6 @@ import {
   FormLabel,
   FormMessage,
 } from "~/components/ui/form";
-import { Skeleton } from "~/components/ui/skeleton";
 import {
   showSuccessToast,
   showTrpcErrorToast,
@@ -58,6 +59,7 @@ import {
   type CreateBucketInput,
 } from "~/server/api/routers/trustclaw/createBucket.schema";
 import type { RouterOutputs } from "~/clients/trpc";
+import { Spinner } from "~/components/ui/spinner";
 
 type Bucket = RouterOutputs["trustclaw"]["getBuckets"]["buckets"][number];
 // alwaysInject carries a Zod default, so the form's raw (input) type differs
@@ -160,10 +162,7 @@ export function KnowledgeBucketsSettings() {
       </CardHeader>
       <CardContent>
         {isLoading ? (
-          <div className="space-y-2">
-            <Skeleton className="h-14 w-full" />
-            <Skeleton className="h-14 w-full" />
-          </div>
+          <KnowledgeBucketsSettingsSkeleton />
         ) : error ? (
           <ErrorDisplay
             message="Failed to load knowledge buckets"
@@ -171,7 +170,16 @@ export function KnowledgeBucketsSettings() {
             onRetry={() => void refetch()}
           />
         ) : !data || data.buckets.length === 0 ? (
-          <p className="text-muted-foreground text-sm">No buckets yet.</p>
+          <EmptyState
+            icon={FolderTree}
+            title="No buckets yet"
+            description="Buckets are namespaces for memory. Create one to start organizing what your agent knows."
+            action={
+              <Button size="sm" variant="outline" onClick={openCreate}>
+                <Plus className="h-4 w-4" /> New bucket
+              </Button>
+            }
+          />
         ) : (
           <ul className="space-y-2">
             {data.buckets.map((bucket) => (
@@ -329,7 +337,7 @@ export function KnowledgeBucketsSettings() {
                   Cancel
                 </Button>
                 <Button type="submit" disabled={saving}>
-                  {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  {saving && <Spinner className="mr-2" />}
                   {editing ? "Save" : "Create"}
                 </Button>
               </DialogFooter>

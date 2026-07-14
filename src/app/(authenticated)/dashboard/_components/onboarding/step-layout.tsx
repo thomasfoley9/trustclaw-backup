@@ -75,7 +75,8 @@ export function StepLayout({
             <Button
               onClick={onNext}
               disabled={nextDisabled}
-              className="bg-accent-gradient min-h-[44px] w-full border-0 text-white shadow-md transition-transform hover:scale-[1.02] disabled:hover:scale-100 sm:w-auto"
+              variant="brand"
+              className="min-h-[44px] w-full shadow-md sm:w-auto"
             >
               {nextLabel ?? "Continue"}
             </Button>

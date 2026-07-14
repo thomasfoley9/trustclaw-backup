@@ -1,9 +1,11 @@
 "use client";
 
+import { PersonalitySettingsSkeleton } from "./personality-settings.skeleton";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Check, Pencil, Plus, Trash2, Drama, Loader2 } from "lucide-react";
+import { Check, Pencil, Plus, Trash2, Drama } from "lucide-react";
+import { EmptyState } from "~/components/core/empty-state";
 import { trpc } from "~/clients/trpc";
 import { Button } from "~/components/ui/button";
 import { Badge } from "~/components/ui/badge";
@@ -42,7 +44,6 @@ import {
   FormItem,
   FormMessage,
 } from "~/components/ui/form";
-import { Skeleton } from "~/components/ui/skeleton";
 import { cn } from "~/lib/utils";
 import {
   showSuccessToast,
@@ -65,6 +66,7 @@ import {
   type CreatePersonalityInput,
 } from "~/server/api/routers/trustclaw/createPersonality.schema";
 import type { RouterOutputs } from "~/clients/trpc";
+import { Spinner } from "~/components/ui/spinner";
 
 type Personality =
   RouterOutputs["trustclaw"]["getPersonalities"]["personalities"][number];
@@ -181,10 +183,7 @@ export function PersonalitySettings() {
       </CardHeader>
       <CardContent>
         {isLoading ? (
-          <div className="space-y-2">
-            <Skeleton className="h-14 w-full" />
-            <Skeleton className="h-14 w-full" />
-          </div>
+          <PersonalitySettingsSkeleton />
         ) : error ? (
           <ErrorDisplay
             message="Failed to load personalities"
@@ -192,9 +191,16 @@ export function PersonalitySettings() {
             onRetry={() => void refetch()}
           />
         ) : !data || data.personalities.length === 0 ? (
-          <p className="text-muted-foreground text-sm">
-            No personalities yet. Create one to get started.
-          </p>
+          <EmptyState
+            icon={Drama}
+            title="No personalities yet"
+            description="Create one to give your agent a swappable voice."
+            action={
+              <Button size="sm" variant="outline" onClick={openCreate}>
+                <Plus className="h-4 w-4" /> New personality
+              </Button>
+            }
+          />
         ) : (
           <ul className="space-y-2">
             {data.personalities.map((personality) => {
@@ -320,7 +326,7 @@ export function PersonalitySettings() {
                           type="button"
                           title={t.blurb}
                           onClick={() => applyTemplate(t)}
-                          className="border-border hover:border-primary/50 hover:bg-accent flex w-28 shrink-0 flex-col items-center gap-1 rounded-md border p-2 text-center transition-colors"
+                          className="border-border hover:border-primary/50 hover:bg-accent flex w-28 shrink-0 flex-col items-center gap-1 rounded-md border p-2 text-center transition-colors duration-fast ease-out-quad"
                         >
                           <PersonalityAvatar
                             avatarKey={t.avatarKey}
@@ -330,7 +336,7 @@ export function PersonalitySettings() {
                           <span className="text-foreground text-xs leading-tight font-medium">
                             {t.name}
                           </span>
-                          <span className="text-muted-foreground line-clamp-2 text-[10px] leading-tight">
+                          <span className="text-muted-foreground line-clamp-2 text-2xs leading-tight">
                             {t.blurb}
                           </span>
                         </button>
@@ -373,7 +379,7 @@ export function PersonalitySettings() {
                           })
                         }
                         className={cn(
-                          "flex items-center justify-center rounded-md p-1 transition-colors hover:bg-accent",
+                          "flex items-center justify-center rounded-md p-1 transition-colors duration-fast ease-out-quad hover:bg-accent",
                           avatarKey === a.key && "bg-accent ring-ring ring-2",
                         )}
                       >
@@ -413,7 +419,7 @@ export function PersonalitySettings() {
                   Cancel
                 </Button>
                 <Button type="submit" disabled={saving}>
-                  {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  {saving && <Spinner className="mr-2" />}
                   {editing ? "Save" : "Create"}
                 </Button>
               </DialogFooter>

@@ -1,8 +1,9 @@
 "use client";
 
+import { CustomModelsSettingsSkeleton } from "./custom-models-settings.skeleton";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Boxes, CheckCircle2, KeyRound, Loader2, Trash2 } from "lucide-react";
+import { Boxes, CheckCircle2, KeyRound, Trash2 } from "lucide-react";
 import { trpc } from "~/clients/trpc";
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
@@ -33,6 +34,7 @@ import {
   addCustomModelInput,
   type AddCustomModelInput,
 } from "~/server/api/routers/trustclaw/addCustomModel.schema";
+import { Spinner } from "~/components/ui/spinner";
 
 export function CustomModelsSettings() {
   const utils = trpc.useUtils();
@@ -93,9 +95,7 @@ export function CustomModelsSettings() {
       </CardHeader>
       <CardContent className="space-y-4">
         {isLoading ? (
-          <div className="text-muted-foreground flex items-center gap-2 text-sm">
-            <Loader2 className="h-4 w-4 animate-spin" /> Loading…
-          </div>
+          <CustomModelsSettingsSkeleton />
         ) : error ? (
           <ErrorDisplay
             message="Failed to load custom models"
@@ -234,7 +234,7 @@ export function CustomModelsSettings() {
             <Button type="submit" variant="outline" disabled={isBusy}>
               {addModel.isPending ? (
                 <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Validating…
+                  <Spinner className="mr-2" /> Validating…
                 </>
               ) : (
                 <>

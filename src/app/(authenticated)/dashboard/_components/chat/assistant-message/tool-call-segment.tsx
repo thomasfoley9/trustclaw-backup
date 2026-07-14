@@ -112,7 +112,7 @@ export function ToolCallSegment({
                 href={action.redirectUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="border-primary/30 bg-primary/5 text-primary hover:bg-primary/10 inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-xs font-medium transition-colors"
+                className="border-primary/30 bg-primary/5 text-primary hover:bg-primary/10 inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-xs font-medium transition-colors duration-fast ease-out-quad"
               >
                 Connect {action.toolkit}
                 <ExternalLink className="size-3" />

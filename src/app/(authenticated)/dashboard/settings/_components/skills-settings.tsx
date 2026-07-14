@@ -1,9 +1,11 @@
 "use client";
 
+import { SkillsSettingsSkeleton } from "./skills-settings.skeleton";
 import { useState } from "react";
 import { useFieldArray, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Plus, Pencil, Trash2, Sparkles, Wrench, X, Loader2 } from "lucide-react";
+import { Plus, Pencil, Trash2, Sparkles, Wrench, X } from "lucide-react";
+import { EmptyState } from "~/components/core/empty-state";
 import { trpc } from "~/clients/trpc";
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
@@ -43,7 +45,6 @@ import {
   FormLabel,
   FormMessage,
 } from "~/components/ui/form";
-import { Skeleton } from "~/components/ui/skeleton";
 import {
   showSuccessToast,
   showTrpcErrorToast,
@@ -57,6 +58,7 @@ import {
 } from "~/server/api/routers/trustclaw/createSkill.schema";
 import type { RouterOutputs } from "~/clients/trpc";
 import type { SkillDraft } from "~/server/api/routers/trustclaw/generateSkill.schema";
+import { Spinner } from "~/components/ui/spinner";
 
 type Skill = RouterOutputs["trustclaw"]["getSkills"]["skills"][number];
 
@@ -191,10 +193,7 @@ export function SkillsSettings() {
       </CardHeader>
       <CardContent>
         {isLoading ? (
-          <div className="space-y-2">
-            <Skeleton className="h-14 w-full" />
-            <Skeleton className="h-14 w-full" />
-          </div>
+          <SkillsSettingsSkeleton />
         ) : error ? (
           <ErrorDisplay
             message="Failed to load skills"
@@ -202,9 +201,20 @@ export function SkillsSettings() {
             onRetry={() => void refetch()}
           />
         ) : !data || data.skills.length === 0 ? (
-          <p className="text-muted-foreground text-sm">
-            No skills yet. Describe one and the agent will draft it.
-          </p>
+          <EmptyState
+            icon={Wrench}
+            title="No skills yet"
+            description="Describe one and the agent will draft it."
+            action={
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => setCreatorOpen(true)}
+              >
+                <Sparkles className="h-4 w-4" /> From description
+              </Button>
+            }
+          />
         ) : (
           <ul className="space-y-2">
             {data.skills.map((s) => (
@@ -457,7 +467,7 @@ export function SkillsSettings() {
                   Cancel
                 </Button>
                 <Button type="submit" disabled={saving}>
-                  {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  {saving && <Spinner className="mr-2" />}
                   {editingId ? "Save" : "Create"}
                 </Button>
               </DialogFooter>

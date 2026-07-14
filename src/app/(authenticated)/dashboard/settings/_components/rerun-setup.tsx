@@ -1,6 +1,6 @@
 "use client";
 
-import { Loader2, RotateCcw } from "lucide-react";
+import { RotateCcw } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { trpc } from "~/clients/trpc";
 import { Button } from "~/components/ui/button";
@@ -13,6 +13,7 @@ import {
 } from "~/components/ui/card";
 import { trpcToastOnError } from "~/components/core/toast-notifications";
 import { AlertDialog } from "~/components/core/confirm-dialog";
+import { Spinner } from "~/components/ui/spinner";
 
 export function RerunSetup() {
   const router = useRouter();
@@ -57,7 +58,7 @@ export function RerunSetup() {
             trigger={
               <Button variant="outline" disabled={restart.isPending}>
                 {restart.isPending ? (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  <Spinner className="mr-2" />
                 ) : (
                   <RotateCcw className="mr-2 h-4 w-4" />
                 )}

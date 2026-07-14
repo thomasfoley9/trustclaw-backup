@@ -86,10 +86,10 @@ export function ConnectionToolResult({ data }: ConnectionToolResultProps) {
                   {isLast(`status-${toolkit}`) ? "└" : "├"}
                 </span>
                 <div className="min-w-0 flex-1">
-                  <div className="text-muted-foreground/60 mb-0.5 text-[10px]">
+                  <div className="text-muted-foreground/60 mb-0.5 text-2xs">
                     {toolkit.toUpperCase()}
                   </div>
-                  <div className="flex items-center gap-1.5 text-[11px]">
+                  <div className="flex items-center gap-1.5 text-2xs">
                     <span className={color}>{statusDot(result.status)}</span>
                     <span className={cn("font-semibold uppercase", color)}>
                       {result.status}
@@ -109,7 +109,7 @@ export function ConnectionToolResult({ data }: ConnectionToolResultProps) {
                     {isLast(`auth-${toolkit}`) ? "└" : "├"}
                   </span>
                   <div className="min-w-0 flex-1">
-                    <div className="text-primary mb-1.5 flex items-center gap-1.5 text-[10px] tracking-wider uppercase">
+                    <div className="text-primary mb-1.5 flex items-center gap-1.5 text-2xs tracking-wider uppercase">
                       <span>→</span>
                       <span>Action Required</span>
                     </div>
@@ -117,12 +117,12 @@ export function ConnectionToolResult({ data }: ConnectionToolResultProps) {
                       href={result.redirect_url!}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="border-primary/30 text-primary hover:bg-primary/10 inline-flex items-center gap-2 rounded border px-3 py-1.5 text-[11px] transition-colors"
+                      className="border-primary/30 text-primary hover:bg-primary/10 inline-flex items-center gap-2 rounded border px-3 py-1.5 text-2xs transition-colors duration-fast ease-out-quad"
                     >
                       Connect {toolkit}
                       <span className="text-primary/50">↗</span>
                     </Link>
-                    <div className="text-muted-foreground/60 mt-1.5 flex items-center gap-1 text-[10px]">
+                    <div className="text-muted-foreground/60 mt-1.5 flex items-center gap-1 text-2xs">
                       <Clock className="size-3" aria-hidden />
                       <span>Link expires in 10 minutes</span>
                     </div>

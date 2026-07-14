@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Loader2 } from "lucide-react";
+
 import { trpc } from "~/clients/trpc";
 import { Button } from "~/components/ui/button";
 import {
@@ -29,6 +29,7 @@ import {
   MODELS,
   HOUSE_MODELS,
 } from "~/app/(authenticated)/dashboard/_components/onboarding/onboarding.consts";
+import { Spinner } from "~/components/ui/spinner";
 
 interface ModelSettingsProps {
   // anthropicModel - the single agent behind text chat + tool work.
@@ -201,7 +202,7 @@ export function ModelSettings({
         >
           {updateSettings.isPending ? (
             <>
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              <Spinner className="mr-2" />
               Saving...
             </>
           ) : (

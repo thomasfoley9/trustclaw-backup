@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useEffect, useRef } from "react";
 import { motion } from "framer-motion";
-import { Check, Copy, ExternalLink, Loader2, MessageSquare } from "lucide-react";
+import { Check, Copy, ExternalLink, MessageSquare } from "lucide-react";
 import { trpc } from "~/clients/trpc";
 import {
   showSuccessToast,
@@ -12,6 +12,7 @@ import {
 import { Button } from "~/components/ui/button";
 import Link from "next/link";
 import { StepLayout, itemVariants } from "./step-layout";
+import { Spinner } from "~/components/ui/spinner";
 
 interface TelegramStepProps {
   onBack: () => void;
@@ -93,7 +94,7 @@ export function TelegramStep({ onBack, onSkip, onComplete }: TelegramStepProps) 
             >
               {linkTelegram.isPending ? (
                 <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  <Spinner className="mr-2" />
                   Generating link...
                 </>
               ) : (
@@ -141,7 +142,7 @@ export function TelegramStep({ onBack, onSkip, onComplete }: TelegramStepProps) 
             </div>
 
             <div className="text-muted-foreground flex items-center justify-center gap-2 text-sm">
-              <Loader2 className="h-4 w-4 animate-spin" />
+              <Spinner />
               Waiting for Telegram link...
             </div>
           </div>

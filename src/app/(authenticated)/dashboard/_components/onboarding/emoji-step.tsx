@@ -35,7 +35,7 @@ export function EmojiStep({
                 onChange(emoji);
               }}
               className={cn(
-                "flex min-h-[44px] min-w-[44px] items-center justify-center rounded-lg border text-xl transition-all",
+                "flex min-h-[44px] min-w-[44px] items-center justify-center rounded-lg border text-xl transition-all duration-fast ease-out-quad",
                 value === emoji
                   ? "border-primary ring-primary ring-2"
                   : "border-border hover:border-primary/50",

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Loader2 } from "lucide-react";
+
 import { trpc } from "~/clients/trpc";
 import { Button } from "~/components/ui/button";
 import {
@@ -24,6 +24,7 @@ import {
   showSuccessToast,
   trpcToastOnError,
 } from "~/components/core/toast-notifications";
+import { Spinner } from "~/components/ui/spinner";
 
 export function SaveToKnowledgeDialog({
   conversationId,
@@ -110,7 +111,7 @@ export function SaveToKnowledgeDialog({
           >
             {save.isPending ? (
               <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Saving…
+                <Spinner className="mr-2" /> Saving…
               </>
             ) : (
               "Save"

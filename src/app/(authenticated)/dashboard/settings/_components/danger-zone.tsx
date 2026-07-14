@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Loader2, Trash2 } from "lucide-react";
+import { Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { trpc } from "~/clients/trpc";
 import { Button } from "~/components/ui/button";
@@ -13,6 +13,7 @@ import {
   showSuccessToast,
   trpcToastOnError,
 } from "~/components/core/toast-notifications";
+import { Spinner } from "~/components/ui/spinner";
 
 const CONFIRM_TEXT = "delete my instance";
 
@@ -103,7 +104,7 @@ export function DangerZone() {
                 >
                   {deleteInstance.isPending ? (
                     <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      <Spinner className="mr-2" />
                       Deleting...
                     </>
                   ) : (

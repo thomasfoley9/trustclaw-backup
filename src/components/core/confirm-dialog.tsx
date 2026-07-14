@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { Loader2 } from "lucide-react";
+
 import {
   AlertDialog as BaseAlertDialog,
   AlertDialogAction,
@@ -13,6 +13,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "~/components/ui/alert-dialog";
+import { Spinner } from "~/components/ui/spinner";
 
 interface AlertDialogProps {
   /** The element that opens the dialog when clicked */
@@ -73,7 +74,7 @@ export function AlertDialog({
           >
             {isPending ? (
               <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                <Spinner className="mr-2" />
                 {confirmLabel}
               </>
             ) : (

@@ -31,7 +31,7 @@ export function CodeBlock(props: React.HTMLAttributes<HTMLPreElement>) {
         type="button"
         onClick={handleCopy}
         aria-label={copied ? "Copied" : "Copy code"}
-        className="border-border bg-background/80 text-muted-foreground hover:text-foreground absolute top-2 right-2 rounded-md border p-1.5 opacity-0 backdrop-blur transition-opacity group-hover:opacity-100 focus-visible:opacity-100"
+        className="border-border bg-background/80 text-muted-foreground hover:text-foreground absolute top-2 right-2 rounded-md border p-1.5 opacity-0 backdrop-blur transition-opacity duration-fast ease-out-quad group-hover:opacity-100 focus-visible:opacity-100"
       >
         {copied ? <Check className="size-3.5" /> : <Copy className="size-3.5" />}
       </button>

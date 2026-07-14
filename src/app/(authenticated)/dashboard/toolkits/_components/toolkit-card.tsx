@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Loader2, Unplug } from "lucide-react";
+import { Unplug } from "lucide-react";
 import { Button } from "~/components/ui/button";
 import { trpc } from "~/clients/trpc";
 import {
@@ -11,6 +11,7 @@ import {
 import { AlertDialog } from "~/components/core/confirm-dialog";
 import { useToolkitConnect } from "./use-toolkit-connect";
 import type { RouterOutputs } from "~/clients/trpc";
+import { Spinner } from "~/components/ui/spinner";
 
 type ToolkitItem = RouterOutputs["toolkits"]["getToolkits"]["items"][number];
 
@@ -100,7 +101,7 @@ export function ToolkitCard({ toolkit }: ToolkitCardProps) {
                         title={`Disconnect ${toolkit.name}`}
                       >
                         {disconnect.isPending ? (
-                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                          <Spinner className="size-3.5" />
                         ) : (
                           <Unplug className="h-3.5 w-3.5" />
                         )}
@@ -117,13 +118,13 @@ export function ToolkitCard({ toolkit }: ToolkitCardProps) {
                 onClick={() => void connect()}
                 title="Reopen the connection window"
               >
-                <Loader2 className="mr-1 h-3 w-3 animate-spin" />
+                <Spinner size="sm" className="mr-1" />
                 Waiting...
               </Button>
             ) : (
               <Button
                 size="sm"
-                className="h-7 px-2.5 text-xs transition-all duration-200 group-hover:scale-105 group-hover:shadow-md"
+                className="h-7 px-2.5 text-xs transition-all duration-base ease-out-quad group-hover:-translate-y-px group-hover:shadow-md active:translate-y-0 active:brightness-95"
                 onClick={(e) => {
                   e.stopPropagation();
                   void connect();
@@ -140,7 +141,7 @@ export function ToolkitCard({ toolkit }: ToolkitCardProps) {
           <img
             src={toolkit.logo}
             alt={`${toolkit.name} logo`}
-            className="h-12 w-12 select-none transition-opacity duration-300 ease-in"
+            className="h-12 w-12 select-none transition-opacity duration-slow ease-out-quad"
             style={{ opacity: logoLoaded ? 1 : 0 }}
             onLoad={() => setLogoLoaded(true)}
             draggable={false}

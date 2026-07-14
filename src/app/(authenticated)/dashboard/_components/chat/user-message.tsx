@@ -111,7 +111,7 @@ export function UserMessage({ message }: UserMessageProps) {
           <button
             onClick={handleCopy}
             aria-label={copied ? "Copied" : "Copy message"}
-            className="text-muted-foreground/50 hover:text-muted-foreground p-2 transition-colors"
+            className="text-muted-foreground/50 hover:text-muted-foreground p-2 transition-colors duration-fast ease-out-quad"
           >
             {copied ? (
               <Check className="size-3.5" />

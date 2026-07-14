@@ -40,7 +40,7 @@ export function BrandLanding({ brand }: { brand: Brand }) {
         </div>
         <Link
           href="/login"
-          className="rounded-full border border-white/20 px-5 py-2 text-sm font-medium text-white transition hover:bg-white hover:text-black"
+          className="rounded-full border border-white/20 px-5 py-2 text-sm font-medium text-white transition-colors duration-fast ease-out-quad hover:bg-white hover:text-black"
         >
           Sign in
         </Link>
@@ -48,7 +48,7 @@ export function BrandLanding({ brand }: { brand: Brand }) {
 
       <main className="relative z-10 mx-auto flex max-w-5xl flex-col items-center px-6 pt-16 pb-20 text-center sm:pt-24">
         <span
-          className="mb-7 inline-flex items-center gap-2 rounded-full border px-4 py-1.5 text-[11px] font-medium tracking-[0.22em] uppercase"
+          className="mb-7 inline-flex items-center gap-2 rounded-full border px-4 py-1.5 text-2xs font-medium tracking-[0.22em] uppercase"
           style={{ borderColor: `${accent}55`, backgroundColor: `${accent}14`, color: accent }}
         >
           AI that can do things
@@ -65,19 +65,19 @@ export function BrandLanding({ brand }: { brand: Brand }) {
         <div className="mt-11 flex flex-col items-center gap-4 sm:flex-row">
           <Link
             href="/login?tab=register"
-            className="rounded-full px-8 py-3.5 text-base font-semibold transition hover:brightness-95"
+            className="rounded-full px-8 py-3.5 text-base font-semibold transition-all duration-base ease-out-quad hover:-translate-y-px hover:shadow-md active:translate-y-0 active:brightness-95"
             style={{ backgroundColor: accent, color: brand.onAccent }}
           >
             Take the wheel
           </Link>
           <Link
             href="/login?tab=register"
-            className="rounded-full border border-white/20 px-8 py-3.5 text-base font-medium text-white transition hover:bg-white/5"
+            className="rounded-full border border-white/20 px-8 py-3.5 text-base font-medium text-white transition-colors duration-fast ease-out-quad hover:bg-white/5"
           >
             See it drive
           </Link>
         </div>
-        <p className="mt-12 text-[11px] tracking-[0.35em] text-white/35 uppercase">by {brand.name}</p>
+        <p className="mt-12 text-2xs tracking-[0.35em] text-white/35 uppercase">by {brand.name}</p>
       </main>
 
       <section className="relative z-10 mx-auto max-w-5xl px-6 pb-28">

@@ -29,7 +29,7 @@ function StylePicker({
           key={style.key}
           onClick={() => onSelect(style.key)}
           className={cn(
-            "min-h-[44px] cursor-pointer rounded-lg border p-4 text-left transition-all",
+            "min-h-[44px] cursor-pointer rounded-lg border p-4 text-left transition-all duration-fast ease-out-quad",
             selected === style.key
               ? "border-primary ring-primary ring-2"
               : "border-border hover:border-primary/50",

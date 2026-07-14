@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { Loader2, CheckCircle2, XCircle, Wrench } from "lucide-react";
+import { CheckCircle2, XCircle, Wrench } from "lucide-react";
 import { cn } from "~/lib/utils";
 import type { DynamicToolUIPart, ToolUIPart } from "ai";
 import { getToolName } from "ai";
@@ -10,6 +10,7 @@ type AnyToolUIPart = DynamicToolUIPart | ToolUIPart;
 import { parseMultiExecArgs } from "../tool-results/multi-exec/schema";
 import { parseManageConnectionsArgs } from "../tool-results/connections/schema";
 import { parseToolResult } from "../tool-results/envelope";
+import { Spinner } from "~/components/ui/spinner";
 
 interface ToolInvocationProps {
   toolCall: AnyToolUIPart;
@@ -106,14 +107,14 @@ export function ToolInvocation({ toolCall, onClick }: ToolInvocationProps) {
     <button
       onClick={onClick}
       className={cn(
-        "inline-flex max-w-full items-center gap-2 rounded-lg border px-3 py-1.5 text-xs transition-colors",
+        "inline-flex max-w-full items-center gap-2 rounded-lg border px-3 py-1.5 text-xs transition-colors duration-fast ease-out-quad",
         "border-border bg-card hover:bg-accent",
         hasError && "border-destructive/30",
       )}
       data-tool-call-id={toolCall.toolCallId}
     >
       {isRunning ? (
-        <Loader2 className="text-chart-4 size-3.5 animate-spin" />
+        <Spinner className="text-chart-4 size-3.5" />
       ) : hasError ? (
         <XCircle className="text-destructive size-3.5" />
       ) : (

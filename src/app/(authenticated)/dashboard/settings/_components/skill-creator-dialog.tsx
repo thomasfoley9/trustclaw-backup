@@ -2,7 +2,7 @@
 
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Sparkles, Loader2 } from "lucide-react";
+import { Sparkles } from "lucide-react";
 import { trpc } from "~/clients/trpc";
 import { Button } from "~/components/ui/button";
 import { Textarea } from "~/components/ui/textarea";
@@ -27,6 +27,7 @@ import {
   type GenerateSkillInput,
   type SkillDraft,
 } from "~/server/api/routers/trustclaw/generateSkill.schema";
+import { Spinner } from "~/components/ui/spinner";
 
 export function SkillCreatorDialog({
   open,
@@ -107,7 +108,7 @@ export function SkillCreatorDialog({
               <Button type="submit" disabled={generate.isPending}>
                 {generate.isPending ? (
                   <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Drafting…
+                    <Spinner className="mr-2" /> Drafting…
                   </>
                 ) : (
                   <>

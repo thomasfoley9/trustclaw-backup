@@ -9,7 +9,7 @@ import {
   useMemo,
 } from "react";
 import type { UIMessage } from "@ai-sdk/react";
-import { Loader2, ArrowDown, RefreshCw } from "lucide-react";
+import { ArrowDown, RefreshCw } from "lucide-react";
 import { trpc } from "~/clients/trpc";
 import { ErrorBoundary } from "~/components/core/error-boundary";
 import { Button } from "~/components/ui/button";
@@ -42,6 +42,7 @@ import {
 import { env } from "~/env";
 import { TerminalPane } from "../terminal/terminal-pane";
 import { OpenClawLogo } from "~/app/_components/openclaw-logo";
+import { Spinner } from "~/components/ui/spinner";
 
 // Starter prompts keyed by connected toolkit; anything not connected falls
 // back to prompts that work with zero integrations.
@@ -485,7 +486,7 @@ export function ChatView({
                     onClick={() => {
                       void handleSend(prompt);
                     }}
-                    className="border-border bg-card/50 text-muted-foreground hover:border-primary/40 hover:text-foreground rounded-full border px-4 py-2 text-sm transition-all hover:scale-[1.02]"
+                    className="border-border bg-card/50 text-muted-foreground hover:border-primary/40 hover:text-foreground focus-visible:ring-ring/50 focus-visible:border-ring rounded-full border px-4 py-2 text-sm transition-all duration-base ease-out-quad outline-none hover:-translate-y-px hover:shadow-sm focus-visible:ring-[3px]"
                   >
                     {prompt}
                   </button>
@@ -500,7 +501,7 @@ export function ChatView({
             >
               {isFetchingOlderMessages && (
                 <div className="flex justify-center py-3">
-                  <Loader2 className="text-muted-foreground h-4 w-4 animate-spin" />
+                  <Spinner className="text-muted-foreground" />
                 </div>
               )}
               {displayMessages.map((message) => (

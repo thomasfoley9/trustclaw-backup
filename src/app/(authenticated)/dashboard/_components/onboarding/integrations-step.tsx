@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect, useMemo } from "react";
 import { motion } from "framer-motion";
-import { Check, ExternalLink, Loader2 } from "lucide-react";
+import { Check, ExternalLink } from "lucide-react";
 import { trpc } from "~/clients/trpc";
 import { Button } from "~/components/ui/button";
 import {
@@ -13,6 +13,7 @@ import { IntegrationsStepSkeleton } from "./integrations-step.skeleton";
 import Image from "next/image";
 import { INTEGRATION_DESCRIPTIONS } from "./onboarding.consts";
 import { StepLayout, itemVariants } from "./step-layout";
+import { Spinner } from "~/components/ui/spinner";
 
 interface IntegrationsStepProps {
   onNext: () => void;
@@ -201,7 +202,7 @@ export function IntegrationsStep({
                   className="text-muted-foreground hover:text-foreground ml-3 flex min-h-[44px] shrink-0 items-center gap-1.5 text-sm"
                   title="Reopen the connection window"
                 >
-                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <Spinner />
                   Waiting... reopen
                 </button>
               ) : (

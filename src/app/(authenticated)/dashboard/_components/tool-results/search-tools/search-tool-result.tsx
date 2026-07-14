@@ -62,7 +62,7 @@ function DifficultyBadge({ level }: { level: string }) {
   const color = colors[level] ?? "text-muted-foreground";
 
   return (
-    <span className="flex items-center gap-1.5 text-[10px]">
+    <span className="flex items-center gap-1.5 text-2xs">
       <span className="tracking-wider">
         {[1, 2, 3].map((i) => (
           <span
@@ -119,7 +119,7 @@ export function SearchToolResult({ data }: SearchToolResultProps) {
             ├
           </span>
           <div className="flex-1">
-            <div className="mb-0.5 text-[10px] text-muted-foreground/60">
+            <div className="mb-0.5 text-2xs text-muted-foreground/60">
               USE CASE
             </div>
             <div className="text-sm font-semibold uppercase text-foreground/90">
@@ -134,10 +134,10 @@ export function SearchToolResult({ data }: SearchToolResultProps) {
               ├
             </span>
             <div className="flex-1">
-              <div className="mb-0.5 text-[10px] text-muted-foreground/60">
+              <div className="mb-0.5 text-2xs text-muted-foreground/60">
                 {connection.toolkit.toUpperCase()}
               </div>
-              <div className="flex items-center gap-1.5 text-[11px]">
+              <div className="flex items-center gap-1.5 text-2xs">
                 {isConnected ? (
                   <>
                     <span className="text-chart-2">●</span>
@@ -167,7 +167,7 @@ export function SearchToolResult({ data }: SearchToolResultProps) {
             {hasPlan ? "├" : "└"}
           </span>
           <div className="flex-1">
-            <div className="mb-0.5 text-[10px] text-muted-foreground/60">
+            <div className="mb-0.5 text-2xs text-muted-foreground/60">
               RECOMMENDED TOOL
             </div>
             <div className="flex items-center justify-between">
@@ -182,17 +182,17 @@ export function SearchToolResult({ data }: SearchToolResultProps) {
             {hasDescription && (
               <div className="mt-3 space-y-5">
                 <div>
-                  <div className="mb-1 flex items-center gap-1.5 text-[10px] uppercase tracking-wider text-primary">
+                  <div className="mb-1 flex items-center gap-1.5 text-2xs uppercase tracking-wider text-primary">
                     <span>?</span>
                     <span>Description</span>
                   </div>
-                  <p className="border-l border-border pl-2 text-[11px] leading-relaxed text-muted-foreground">
+                  <p className="border-l border-border pl-2 text-2xs leading-relaxed text-muted-foreground">
                     {primarySchema?.description}
                   </p>
                 </div>
 
                 <div>
-                  <div className="mb-1 flex items-center gap-1.5 text-[10px] uppercase tracking-wider text-chart-4">
+                  <div className="mb-1 flex items-center gap-1.5 text-2xs uppercase tracking-wider text-chart-4">
                     <span>!</span>
                     <span>
                       Known Pitfalls{" "}
@@ -209,7 +209,7 @@ export function SearchToolResult({ data }: SearchToolResultProps) {
                           ).map((msg, i) => (
                             <div
                               key={i}
-                              className="flex items-start gap-2 text-[11px]"
+                              className="flex items-start gap-2 text-2xs"
                             >
                               <span className="shrink-0 text-chart-4">-</span>
                               <span className="leading-relaxed text-muted-foreground">
@@ -221,11 +221,11 @@ export function SearchToolResult({ data }: SearchToolResultProps) {
                         {primaryPitfalls.length > 2 && (
                           <button
                             onClick={() => setShowAllPitfalls((v) => !v)}
-                            className="mt-2 flex items-center gap-1.5 text-[10px] text-muted-foreground/60 transition-colors hover:text-muted-foreground"
+                            className="mt-2 flex items-center gap-1.5 text-2xs text-muted-foreground/60 transition-colors duration-fast ease-out-quad hover:text-muted-foreground"
                           >
                             <span
                               className={cn(
-                                "transition-transform duration-200",
+                                "transition-transform duration-base ease-out-quad",
                                 showAllPitfalls && "rotate-90",
                               )}
                             >
@@ -240,7 +240,7 @@ export function SearchToolResult({ data }: SearchToolResultProps) {
                         )}
                       </>
                     ) : (
-                      <p className="text-[11px] italic text-muted-foreground/60">
+                      <p className="text-2xs italic text-muted-foreground/60">
                         No known pitfalls
                       </p>
                     )}
@@ -257,11 +257,11 @@ export function SearchToolResult({ data }: SearchToolResultProps) {
               └
             </span>
             <div className="flex-1">
-              <div className="mb-0.5 text-[10px] text-muted-foreground/60">
+              <div className="mb-0.5 text-2xs text-muted-foreground/60">
                 RECOMMENDED PLAN
               </div>
               {result.execution_guidance && (
-                <p className="mb-3 text-[11px] leading-relaxed text-muted-foreground/70">
+                <p className="mb-3 text-2xs leading-relaxed text-muted-foreground/70">
                   {result.execution_guidance}
                 </p>
               )}
@@ -270,11 +270,11 @@ export function SearchToolResult({ data }: SearchToolResultProps) {
                   (step, i) => (
                     <div
                       key={i}
-                      className="flex items-start gap-2 text-[11px]"
+                      className="flex items-start gap-2 text-2xs"
                     >
                       <span
                         className={cn(
-                          "mt-px shrink-0 text-[10px] font-semibold",
+                          "mt-px shrink-0 text-2xs font-semibold",
                           step.required
                             ? "text-primary"
                             : "text-muted-foreground/50",
@@ -287,7 +287,7 @@ export function SearchToolResult({ data }: SearchToolResultProps) {
                           {step.label && (
                             <span
                               className={cn(
-                                "mr-1.5 inline-block rounded-sm px-1 py-px text-[9px] uppercase tracking-wider",
+                                "mr-1.5 inline-block rounded-sm px-1 py-px text-2xs uppercase tracking-wider",
                                 step.required
                                   ? "bg-primary/10 text-primary"
                                   : "bg-muted text-muted-foreground/60",
@@ -306,11 +306,11 @@ export function SearchToolResult({ data }: SearchToolResultProps) {
               {planSteps.length > 3 && (
                 <button
                   onClick={() => setShowAllSteps((v) => !v)}
-                  className="mt-2 flex items-center gap-1.5 text-[10px] text-muted-foreground/60 transition-colors hover:text-muted-foreground"
+                  className="mt-2 flex items-center gap-1.5 text-2xs text-muted-foreground/60 transition-colors duration-fast ease-out-quad hover:text-muted-foreground"
                 >
                   <span
                     className={cn(
-                      "transition-transform duration-200",
+                      "transition-transform duration-base ease-out-quad",
                       showAllSteps && "rotate-90",
                     )}
                   >
@@ -326,7 +326,7 @@ export function SearchToolResult({ data }: SearchToolResultProps) {
 
               {nextSteps.length > 0 && (
                 <div className="mt-4">
-                  <div className="mb-1 flex items-center gap-1.5 text-[10px] uppercase tracking-wider text-chart-2">
+                  <div className="mb-1 flex items-center gap-1.5 text-2xs uppercase tracking-wider text-chart-2">
                     <span>→</span>
                     <span>Next Steps</span>
                   </div>
@@ -335,7 +335,7 @@ export function SearchToolResult({ data }: SearchToolResultProps) {
                       {nextSteps.map((step, i) => (
                         <div
                           key={i}
-                          className="flex items-start gap-2 text-[11px]"
+                          className="flex items-start gap-2 text-2xs"
                         >
                           <span className="shrink-0 text-chart-2">-</span>
                           <span className="leading-relaxed text-muted-foreground">
@@ -355,8 +355,8 @@ export function SearchToolResult({ data }: SearchToolResultProps) {
       {relatedTools.length > 0 && (
         <Collapsible open={showMore} onOpenChange={setShowMore}>
           <CollapsibleTrigger asChild>
-            <button className="group mt-3 flex w-full items-center gap-2 text-[10px] text-muted-foreground/60 transition-colors hover:text-muted-foreground">
-              <span className="transition-transform duration-200 group-data-[state=open]:rotate-90">
+            <button className="group mt-3 flex w-full items-center gap-2 text-2xs text-muted-foreground/60 transition-colors duration-fast ease-out-quad hover:text-muted-foreground">
+              <span className="transition-transform duration-base ease-out-quad group-data-[state=open]:rotate-90">
                 ▸
               </span>
               <span className="uppercase tracking-wider">
@@ -376,17 +376,17 @@ export function SearchToolResult({ data }: SearchToolResultProps) {
                 return (
                   <div
                     key={tool}
-                    className="flex py-1 transition-colors hover:bg-accent/30"
+                    className="flex py-1 transition-colors duration-fast ease-out-quad hover:bg-accent/30"
                   >
-                    <span className="shrink-0 text-[10px] text-muted-foreground/60">
+                    <span className="shrink-0 text-2xs text-muted-foreground/60">
                       {isLast ? "└─ " : "├─ "}
                     </span>
                     <div className="min-w-0 flex-1">
-                      <span className="text-[11px] font-medium text-muted-foreground">
+                      <span className="text-2xs font-medium text-muted-foreground">
                         {tool}
                       </span>
                       {schema?.description && (
-                        <p className="mt-0.5 line-clamp-1 text-[10px] text-muted-foreground/60">
+                        <p className="mt-0.5 line-clamp-1 text-2xs text-muted-foreground/60">
                           {schema.description}
                         </p>
                       )}

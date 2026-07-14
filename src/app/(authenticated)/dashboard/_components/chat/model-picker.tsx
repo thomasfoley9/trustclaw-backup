@@ -77,8 +77,8 @@ export function ModelPicker() {
 
   const rowClass = (active: boolean) =>
     cn(
-      "flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm transition-colors",
-      "hover:bg-accent focus-visible:bg-accent outline-none",
+      "flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm transition-colors duration-fast ease-out-quad",
+      "hover:bg-accent focus-visible:bg-accent focus-visible:ring-ring/50 outline-none focus-visible:ring-2",
       active && "bg-accent/60",
     );
 

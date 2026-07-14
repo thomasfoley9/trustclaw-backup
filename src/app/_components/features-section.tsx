@@ -78,7 +78,7 @@ function FeatureCard({
     <AnimateOnView delay={index * 0.1}>
       <div className="from-border via-border/50 h-full rounded-xl bg-linear-to-br to-transparent p-px">
         <div className="bg-card flex h-full flex-col gap-4 rounded-xl p-6">
-          <div className="bg-muted flex h-10 w-10 items-center justify-center rounded-full shadow-[0_0_15px_oklch(0.488_0.243_264.376/0.2)]">
+          <div className="bg-muted flex h-10 w-10 items-center justify-center rounded-full shadow-[0_0_15px_color-mix(in_oklch,var(--primary)_20%,transparent)]">
             <feature.icon className="text-foreground h-5 w-5" />
           </div>
           <div className="flex flex-col gap-1.5">
@@ -118,7 +118,7 @@ function IntegrationsFeatureCard({ index }: { index: number }) {
     <AnimateOnView delay={index * 0.1}>
       <div className="from-border via-border/50 h-full rounded-xl bg-linear-to-br to-transparent p-px">
         <div className="bg-card flex h-full flex-col gap-4 rounded-xl p-6">
-          <div className="bg-muted flex h-10 w-10 items-center justify-center rounded-full shadow-[0_0_15px_oklch(0.488_0.243_264.376/0.2)]">
+          <div className="bg-muted flex h-10 w-10 items-center justify-center rounded-full shadow-[0_0_15px_color-mix(in_oklch,var(--primary)_20%,transparent)]">
             <Layers className="text-foreground h-5 w-5" />
           </div>
           <div className="flex flex-col gap-1.5">
@@ -160,7 +160,7 @@ function MessagingFeatureCard({ index }: { index: number }) {
     <AnimateOnView delay={index * 0.1}>
       <div className="from-border via-border/50 h-full rounded-xl bg-linear-to-br to-transparent p-px">
         <div className="bg-card flex h-full flex-col gap-4 rounded-xl p-6">
-          <div className="bg-muted flex h-10 w-10 items-center justify-center rounded-full shadow-[0_0_15px_oklch(0.488_0.243_264.376/0.2)]">
+          <div className="bg-muted flex h-10 w-10 items-center justify-center rounded-full shadow-[0_0_15px_color-mix(in_oklch,var(--primary)_20%,transparent)]">
             <MessageCircle className="text-foreground h-5 w-5" />
           </div>
           <div className="flex flex-col gap-1.5">

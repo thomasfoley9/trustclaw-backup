@@ -1,7 +1,7 @@
 "use client";
 
 import moment from "moment";
-import { Loader2 } from "lucide-react";
+
 import { cn } from "~/lib/utils";
 import { SearchToolResult } from "../tool-results/search-tools/search-tool-result";
 import { WorkbenchToolResult } from "../tool-results/workbench/workbench-tool-result";
@@ -12,6 +12,7 @@ import { getConnectionData } from "../tool-results/connections/schema";
 import { getMultiExecInfo } from "../tool-results/multi-exec/schema";
 
 import type { TerminalLogEntryData } from "./types";
+import { Spinner } from "~/components/ui/spinner";
 
 export type { TerminalLogEntryData } from "./types";
 
@@ -55,7 +56,7 @@ export function TerminalLogEntry({ log }: { log: TerminalLogEntryData }) {
   return (
     <div
       id={`tool-log-${log.id}`}
-      className="border-b border-border/50 py-3 font-mono text-xs transition-all last:border-0"
+      className="border-b border-border/50 py-3 font-mono text-xs transition-all duration-fast ease-out-quad last:border-0"
     >
       <div className="flex w-full items-center gap-2 text-left">
         <span className="text-muted-foreground/60 shrink-0">{">"}</span>
@@ -66,7 +67,7 @@ export function TerminalLogEntry({ log }: { log: TerminalLogEntryData }) {
           className={cn("ml-auto shrink-0", statusColors[effectiveStatus])}
         >
           {effectiveStatus === "executing" ? (
-            <Loader2 className="size-3 animate-spin" />
+            <Spinner size="sm" />
           ) : effectiveStatus === "complete" ? (
             "Done"
           ) : (
@@ -91,7 +92,7 @@ export function TerminalLogEntry({ log }: { log: TerminalLogEntryData }) {
               className="border-b border-border/30 py-1 last:border-0"
             >
               <div className="flex items-center gap-2">
-                <span className="shrink-0 text-[10px] text-muted-foreground/60">
+                <span className="shrink-0 text-2xs text-muted-foreground/60">
                   └
                 </span>
                 <span
@@ -122,7 +123,7 @@ export function TerminalLogEntry({ log }: { log: TerminalLogEntryData }) {
                 </span>
               </div>
               {tool.error && (
-                <div className="mt-0.5 pl-5 text-[10px] text-destructive/70">
+                <div className="mt-0.5 pl-5 text-2xs text-destructive/70">
                   {tool.error}
                 </div>
               )}

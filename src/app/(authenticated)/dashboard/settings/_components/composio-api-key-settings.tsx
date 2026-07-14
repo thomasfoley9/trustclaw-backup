@@ -1,7 +1,8 @@
 "use client";
 
+import { ComposioApiKeySettingsSkeleton } from "./composio-api-key-settings.skeleton";
 import { useState } from "react";
-import { CheckCircle2, KeyRound, Loader2 } from "lucide-react";
+import { CheckCircle2, KeyRound } from "lucide-react";
 import { trpc } from "~/clients/trpc";
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
@@ -19,6 +20,7 @@ import {
 } from "~/components/core/toast-notifications";
 import { ErrorDisplay } from "~/components/core/error-display";
 import { AlertDialog } from "~/components/core/confirm-dialog";
+import { Spinner } from "~/components/ui/spinner";
 
 export function ComposioApiKeySettings() {
   const utils = trpc.useUtils();
@@ -87,7 +89,8 @@ export function ComposioApiKeySettings() {
             onRetry={() => void refetch()}
           />
         )}
-        {!error && onSharedKey && !editing && (
+        {!error && isLoading && <ComposioApiKeySettingsSkeleton />}
+        {!error && !isLoading && onSharedKey && !editing && (
           <div className="flex items-center gap-2 rounded-md border bg-muted/30 px-3 py-2 text-sm">
             <CheckCircle2 className="text-chart-2 h-4 w-4 shrink-0" />
             <span className="font-medium">Tools active</span>
@@ -96,7 +99,7 @@ export function ComposioApiKeySettings() {
             </span>
           </div>
         )}
-        {!error && hasKey && !editing && (
+        {!error && !isLoading && hasKey && !editing && (
           <div className="flex flex-col gap-2 rounded-md border bg-muted/30 px-3 py-2 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex min-w-0 items-center gap-2 text-sm">
               <CheckCircle2 className="text-chart-2 h-4 w-4 shrink-0" />
@@ -125,7 +128,7 @@ export function ComposioApiKeySettings() {
                 trigger={
                   <Button variant="ghost" size="sm" disabled={isBusy}>
                     {clearKey.isPending ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
+                      <Spinner />
                     ) : (
                       "Remove"
                     )}
@@ -136,7 +139,7 @@ export function ComposioApiKeySettings() {
           </div>
         )}
 
-        {!error && showInput && (
+        {!error && !isLoading && showInput && (
           <div className="space-y-3">
             <div className="space-y-2">
               <Label htmlFor="composio-api-key">API key</Label>
@@ -170,7 +173,7 @@ export function ComposioApiKeySettings() {
               >
                 {setKey.isPending ? (
                   <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    <Spinner className="mr-2" />
                     Validating…
                   </>
                 ) : (

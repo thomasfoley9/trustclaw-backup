@@ -1,14 +1,9 @@
 "use client";
 
+import { CronJobsSettingsSkeleton } from "./cron-jobs-settings.skeleton";
 import { useState } from "react";
-import {
-  Calendar,
-  Clock,
-  History,
-  Loader2,
-  Play,
-  Trash2,
-} from "lucide-react";
+import { Calendar, Clock, History, Play, Trash2 } from "lucide-react";
+import { EmptyState } from "~/components/core/empty-state";
 import { trpc } from "~/clients/trpc";
 import { Button } from "~/components/ui/button";
 import { Switch } from "~/components/ui/switch";
@@ -23,6 +18,7 @@ import { ErrorDisplay } from "~/components/core/error-display";
 import { VirtualizedList } from "~/components/core/virtualized-list";
 import { formatCronExpression, formatCronDate } from "~/lib/cron-format";
 import { CronRunHistory } from "./cron-run-history";
+import { Spinner } from "~/components/ui/spinner";
 
 // Mirrors AUTO_PAUSE_THRESHOLD in ~/server/cron/run-single-job (not imported:
 // that module pulls the whole server runtime into the client bundle).
@@ -119,9 +115,7 @@ export function CronJobsSettings() {
       </CardHeader>
       <CardContent>
         {isLoading ? (
-          <div className="flex items-center justify-center py-8">
-            <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
-          </div>
+          <CronJobsSettingsSkeleton />
         ) : error ? (
           <ErrorDisplay
             message="Failed to load scheduled tasks"
@@ -129,12 +123,11 @@ export function CronJobsSettings() {
             onRetry={() => void refetch()}
           />
         ) : cronJobs.length === 0 ? (
-          <div className="rounded-lg border border-dashed border-border p-6 text-center">
-            <Calendar className="mx-auto mb-2 h-8 w-8 text-muted-foreground" />
-            <p className="text-sm text-muted-foreground">
-              No scheduled tasks. Ask your agent to schedule something!
-            </p>
-          </div>
+          <EmptyState
+            icon={Calendar}
+            title="No scheduled tasks"
+            description="Ask your agent to schedule something!"
+          />
         ) : (
           <VirtualizedList
             items={cronJobs}
@@ -165,7 +158,7 @@ export function CronJobsSettings() {
                         )}
                         {isRunning && (
                           <Badge variant="secondary" className="gap-1">
-                            <Loader2 className="h-3 w-3 animate-spin" />
+                            <Spinner size="sm" />
                             Running
                           </Badge>
                         )}
@@ -192,7 +185,7 @@ export function CronJobsSettings() {
                         }
                       >
                         {isStartingRun ? (
-                          <Loader2 className="h-4 w-4 animate-spin" />
+                          <Spinner />
                         ) : (
                           <Play className="h-4 w-4" />
                         )}
@@ -263,7 +256,7 @@ export function CronJobsSettings() {
             footer={
               isFetchingNextPage ? (
                 <div className="flex justify-center py-4">
-                  <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+                  <Spinner className="size-5 text-muted-foreground" />
                 </div>
               ) : null
             }

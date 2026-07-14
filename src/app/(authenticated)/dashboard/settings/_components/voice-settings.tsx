@@ -1,7 +1,8 @@
 "use client";
 
+import { VoiceSettingsSkeleton } from "./voice-settings.skeleton";
 import { useState, useRef, useEffect } from "react";
-import { CheckCircle2, Loader2, Volume2 } from "lucide-react";
+import { CheckCircle2, Volume2 } from "lucide-react";
 import { trpc } from "~/clients/trpc";
 import {
   VOICE_SPEEDS,
@@ -33,6 +34,7 @@ import {
 } from "~/components/core/toast-notifications";
 import { ErrorDisplay } from "~/components/core/error-display";
 import { AlertDialog } from "~/components/core/confirm-dialog";
+import { Spinner } from "~/components/ui/spinner";
 
 export function VoiceSettings() {
   const utils = trpc.useUtils();
@@ -136,7 +138,8 @@ export function VoiceSettings() {
             onRetry={() => void refetch()}
           />
         )}
-        {!error && hasKey && !editing && (
+        {!error && isLoading && <VoiceSettingsSkeleton />}
+        {!error && !isLoading && hasKey && !editing && (
           <div className="flex flex-col gap-2 rounded-md border bg-muted/30 px-3 py-2 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex min-w-0 items-center gap-2 text-sm">
               <CheckCircle2 className="text-chart-2 h-4 w-4 shrink-0" />
@@ -165,7 +168,7 @@ export function VoiceSettings() {
                 trigger={
                   <Button variant="ghost" size="sm" disabled={isBusy}>
                     {clearKey.isPending ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
+                      <Spinner />
                     ) : (
                       "Remove"
                     )}
@@ -176,7 +179,7 @@ export function VoiceSettings() {
           </div>
         )}
 
-        {!error && showInput && (
+        {!error && !isLoading && showInput && (
           <div className="space-y-3">
             <div className="space-y-2">
               <Label htmlFor="voice-api-key">API key</Label>
@@ -208,7 +211,7 @@ export function VoiceSettings() {
               >
                 {setKey.isPending ? (
                   <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    <Spinner className="mr-2" />
                     Validating…
                   </>
                 ) : (
@@ -231,7 +234,7 @@ export function VoiceSettings() {
           </div>
         )}
 
-        {!error && (
+        {!error && !isLoading && (
         <div className="space-y-4 border-t pt-4">
           <div className="space-y-2">
             <Label>Voice</Label>
@@ -257,7 +260,7 @@ export function VoiceSettings() {
                 disabled={testing}
               >
                 {testing ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <Spinner />
                 ) : (
                   <>
                     <Volume2 className="mr-2 h-4 w-4" />

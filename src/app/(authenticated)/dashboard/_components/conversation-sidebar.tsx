@@ -1,17 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import {
-  Plus,
-  Trash2,
-  MessageSquare,
-  Loader2,
-  Pencil,
-  Check,
-  X,
-  Clock,
-  BookmarkPlus,
-} from "lucide-react";
+import { Plus, Trash2, MessageSquare, Pencil, Check, X, Clock, BookmarkPlus } from "lucide-react";
 import { trpc } from "~/clients/trpc";
 import { Button } from "~/components/ui/button";
 import { Skeleton } from "~/components/ui/skeleton";
@@ -21,6 +11,7 @@ import { formatCronExpression, formatCronDate } from "~/lib/cron-format";
 import { trpcToastOnError } from "~/components/core/toast-notifications";
 import { AlertDialog } from "~/components/core/confirm-dialog";
 import { SaveToKnowledgeDialog } from "./save-to-knowledge-dialog";
+import { Spinner } from "~/components/ui/spinner";
 
 // Mirror of the server's run-staleness window: runs older than this are
 // treated as dead even if the flag wasn't cleared (crashed function).
@@ -140,7 +131,7 @@ export function ConversationSidebarContent({
           type="button"
           onClick={() => setView("chats")}
           className={cn(
-            "flex-1 rounded-md px-2 py-1.5 text-xs font-medium transition-colors",
+            "focus-visible:ring-ring/50 flex-1 rounded-md px-2 py-1.5 text-xs font-medium transition-colors duration-fast ease-out-quad outline-none focus-visible:ring-2",
             view === "chats"
               ? "bg-accent text-foreground"
               : "text-muted-foreground hover:bg-accent/50",
@@ -152,7 +143,7 @@ export function ConversationSidebarContent({
           type="button"
           onClick={() => setView("cron")}
           className={cn(
-            "flex-1 rounded-md px-2 py-1.5 text-xs font-medium transition-colors",
+            "focus-visible:ring-ring/50 flex-1 rounded-md px-2 py-1.5 text-xs font-medium transition-colors duration-fast ease-out-quad outline-none focus-visible:ring-2",
             view === "cron"
               ? "bg-accent text-foreground"
               : "text-muted-foreground hover:bg-accent/50",
@@ -166,7 +157,8 @@ export function ConversationSidebarContent({
         <>
           <div className="px-2 pb-2">
             <Button
-              className="bg-accent-gradient w-full justify-start gap-2 border-0 text-white shadow-md transition-transform hover:scale-[1.01]"
+              variant="brand"
+              className="w-full justify-start gap-2 shadow-md"
               onClick={() => {
                 void createConversation.mutateAsync();
                 onNavigate?.();
@@ -252,7 +244,7 @@ export function ConversationSidebarContent({
                     <li
                       key={c.id}
                       className={cn(
-                        "group relative flex items-center rounded-lg transition-colors",
+                        "group relative flex items-center rounded-lg transition-colors duration-fast ease-out-quad",
                         isActive
                           ? "bg-primary/15 before:bg-primary before:absolute before:top-1.5 before:bottom-1.5 before:left-0 before:w-0.5 before:rounded-full"
                           : "hover:bg-accent/60",
@@ -269,7 +261,7 @@ export function ConversationSidebarContent({
                         className="flex min-w-0 flex-1 items-center gap-2 px-2.5 py-2 text-left text-sm"
                       >
                         {isRunning ? (
-                          <Loader2 className="text-primary h-4 w-4 shrink-0 animate-spin" />
+                          <Spinner className="text-primary shrink-0" />
                         ) : (
                           <MessageSquare
                             className={cn(
@@ -288,7 +280,7 @@ export function ConversationSidebarContent({
                         type="button"
                         disabled={busy}
                         onClick={() => setSavingConvId(c.id)}
-                        className="text-muted-foreground hover:text-foreground shrink-0 px-1.5 py-2 opacity-100 transition-opacity focus-visible:opacity-100 md:opacity-0 md:group-hover:opacity-100"
+                        className="text-muted-foreground hover:text-foreground shrink-0 px-1.5 py-2 opacity-100 transition-opacity duration-fast ease-out-quad focus-visible:opacity-100 md:opacity-0 md:group-hover:opacity-100"
                         aria-label="Save chat to knowledge"
                       >
                         <BookmarkPlus className="h-3.5 w-3.5" />
@@ -297,7 +289,7 @@ export function ConversationSidebarContent({
                         type="button"
                         disabled={busy}
                         onClick={() => beginRename(c.id, c.title)}
-                        className="text-muted-foreground hover:text-foreground shrink-0 px-1.5 py-2 opacity-100 transition-opacity focus-visible:opacity-100 md:opacity-0 md:group-hover:opacity-100"
+                        className="text-muted-foreground hover:text-foreground shrink-0 px-1.5 py-2 opacity-100 transition-opacity duration-fast ease-out-quad focus-visible:opacity-100 md:opacity-0 md:group-hover:opacity-100"
                         aria-label="Rename chat"
                       >
                         <Pencil className="h-3.5 w-3.5" />
@@ -314,7 +306,7 @@ export function ConversationSidebarContent({
                           <button
                             type="button"
                             disabled={busy}
-                            className="text-muted-foreground hover:text-destructive shrink-0 px-1.5 py-2 opacity-100 transition-opacity focus-visible:opacity-100 md:opacity-0 md:group-hover:opacity-100"
+                            className="text-muted-foreground hover:text-destructive shrink-0 px-1.5 py-2 opacity-100 transition-opacity duration-fast ease-out-quad focus-visible:opacity-100 md:opacity-0 md:group-hover:opacity-100"
                             aria-label="Delete chat"
                           >
                             <Trash2 className="h-3.5 w-3.5" />
@@ -363,7 +355,7 @@ function CronList() {
     <div className="min-h-0 flex-1 overflow-y-auto px-2 pb-2">
       {isLoading ? (
         <div className="text-muted-foreground flex items-center gap-2 px-2 py-4 text-xs">
-          <Loader2 className="h-3.5 w-3.5 animate-spin" /> Loading…
+          <Spinner className="size-3.5" /> Loading…
         </div>
       ) : error ? (
         <div className="px-2 py-4">

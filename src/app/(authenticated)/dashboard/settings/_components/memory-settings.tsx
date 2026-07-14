@@ -1,6 +1,8 @@
 "use client";
 
-import { Brain, Loader2, Trash2 } from "lucide-react";
+import { MemorySettingsSkeleton } from "./memory-settings.skeleton";
+import { Brain, Trash2 } from "lucide-react";
+import { EmptyState } from "~/components/core/empty-state";
 import moment from "moment";
 import { trpc } from "~/clients/trpc";
 import {
@@ -12,10 +14,10 @@ import {
 } from "~/components/ui/card";
 import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
-import { Skeleton } from "~/components/ui/skeleton";
 import { trpcToastOnError } from "~/components/core/toast-notifications";
 import { ErrorDisplay } from "~/components/core/error-display";
 import { AlertDialog } from "~/components/core/confirm-dialog";
+import { Spinner } from "~/components/ui/spinner";
 
 export function MemorySettings() {
   const utils = trpc.useUtils();
@@ -52,11 +54,7 @@ export function MemorySettings() {
       </CardHeader>
       <CardContent>
         {isLoading ? (
-          <div className="space-y-2">
-            <Skeleton className="h-12 w-full" />
-            <Skeleton className="h-12 w-full" />
-            <Skeleton className="h-12 w-full" />
-          </div>
+          <MemorySettingsSkeleton />
         ) : error ? (
           <ErrorDisplay
             message="Failed to load memories"
@@ -64,12 +62,11 @@ export function MemorySettings() {
             onRetry={() => void refetch()}
           />
         ) : memories.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-8">
-            <Brain className="text-muted-foreground mb-2 h-8 w-8" />
-            <p className="text-muted-foreground text-sm">
-              No memories yet. Your agent will remember things as you chat.
-            </p>
-          </div>
+          <EmptyState
+            icon={Brain}
+            title="No memories yet"
+            description="Your agent will remember things as you chat."
+          />
         ) : (
           <>
             <ul className="space-y-2">
@@ -122,7 +119,7 @@ export function MemorySettings() {
                 >
                   {isFetchingNextPage ? (
                     <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      <Spinner className="mr-2" />
                       Loading…
                     </>
                   ) : (

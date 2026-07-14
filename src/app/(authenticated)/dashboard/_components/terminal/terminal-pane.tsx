@@ -142,7 +142,7 @@ export function TerminalPane({
           <button
             onClick={() => setViewMode("live")}
             className={cn(
-              "rounded-md px-2.5 py-1 text-xs font-medium transition-colors",
+              "focus-visible:ring-ring/50 rounded-md px-2.5 py-1 text-xs font-medium transition-colors duration-fast ease-out-quad outline-none focus-visible:ring-2",
               viewMode === "live"
                 ? "bg-background text-foreground shadow-sm"
                 : "text-muted-foreground hover:text-foreground",
@@ -153,7 +153,7 @@ export function TerminalPane({
           <button
             onClick={() => setViewMode("receipts")}
             className={cn(
-              "rounded-md px-2.5 py-1 text-xs font-medium transition-colors",
+              "focus-visible:ring-ring/50 rounded-md px-2.5 py-1 text-xs font-medium transition-colors duration-fast ease-out-quad outline-none focus-visible:ring-2",
               viewMode === "receipts"
                 ? "bg-background text-foreground shadow-sm"
                 : "text-muted-foreground hover:text-foreground",
@@ -163,14 +163,14 @@ export function TerminalPane({
           </button>
         </div>
         {toolCount > 0 && (
-          <span className="rounded-full bg-muted px-2 py-0.5 font-mono text-[10px] text-muted-foreground">
+          <span className="rounded-full bg-muted px-2 py-0.5 font-mono text-2xs text-muted-foreground">
             {toolCount} call{toolCount !== 1 ? "s" : ""}
           </span>
         )}
         {onHide && (
           <button
             onClick={onHide}
-            className="ml-auto inline-flex items-center gap-1.5 rounded-md p-1.5 text-xs text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+            className="focus-visible:ring-ring/50 ml-auto inline-flex items-center gap-1.5 rounded-md p-1.5 text-xs text-muted-foreground transition-colors duration-fast ease-out-quad outline-none hover:bg-accent hover:text-foreground focus-visible:ring-2"
           >
             <PanelRightClose className="size-4" />
             Hide

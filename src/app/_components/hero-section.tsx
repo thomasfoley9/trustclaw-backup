@@ -63,7 +63,7 @@ export function HeroSection() {
         className="pointer-events-none absolute left-1/2 top-1/2 hidden h-auto w-[140%] max-w-none -translate-x-1/2 -translate-y-1/2 -scale-x-100 lg:block"
       />
       <div className="pointer-events-none absolute right-0 top-1/2 hidden h-[600px] w-[600px] -translate-y-1/2 translate-x-1/4 lg:block">
-        <div className="h-full w-full rounded-full bg-[radial-gradient(ellipse_at_center,_oklch(0.488_0.243_264.376_/_0.15),_transparent_70%)]" />
+        <div className="h-full w-full rounded-full bg-[radial-gradient(ellipse_at_center,_color-mix(in_oklch,var(--primary)_15%,transparent),_transparent_70%)]" />
       </div>
 
       {SCATTERED_LOGOS.map((pos, i) => {

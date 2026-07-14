@@ -164,7 +164,7 @@ export function AssistantMessage({
           <button
             onClick={handleCopy}
             aria-label={copied ? "Copied" : "Copy reply"}
-            className="text-muted-foreground/50 hover:text-muted-foreground p-2 transition-colors"
+            className="text-muted-foreground/50 hover:text-muted-foreground p-2 transition-colors duration-fast ease-out-quad"
           >
             {copied ? (
               <Check className="size-3.5" />
@@ -176,7 +176,7 @@ export function AssistantMessage({
             <button
               onClick={onRegenerate}
               aria-label="Regenerate reply"
-              className="text-muted-foreground/50 hover:text-muted-foreground p-2 transition-colors"
+              className="text-muted-foreground/50 hover:text-muted-foreground p-2 transition-colors duration-fast ease-out-quad"
             >
               <RefreshCw className="size-3.5" />
             </button>

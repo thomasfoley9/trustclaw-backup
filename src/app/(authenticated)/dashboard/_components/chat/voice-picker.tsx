@@ -55,7 +55,7 @@ export function VoicePicker({ disabled }: { disabled?: boolean }) {
                 onClick={() => void setVoice.mutateAsync({ voiceId: voice.id })}
                 disabled={setVoice.isPending}
                 className={cn(
-                  "hover:bg-accent flex w-full items-center justify-between rounded-md px-2 py-1.5 text-left text-sm transition-colors disabled:opacity-60",
+                  "hover:bg-accent focus-visible:bg-accent focus-visible:ring-ring/50 flex w-full items-center justify-between rounded-md px-2 py-1.5 text-left text-sm transition-colors duration-fast ease-out-quad outline-none focus-visible:ring-2 disabled:opacity-60",
                   active && "bg-accent/60",
                 )}
               >

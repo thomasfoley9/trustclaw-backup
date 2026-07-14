@@ -1,14 +1,7 @@
 "use client";
 
 import { useState, useCallback, useEffect, useRef } from "react";
-import {
-  Check,
-  Copy,
-  ExternalLink,
-  Loader2,
-  MessageSquare,
-  Unlink,
-} from "lucide-react";
+import { Check, Copy, ExternalLink, MessageSquare, Unlink } from "lucide-react";
 import { trpc } from "~/clients/trpc";
 import { Button } from "~/components/ui/button";
 import Link from "next/link";
@@ -19,6 +12,7 @@ import {
   showSuccessToast,
   trpcToastOnError,
 } from "~/components/core/toast-notifications";
+import { Spinner } from "~/components/ui/spinner";
 
 export function TelegramSettings() {
   const [commandCopied, setCommandCopied] = useState(false);
@@ -120,7 +114,7 @@ export function TelegramSettings() {
                   disabled={unlinkTelegram.isPending}
                 >
                   {unlinkTelegram.isPending ? (
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    <Spinner className="mr-2" />
                   ) : (
                     <Unlink className="mr-2 h-4 w-4" />
                   )}
@@ -148,7 +142,7 @@ export function TelegramSettings() {
             >
               {linkTelegram.isPending ? (
                 <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  <Spinner className="mr-2" />
                   Generating link...
                 </>
               ) : (
@@ -193,7 +187,7 @@ export function TelegramSettings() {
             </div>
             <div className="text-muted-foreground flex items-center justify-between gap-2 text-sm">
               <span className="flex items-center gap-2">
-                <Loader2 className="h-4 w-4 animate-spin" />
+                <Spinner />
                 Waiting for Telegram link...
               </span>
               <Button
@@ -213,7 +207,7 @@ export function TelegramSettings() {
           >
             {linkTelegram.isPending ? (
               <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                <Spinner className="mr-2" />
                 Generating link...
               </>
             ) : (

@@ -9,9 +9,9 @@ interface TrustClawBrandProps {
 }
 
 const SIZES = {
-  sm: { logo: 20, text: "text-xs", by: "text-[10px]", gap: "gap-1.5", tagline: "max-w-[180px]" },
-  md: { logo: 24, text: "text-lg", by: "text-[10px]", gap: "gap-2", tagline: "max-w-[260px]" },
-  lg: { logo: 48, text: "text-2xl", by: "text-[11px]", gap: "gap-3", tagline: "max-w-[360px]" },
+  sm: { logo: 20, text: "text-xs", by: "text-2xs", gap: "gap-1.5", tagline: "max-w-[180px]" },
+  md: { logo: 24, text: "text-lg", by: "text-2xs", gap: "gap-2", tagline: "max-w-[260px]" },
+  lg: { logo: 48, text: "text-2xl", by: "text-2xs", gap: "gap-3", tagline: "max-w-[360px]" },
 } as const;
 
 export function TrustClawBrand({ size = "md", logoLink }: TrustClawBrandProps) {
@@ -22,7 +22,10 @@ export function TrustClawBrand({ size = "md", logoLink }: TrustClawBrandProps) {
   return (
     <div className={`flex min-w-0 items-center ${s.gap}`}>
       {logoLink ? (
-        <Link href={logoLink} className="transition-transform hover:scale-105">
+        <Link
+          href={logoLink}
+          className="transition-transform duration-base ease-out-quad hover:-translate-y-px"
+        >
           {logo}
         </Link>
       ) : (

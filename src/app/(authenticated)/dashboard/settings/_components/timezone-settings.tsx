@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Globe, Loader2 } from "lucide-react";
+import { Globe } from "lucide-react";
 import { trpc } from "~/clients/trpc";
 import { Button } from "~/components/ui/button";
 import { Label } from "~/components/ui/label";
@@ -23,6 +23,7 @@ import {
   showSuccessToast,
   trpcToastOnError,
 } from "~/components/core/toast-notifications";
+import { Spinner } from "~/components/ui/spinner";
 
 // Short common list for runtimes without Intl.supportedValuesOf (widely
 // available since 2022, but the fallback keeps the card usable everywhere).
@@ -125,7 +126,7 @@ export function TimezoneSettings({
           >
             {updateSettings.isPending ? (
               <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                <Spinner className="mr-2" />
                 Saving...
               </>
             ) : (

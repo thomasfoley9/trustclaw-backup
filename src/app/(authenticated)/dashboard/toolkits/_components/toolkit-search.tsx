@@ -1,7 +1,8 @@
 "use client";
 
-import { Search, Loader2 } from "lucide-react";
+import { Search } from "lucide-react";
 import { SearchInput } from "~/components/core/search-input";
+import { Spinner } from "~/components/ui/spinner";
 
 interface ToolkitSearchProps {
   onSearch: (query: string) => void;
@@ -12,7 +13,7 @@ export function ToolkitSearch({ onSearch, isLoading }: ToolkitSearchProps) {
   return (
     <div className="relative w-full sm:w-72">
       {isLoading ? (
-        <Loader2 className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 animate-spin text-muted-foreground" />
+        <Spinner className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
       ) : (
         <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
       )}
