@@ -1,10 +1,10 @@
 "use client";
 
-import { useState, useRef, useEffect, useMemo } from "react";
+import { memo, useState, useRef, useEffect, useMemo } from "react";
 import Markdown, { type Components } from "react-markdown";
 import remarkGfm from "remark-gfm";
 import rehypeHighlight from "rehype-highlight";
-import moment from "moment";
+import dayjs from "~/lib/dayjs";
 import { Copy, Check, RefreshCw } from "lucide-react";
 import type { UIMessage } from "@ai-sdk/react";
 import type { ChatStatus, DynamicToolUIPart, ToolUIPart } from "ai";
@@ -66,7 +66,11 @@ interface AssistantMessageProps {
   onRegenerate?: () => void;
 }
 
-export function AssistantMessage({
+// Memoized: message objects are referentially stable per row (useChat only
+// replaces the streaming message), `status` differs from "ready" only on the
+// last message, and the callbacks are stable (useCallback in chat-view /
+// use-chat-hook) - so historical replies skip re-rendering per streaming tick.
+export const AssistantMessage = memo(function AssistantMessage({
   message,
   status,
   onOpenTerminal,
@@ -183,7 +187,7 @@ export function AssistantMessage({
           )}
           {(meta.createdAt !== undefined || tokenTotal > 0) && (
             <span className="text-muted-foreground/50 pl-1 text-xs">
-              {meta.createdAt && moment(meta.createdAt).format("h:mm A")}
+              {meta.createdAt && dayjs(meta.createdAt).format("h:mm A")}
               {meta.createdAt && tokenTotal > 0 && " · "}
               {tokenTotal > 0 && `${tokenTotal.toLocaleString()} tokens`}
             </span>
@@ -192,4 +196,4 @@ export function AssistantMessage({
       )}
     </div>
   );
-}
+});

@@ -204,14 +204,20 @@ function MessagingFeatureCard({ index }: { index: number }) {
 export function FeaturesSection() {
   return (
     <section className="relative overflow-hidden px-4 py-16 md:px-6 md:py-24 lg:py-32">
-      <Image
-        src="/images/elements/quarter_circle.svg"
-        alt=""
+      {/* Decorative concentric quarter-circle arcs. CSS substitute for the
+          former quarter_circle.svg, which was 572KB of raster texture
+          embedded in an SVG wrapper. */}
+      <div
         aria-hidden
-        width={800}
-        height={800}
-        priority={false}
         className="pointer-events-none absolute top-0 -right-40 hidden h-[500px] w-[500px] opacity-[0.07] md:h-[700px] md:w-[700px] dark:block"
+        style={{
+          background:
+            "repeating-radial-gradient(circle at 100% 0%, var(--foreground) 0 1px, transparent 1px 48px)",
+          maskImage:
+            "radial-gradient(circle at 100% 0%, black 30%, transparent 78%)",
+          WebkitMaskImage:
+            "radial-gradient(circle at 100% 0%, black 30%, transparent 78%)",
+        }}
       />
 
       <div className="relative z-10 mx-auto max-w-6xl">

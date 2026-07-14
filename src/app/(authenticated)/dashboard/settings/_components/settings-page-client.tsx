@@ -1,25 +1,61 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { trpc } from "~/clients/trpc";
 import Link from "next/link";
 import { ErrorDisplay } from "~/components/core/error-display";
 import { ErrorBoundary } from "~/components/core/error-boundary";
 import { ModelSettings } from "./model-settings";
-import { CustomModelsSettings } from "./custom-models-settings";
-import { McpServersSettings } from "./mcp-servers-settings";
 import { ComposioApiKeySettings } from "./composio-api-key-settings";
 import { AnthropicApiKeySettings } from "./anthropic-api-key-settings";
 import { VoiceSettings } from "./voice-settings";
 import { TelegramSettings } from "./telegram-settings";
 import { TimezoneSettings } from "./timezone-settings";
-import { CronJobsSettings } from "./cron-jobs-settings";
-import { MemorySettings } from "./memory-settings";
-import { KnowledgeBucketsSettings } from "./knowledge-buckets-settings";
-import { PersonalitySettings } from "./personality-settings";
-import { SkillsSettings } from "./skills-settings";
 import { RerunSetup } from "./rerun-setup";
 import { DangerZone } from "./danger-zone";
 import { SettingsPageSkeleton } from "./settings-page.skeleton";
+import { CustomModelsSettingsSkeleton } from "./custom-models-settings.skeleton";
+import { McpServersSettingsSkeleton } from "./mcp-servers-settings.skeleton";
+import { PersonalitySettingsSkeleton } from "./personality-settings.skeleton";
+import { SkillsSettingsSkeleton } from "./skills-settings.skeleton";
+import { CronJobsSettingsSkeleton } from "./cron-jobs-settings.skeleton";
+import { KnowledgeBucketsSettingsSkeleton } from "./knowledge-buckets-settings.skeleton";
+import { MemorySettingsSkeleton } from "./memory-settings.skeleton";
+
+// The heavy below-the-fold cards are code-split so the settings route's
+// initial bundle carries only the top-of-page sections; each split card
+// streams in behind its existing skeleton.
+const CustomModelsSettings = dynamic(
+  () => import("./custom-models-settings").then((m) => m.CustomModelsSettings),
+  { loading: () => <CustomModelsSettingsSkeleton /> },
+);
+const McpServersSettings = dynamic(
+  () => import("./mcp-servers-settings").then((m) => m.McpServersSettings),
+  { loading: () => <McpServersSettingsSkeleton /> },
+);
+const PersonalitySettings = dynamic(
+  () => import("./personality-settings").then((m) => m.PersonalitySettings),
+  { loading: () => <PersonalitySettingsSkeleton /> },
+);
+const SkillsSettings = dynamic(
+  () => import("./skills-settings").then((m) => m.SkillsSettings),
+  { loading: () => <SkillsSettingsSkeleton /> },
+);
+const CronJobsSettings = dynamic(
+  () => import("./cron-jobs-settings").then((m) => m.CronJobsSettings),
+  { loading: () => <CronJobsSettingsSkeleton /> },
+);
+const KnowledgeBucketsSettings = dynamic(
+  () =>
+    import("./knowledge-buckets-settings").then(
+      (m) => m.KnowledgeBucketsSettings,
+    ),
+  { loading: () => <KnowledgeBucketsSettingsSkeleton /> },
+);
+const MemorySettings = dynamic(
+  () => import("./memory-settings").then((m) => m.MemorySettings),
+  { loading: () => <MemorySettingsSkeleton /> },
+);
 
 export function SettingsPageClient() {
   const { data, isLoading, error } = trpc.trustclaw.getInstance.useQuery();

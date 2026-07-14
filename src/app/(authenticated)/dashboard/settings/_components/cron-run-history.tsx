@@ -1,6 +1,6 @@
 "use client";
 
-import moment from "moment";
+import dayjs from "~/lib/dayjs";
 import { AlertCircle, CheckCircle2, History } from "lucide-react";
 import { trpc } from "~/clients/trpc";
 import { Badge } from "~/components/ui/badge";
@@ -10,7 +10,7 @@ import { EmptyState } from "~/components/core/empty-state";
 
 function runDuration(startedAt: Date, finishedAt: Date | null): string | null {
   if (!finishedAt) return null;
-  const seconds = Math.max(0, moment(finishedAt).diff(startedAt, "seconds"));
+  const seconds = Math.max(0, dayjs(finishedAt).diff(startedAt, "seconds"));
   if (seconds < 60) return `${seconds}s`;
   return `${Math.floor(seconds / 60)}m ${seconds % 60}s`;
 }
@@ -90,9 +90,9 @@ export function CronRunHistory({ jobId }: { jobId: string }) {
                 </span>
                 <span
                   className="text-muted-foreground"
-                  title={moment(run.startedAt).format("MMM D, YYYY h:mm:ss A")}
+                  title={dayjs(run.startedAt).format("MMM D, YYYY h:mm:ss A")}
                 >
-                  {moment(run.startedAt).fromNow()}
+                  {dayjs(run.startedAt).fromNow()}
                 </span>
                 {duration && (
                   <span className="text-muted-foreground">in {duration}</span>

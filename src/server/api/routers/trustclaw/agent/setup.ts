@@ -109,8 +109,21 @@ export async function prepareAgentRun(
     regenerate = false,
   } = params;
 
+  // Select only what this function reads - the full row drags every prompt
+  // blob and encrypted key across the wire on EVERY agent turn.
   const instance = await db.composioClawInstance.findUnique({
     where: { id: instanceId },
+    select: {
+      userId: true,
+      incognitoMode: true,
+      activeMemoryBucket: true,
+      activeConversationId: true,
+      activePersonalityId: true,
+      soulPrompt: true,
+      identityPrompt: true,
+      userPrompt: true,
+      anthropicModel: true,
+    },
   });
 
   if (!instance) {

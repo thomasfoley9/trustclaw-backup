@@ -8,8 +8,9 @@ import {
   useLayoutEffect,
   useMemo,
 } from "react";
+import dynamic from "next/dynamic";
 import type { UIMessage } from "@ai-sdk/react";
-import { ArrowDown, RefreshCw } from "lucide-react";
+import { ArrowDown, ChevronUp, RefreshCw } from "lucide-react";
 import { trpc } from "~/clients/trpc";
 import { ErrorBoundary } from "~/components/core/error-boundary";
 import { Button } from "~/components/ui/button";
@@ -34,15 +35,22 @@ import { ThinkingIndicator } from "./assistant-message/thinking-indicator";
 import { ChatInput } from "./chat-input";
 import { useVoicePlayback } from "./use-voice-playback";
 import { useVoiceConversation } from "./use-voice-conversation";
-import {
-  VoiceCall,
-  type VoiceCockpitEvent,
-  type VoiceTranscriptEntry,
+import type {
+  VoiceCockpitEvent,
+  VoiceTranscriptEntry,
 } from "./voice-call";
 import { env } from "~/env";
 import { TerminalPane } from "../terminal/terminal-pane";
 import { OpenClawLogo } from "~/app/_components/openclaw-logo";
 import { Spinner } from "~/components/ui/spinner";
+
+// Code-split the LiveKit stack (livekit-client + @livekit/components-react is
+// >1MB of client JS): the chunk loads on the first call, not on every
+// /dashboard visit. Types above stay as `import type` (erased at build time).
+const VoiceCall = dynamic(
+  () => import("./voice-call").then((m) => m.VoiceCall),
+  { ssr: false },
+);
 
 // Starter prompts keyed by connected toolkit; anything not connected falls
 // back to prompts that work with zero integrations.
@@ -63,6 +71,12 @@ const FALLBACK_PROMPTS = [
 
 const NEAR_BOTTOM_PX = 80;
 const NEAR_TOP_PX = 120;
+
+// Windowed rendering: only the newest MESSAGE_WINDOW messages are mounted by
+// default; "Show earlier messages" reveals more in window-sized steps. Bounds
+// the DOM (and per-token reconciliation) in marathon sessions instead of
+// rendering every message ever streamed.
+const MESSAGE_WINDOW = 75;
 
 // Plain text of an assistant message (text parts only - tool calls/results are
 // skipped) for text-to-speech.
@@ -159,6 +173,18 @@ export function ChatView({
   }, [messages, voiceTranscripts]);
   const isEmpty = displayMessages.length === 0;
 
+  // Render window over the tail of the list (ephemeral voice lines live at the
+  // tail, so they are always inside the window).
+  const [visibleCount, setVisibleCount] = useState(MESSAGE_WINDOW);
+  const visibleMessages = useMemo(
+    () =>
+      displayMessages.length > visibleCount
+        ? displayMessages.slice(displayMessages.length - visibleCount)
+        : displayMessages,
+    [displayMessages, visibleCount],
+  );
+  const hiddenCount = displayMessages.length - visibleMessages.length;
+
   // Starter prompts derived from what's actually connected; a user with no
   // integrations gets prompts that work without any. A failed fetch (e.g. no
   // Composio key yet) just means the fallback list.
@@ -226,6 +252,10 @@ export function ChatView({
     if (el) el.scrollTo({ top: el.scrollHeight, behavior });
   }, []);
 
+  // Latest messages without making effects below re-run per streaming tick.
+  const messagesRef = useRef(messages);
+  messagesRef.current = messages;
+
   // Prepend older history pages, preserving the visual scroll position so the
   // viewport doesn't jump when older messages load in above.
   const pageCountRef = useRef(historyPageCount);
@@ -235,25 +265,38 @@ export function ChatView({
       pageCountRef.current = historyPageCount;
       return;
     }
+    pageCountRef.current = historyPageCount;
+    // Anchor (and grow the render window) only when the new page actually
+    // adds rows - a stale anchor would suppress bottom-pinning and later
+    // restore an outdated scroll position.
+    const knownIds = new Set(messagesRef.current.map((m) => m.id));
+    const prependedCount = initialMessages.filter(
+      (m) => !knownIds.has(m.id),
+    ).length;
+    if (prependedCount === 0) return;
     const el = scrollRef.current;
     prependAnchorRef.current = el ? el.scrollHeight - el.scrollTop : null;
+    // Freshly fetched pages must not land hidden behind the render window.
+    setVisibleCount((c) => c + prependedCount);
     setMessages((current) => {
       const currentIds = new Set(current.map((m) => m.id));
       const newOlder = initialMessages.filter((m) => !currentIds.has(m.id));
       if (newOlder.length === 0) return current;
       return [...newOlder, ...current];
     });
-    pageCountRef.current = historyPageCount;
   }, [historyPageCount, initialMessages, setMessages]);
 
-  // Restore scroll position right after a prepend (before paint).
+  // Restore scroll position right after a prepend / window expansion (before
+  // paint). Keyed on the rendered list, NOT dependency-free: an empty array of
+  // deps here previously forced a synchronous scrollHeight read (layout flush)
+  // on every render, including every streaming token.
   useLayoutEffect(() => {
     if (prependAnchorRef.current != null && scrollRef.current) {
       const el = scrollRef.current;
       el.scrollTop = el.scrollHeight - prependAnchorRef.current;
       prependAnchorRef.current = null;
     }
-  });
+  }, [visibleMessages]);
 
   // Background runs persist their reply via getHistory, not the local stream.
   // When refreshed history is ahead of the seeded chat state (run finished
@@ -327,10 +370,26 @@ export function ChatView({
     const nearBottom = distanceFromBottom < NEAR_BOTTOM_PX;
     atBottomRef.current = nearBottom;
     setAtBottom(nearBottom);
-    if (el.scrollTop < NEAR_TOP_PX && hasOlderMessages && !isFetchingOlderMessages) {
+    // Fetch older server pages only once every locally-known message is
+    // visible - while rows are still hidden behind the render window, the
+    // "Show earlier messages" button is the path backwards.
+    if (
+      el.scrollTop < NEAR_TOP_PX &&
+      hiddenCount === 0 &&
+      hasOlderMessages &&
+      !isFetchingOlderMessages
+    ) {
       fetchOlderMessages();
     }
-  }, [hasOlderMessages, isFetchingOlderMessages, fetchOlderMessages]);
+  }, [hiddenCount, hasOlderMessages, isFetchingOlderMessages, fetchOlderMessages]);
+
+  // Reveal another window of already-loaded messages, keeping the viewport
+  // anchored so the list doesn't jump (same mechanism as the prepend restore).
+  const handleShowEarlier = useCallback(() => {
+    const el = scrollRef.current;
+    prependAnchorRef.current = el ? el.scrollHeight - el.scrollTop : null;
+    setVisibleCount((c) => c + MESSAGE_WINDOW);
+  }, []);
 
   // Speak each assistant reply aloud once it finishes streaming (voice mode on).
   // Detecting the streaming -> ready transition avoids speaking pre-existing
@@ -394,6 +453,11 @@ export function ChatView({
   const liveKitConfigured = !!env.NEXT_PUBLIC_LIVEKIT_URL;
   const [liveCallActive, setLiveCallActive] = useState(false);
   const [liveCallMuted, setLiveCallMuted] = useState(false);
+  // Mount latch for the code-split VoiceCall: it must be mounted to react to
+  // `active` flipping true, but mounting it eagerly would fetch the LiveKit
+  // chunk on every dashboard load. Latched on the first call and kept mounted
+  // afterwards so end-of-call teardown effects run normally.
+  const [hasEverCalled, setHasEverCalled] = useState(false);
 
   const handleStartConversation = useCallback(() => {
     voiceUnlock(); // prime audio within this gesture so replies can autoplay
@@ -406,6 +470,7 @@ export function ChatView({
       clearVoiceOverlay(); // start each call with a fresh transcript + action feed
       setLiveCallMuted(false); // each call starts unmuted
       setTerminalOpen(true); // surface the Live pane so actions are visible
+      setHasEverCalled(true); // mount the code-split VoiceCall (no-op after the first call)
       setLiveCallActive(true);
       return;
     }
@@ -527,12 +592,24 @@ export function ChatView({
               onScroll={handleScroll}
               className="h-full overflow-y-auto"
             >
+              {hiddenCount > 0 && (
+                <div className="flex justify-center pt-4">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleShowEarlier}
+                  >
+                    <ChevronUp className="size-3.5" />
+                    Show earlier messages ({hiddenCount})
+                  </Button>
+                </div>
+              )}
               {isFetchingOlderMessages && (
                 <div className="flex justify-center py-3">
                   <Spinner className="text-muted-foreground" />
                 </div>
               )}
-              {displayMessages.map((message) => (
+              {visibleMessages.map((message) => (
                 <div
                   key={message.id}
                   className="mx-auto w-full max-w-3xl px-4 pt-6 md:px-8"
@@ -619,13 +696,15 @@ export function ChatView({
           onStopConversation={handleStopConversation}
           onToggleMute={handleToggleMute}
         />
-        <VoiceCall
-          active={liveCallActive}
-          muted={liveCallMuted}
-          onEnded={handleVoiceEnded}
-          onCockpitEvent={handleCockpitEvent}
-          onTranscript={handleTranscript}
-        />
+        {hasEverCalled && (
+          <VoiceCall
+            active={liveCallActive}
+            muted={liveCallMuted}
+            onEnded={handleVoiceEnded}
+            onCockpitEvent={handleCockpitEvent}
+            onTranscript={handleTranscript}
+          />
+        )}
         </div>
       </ResizablePanel>
 

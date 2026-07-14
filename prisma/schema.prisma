@@ -354,6 +354,7 @@ model Memory {
 
   @@index([instanceId, createdAt])
   @@index([instanceId, category])
+  @@index([instanceId, category, createdAt(sort: Desc)], map: "composio_claw_memory_instance_category_created_idx")
   @@map("composio_claw_memory")
 }
 

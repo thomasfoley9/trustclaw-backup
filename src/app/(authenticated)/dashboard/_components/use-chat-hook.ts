@@ -49,6 +49,9 @@ export function useChatHook({ initialMessages, streamId, conversationId }: {
     id: `chat-${conversationId}`,
     transport,
     resume: resumeOnMountRef.current,
+    // Batch streaming updates: without a throttle every token triggers a full
+    // message-tree render, which is the dominant client cost during a reply.
+    experimental_throttle: 50,
     onFinish: () => {
       void utils.trustclaw.getHistory.invalidate();
       // Refresh the sidebar so a new session's auto-title + ordering update.

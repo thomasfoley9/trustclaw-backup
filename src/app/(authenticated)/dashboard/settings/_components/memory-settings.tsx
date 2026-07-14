@@ -3,7 +3,7 @@
 import { MemorySettingsSkeleton } from "./memory-settings.skeleton";
 import { Brain, Trash2 } from "lucide-react";
 import { EmptyState } from "~/components/core/empty-state";
-import moment from "moment";
+import dayjs from "~/lib/dayjs";
 import { trpc } from "~/clients/trpc";
 import {
   Card,
@@ -82,7 +82,7 @@ export function MemorySettings() {
                         {memory.category}
                       </Badge>
                       <span className="text-muted-foreground text-xs">
-                        {moment(memory.createdAt).fromNow()}
+                        {dayjs(memory.createdAt).fromNow()}
                       </span>
                     </div>
                   </div>

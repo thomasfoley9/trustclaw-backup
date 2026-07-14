@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useRef, useEffect, useMemo } from "react";
-import moment from "moment";
+import { memo, useState, useRef, useEffect, useMemo } from "react";
+import dayjs from "~/lib/dayjs";
 import { Copy, Check, FileText } from "lucide-react";
 import type { UIMessage } from "@ai-sdk/react";
 import { messageMeta } from "./message-metadata";
@@ -42,7 +42,12 @@ function extractAttachments(message: UIMessage): RenderedAttachment[] {
   return out;
 }
 
-export function UserMessage({ message }: UserMessageProps) {
+// Memoized: message objects are referentially stable per row (useChat only
+// replaces the streaming message), so historical bubbles skip re-rendering on
+// every streaming tick.
+export const UserMessage = memo(function UserMessage({
+  message,
+}: UserMessageProps) {
   const [copied, setCopied] = useState(false);
   const copyTimeoutRef = useRef<ReturnType<typeof setTimeout>>(null);
 
@@ -105,7 +110,7 @@ export function UserMessage({ message }: UserMessageProps) {
         <div className="-m-2 mt-1 mr-1 flex items-center gap-1">
           {createdAt && (
             <span className="text-muted-foreground/50 pr-1 text-xs">
-              {moment(createdAt).format("h:mm A")}
+              {dayjs(createdAt).format("h:mm A")}
             </span>
           )}
           <button
@@ -123,4 +128,4 @@ export function UserMessage({ message }: UserMessageProps) {
       )}
     </div>
   );
-}
+});

@@ -37,17 +37,15 @@ export function useToolFocusHighlight() {
   }, []);
 }
 
-export function useToolCallCount(messages: UIMessage[]): number {
-  return useMemo(() => {
-    let count = 0;
-    for (const msg of messages) {
-      if (msg.role !== "assistant") continue;
-      for (const part of msg.parts) {
-        if (isToolUIPart(part)) count++;
-      }
-    }
-    return count;
-  }, [messages]);
+// Per-message log-entry cache: during streaming the messages ARRAY gets a new
+// identity on every token, but only the streaming message's `parts` actually
+// change (useChat keeps historical messages referentially stable). Caching on
+// (parts identity, chat status) means each token recomputes one message, not
+// the whole history.
+interface EntryCacheItem {
+  parts: UIMessage["parts"];
+  status: ChatStatus;
+  entries: TerminalLogEntryData[];
 }
 
 interface TerminalPaneProps {
@@ -73,18 +71,37 @@ export function TerminalPane({
   const [viewMode, setViewMode] = useState<"live" | "receipts">("live");
 
   useToolFocusHighlight();
-  const toolCount = useToolCallCount(messages) + (liveEvents?.length ?? 0);
 
   // Stable timestamps for voice events (which carry no time of their own).
   const voiceTimestamps = useRef(new Map<string, Date>());
+  const entryCache = useRef(new Map<string, EntryCacheItem>());
   const logEntries = useMemo(() => {
+    const cache = entryCache.current;
+    const seenIds = new Set<string>();
     const entries: TerminalLogEntryData[] = [];
     for (const msg of messages) {
       if (msg.role !== "assistant") continue;
-      for (const part of msg.parts) {
-        if (isToolUIPart(part)) {
-          entries.push(toolCallToLogEntry(part, status));
+      seenIds.add(msg.id);
+      const cached = cache.get(msg.id);
+      let msgEntries: TerminalLogEntryData[];
+      if (cached?.parts === msg.parts && cached?.status === status) {
+        msgEntries = cached.entries;
+      } else {
+        msgEntries = [];
+        for (const part of msg.parts) {
+          if (isToolUIPart(part)) {
+            msgEntries.push(toolCallToLogEntry(part, status));
+          }
         }
+        cache.set(msg.id, { parts: msg.parts, status, entries: msgEntries });
+      }
+      for (const entry of msgEntries) entries.push(entry);
+    }
+    // Evict cache rows for messages no longer in the list (conversation
+    // switches reuse this pane) so it can't grow unbounded.
+    if (cache.size > seenIds.size) {
+      for (const id of cache.keys()) {
+        if (!seenIds.has(id)) cache.delete(id);
       }
     }
     for (const e of liveEvents ?? []) {
@@ -101,6 +118,7 @@ export function TerminalPane({
     }
     return entries;
   }, [messages, status, liveEvents]);
+  const toolCount = logEntries.length;
 
   // Drop the per-call timestamp cache once the call ends (liveEvents cleared) so
   // it doesn't accumulate stale ids across calls in a long session.

@@ -20,6 +20,19 @@ const memoryContextRow = z.object({
   similarity: z.number(),
 });
 
+// PERF (deferred, needs an operator with DB access): the HNSW index
+// (composio_claw_memory_embedding_hnsw_idx) may never be chosen by the planner
+// for the searches below - the selective `"instanceId" = $1` prefilter likely
+// makes a filtered sequential/index scan cheaper than an approximate HNSW walk
+// over ALL instances' vectors, in which case the index is pure write overhead.
+// Verify before touching it:
+//   EXPLAIN ANALYZE
+//   SELECT id FROM composio_claw_memory
+//   WHERE "instanceId" = '<some-real-instance-id>'
+//   ORDER BY embedding <=> '<1024-dim-vector>'::vector
+//   LIMIT 5;
+// If the plan shows no "Index Scan using composio_claw_memory_embedding_hnsw_idx",
+// the index is unused for the app's only vector query shape and can be dropped.
 async function embedQuery(query: string): Promise<string> {
   const { embedding } = await embed({
     model: "openai/text-embedding-3-large",

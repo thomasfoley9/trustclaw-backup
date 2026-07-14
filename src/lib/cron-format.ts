@@ -1,4 +1,6 @@
-import moment from "moment";
+// dayjs (not moment): this module is imported by client components, and
+// moment here would drag ~70KB gzipped into their bundles.
+import dayjs from "~/lib/dayjs";
 
 // Human-readable rendering of a 5-field cron expression. Falls back to the
 // raw expression for patterns it doesn't special-case.
@@ -45,5 +47,5 @@ export function formatCronExpression(expression: string): string {
 
 export function formatCronDate(date: Date | string | null): string {
   if (!date) return "-";
-  return moment(date).format("MMM D, h:mm A");
+  return dayjs(date).format("MMM D, h:mm A");
 }

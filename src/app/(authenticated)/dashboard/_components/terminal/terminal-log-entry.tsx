@@ -1,6 +1,7 @@
 "use client";
 
-import moment from "moment";
+import { memo } from "react";
+import dayjs from "~/lib/dayjs";
 
 import { cn } from "~/lib/utils";
 import { SearchToolResult } from "../tool-results/search-tools/search-tool-result";
@@ -19,7 +20,7 @@ export type { TerminalLogEntryData } from "./types";
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
 function formatTimestamp(date: Date): string {
-  return moment(date).format("HH:mm:ss");
+  return dayjs(date).format("HH:mm:ss");
 }
 
 function formatJson(obj: unknown): string {
@@ -33,7 +34,14 @@ function formatJson(obj: unknown): string {
 
 // ─── Component ──────────────────────────────────────────────────────────────
 
-export function TerminalLogEntry({ log }: { log: TerminalLogEntryData }) {
+// Memoized: log entry objects are cached per message in terminal-pane, so
+// unchanged historical entries skip the per-entry schema parsing on every
+// streaming tick.
+export const TerminalLogEntry = memo(function TerminalLogEntry({
+  log,
+}: {
+  log: TerminalLogEntryData;
+}) {
   const statusColors = {
     complete: "text-chart-2",
     error: "text-destructive",
@@ -205,4 +213,4 @@ export function TerminalLogEntry({ log }: { log: TerminalLogEntryData }) {
         )}
     </div>
   );
-}
+});

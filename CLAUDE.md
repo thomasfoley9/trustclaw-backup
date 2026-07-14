@@ -10,7 +10,7 @@ TrustClaw - a self-hostable personal AI agent with vector memory, Composio tools
 - **Styling:** [Tailwind CSS](https://tailwindcss.com/docs) + [shadcn/ui](https://ui.shadcn.com/docs/)
 - **Auth:** [Better Auth](https://www.better-auth.com/) with username/password login, plus optional Google social sign-in (enabled when `GOOGLE_CLIENT_ID`/`GOOGLE_CLIENT_SECRET` are set).
 - **Server:** [tRPC](https://trpc.io/docs/) for all backend logic
-- **Date/Time:** [moment.js](https://momentjs.com/docs/) for all date formatting and parsing
+- **Date/Time:** [dayjs](https://day.js.org/docs/en/installation/installation) on the client (via `~/lib/dayjs`), [moment-timezone](https://momentjs.com/timezone/docs/) on the server
 
 When you need to look up documentation for any of these libraries, use the **Context7 MCP** (`mcp__plugin_context7_context7__resolve-library-id` → `mcp__plugin_context7_context7__query-docs`) to get up-to-date docs. For **shadcn/ui** specifically, use the **shadcn MCP** tools instead.
 
@@ -581,18 +581,27 @@ We rarely need to make custom components since we are maximally using shadcn pri
 
 ### Date & Time
 
-- ALWAYS use `moment` for date formatting and parsing - never use raw `Date` methods, `Intl.DateTimeFormat`, or `toLocaleString`
-- Import as `import moment from "moment"`
+- NEVER use raw `Date` methods, `Intl.DateTimeFormat`, or `toLocaleString` for formatting/parsing
+- **Client code** (components, hooks): ALWAYS use `dayjs` imported from the shared wrapper `~/lib/dayjs` (it registers the `relativeTime` plugin for `.fromNow()`). Never import `"dayjs"` directly, and never import `moment` in client code - moment is ~70KB gzipped and was removed from the client bundles for that reason.
+- **Server code** (tRPC procedures, route handlers, agent runtime): keep using `moment` / `moment-timezone` (timezone math for cron and the agent needs the tz database)
 
   ```typescript
   // WRONG - raw Date methods
   date.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" });
   new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric" }).format(date);
 
-  // CORRECT - moment.js
-  moment(date).format("HH:mm:ss");
-  moment(date).format("MMM D, YYYY h:mm A");
-  moment(date).fromNow(); // "2 hours ago"
+  // WRONG in client code - moment in a client bundle
+  import moment from "moment";
+
+  // CORRECT - client components
+  import dayjs from "~/lib/dayjs";
+  dayjs(date).format("HH:mm:ss");
+  dayjs(date).format("MMM D, YYYY h:mm A");
+  dayjs(date).fromNow(); // "2 hours ago"
+
+  // CORRECT - server code
+  import moment from "moment-timezone";
+  moment.tz(date, timezone).format("HH:mm:ss");
   ```
 
 ### Hygiene
