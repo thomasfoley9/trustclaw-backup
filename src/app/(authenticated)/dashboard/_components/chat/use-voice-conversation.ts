@@ -115,20 +115,30 @@ export function useVoiceConversation({
       (typeof navigator !== "undefined" && navigator.language) || "en-US";
     recognition.maxAlternatives = 1;
 
+    // Same re-delivery quirk as use-speech-dictation: several engines re-fire
+    // already-final results on every event with resultIndex stuck at 0, so
+    // slicing from resultIndex duplicated every finalized word into the
+    // transcript once per event. Rebuild the full final text from index 0 and
+    // accumulate only the not-yet-consumed suffix. The mark lives per
+    // recognizer instance; the onend auto-restart is covered either way (a
+    // results reset shows up as a non-extension and just resyncs).
+    let consumedFinal = "";
     recognition.onresult = (event) => {
+      let finalFull = "";
       let sawSpeech = false;
-      for (let i = event.resultIndex; i < event.results.length; i++) {
-        const result = event.results[i];
-        if (!result) continue;
+      for (const result of event.results) {
         const transcript = result[0]?.transcript ?? "";
-        if (result.isFinal) {
-          const finalText = transcript.trim();
-          if (finalText) {
-            transcriptRef.current +=
-              (transcriptRef.current ? " " : "") + finalText;
-            sawSpeech = true;
-          }
-        } else if (transcript.trim()) {
+        if (result.isFinal) finalFull += transcript;
+        else if (transcript.trim()) sawSpeech = true;
+      }
+      if (finalFull !== consumedFinal) {
+        const chunk = finalFull.startsWith(consumedFinal)
+          ? finalFull.slice(consumedFinal.length).trim()
+          : "";
+        consumedFinal = finalFull;
+        if (chunk) {
+          transcriptRef.current +=
+            (transcriptRef.current ? " " : "") + chunk;
           sawSpeech = true;
         }
       }

@@ -30,6 +30,10 @@ export function useSpeechDictation({ onFinal }: UseSpeechDictationOptions) {
 
   const recognitionRef = useRef<SpeechRecognitionInstance | null>(null);
   const listeningRef = useRef(false);
+  // Invalidates an in-flight start() preflight (await getUserMedia) if the
+  // user toggles off before it resolves - otherwise the recognizer starts
+  // anyway with nothing pointing at it.
+  const startTokenRef = useRef(0);
   const onFinalRef = useRef(onFinal);
   useEffect(() => {
     onFinalRef.current = onFinal;
@@ -58,11 +62,19 @@ export function useSpeechDictation({ onFinal }: UseSpeechDictationOptions) {
   }, []);
 
   const stop = useCallback(() => {
+    startTokenRef.current++; // cancel a start() still in its preflight
+    listeningRef.current = false;
     recognitionRef.current?.stop();
   }, []);
 
   const start = useCallback(async () => {
     if (!isSupported || listeningRef.current || !ctorRef.current) return;
+    // Claim the slot SYNCHRONOUSLY. The old guard only flipped in onstart
+    // (async, after engine spin-up) and start() awaits a permission preflight
+    // first - so a double-tap spawned two live recognizers, both appending
+    // transcripts, and stop() could only ever reach the newest one.
+    listeningRef.current = true;
+    const token = ++startTokenRef.current;
 
     // Desktop + Android: SpeechRecognition's implicit permission can silently
     // no-op (no prompt, no error), so force an explicit getUserMedia prompt with
@@ -87,6 +99,7 @@ export function useSpeechDictation({ onFinal }: UseSpeechDictationOptions) {
         });
         stream.getTracks().forEach((t) => t.stop());
       } catch (err) {
+        listeningRef.current = false;
         const name = err instanceof Error ? err.name : "";
         if (name === "NotFoundError" || name === "DevicesNotFoundError") {
           showErrorToast("No microphone found.");
@@ -99,6 +112,9 @@ export function useSpeechDictation({ onFinal }: UseSpeechDictationOptions) {
       }
     }
 
+    // Toggled off (or unmounted) while the preflight was awaiting - abort.
+    if (startTokenRef.current !== token) return;
+
     const recognition = new ctorRef.current();
     recognition.continuous = true;
     recognition.interimResults = true;
@@ -110,18 +126,33 @@ export function useSpeechDictation({ onFinal }: UseSpeechDictationOptions) {
       listeningRef.current = true;
       setIsListening(true);
     };
+    // High-water mark of final text already handed to onFinal, per recognizer.
+    // Several engines (Safari, Chrome on Android, desktop Chrome in continuous
+    // mode) re-deliver ALREADY-FINAL results on every subsequent event with
+    // resultIndex stuck at 0 - and continuous mode fires an event per interim
+    // update, many per second. Slicing from resultIndex and appending each
+    // isFinal chunk therefore re-typed every finalized word once per event
+    // (the "same word 80 times" bug). Instead, rebuild the full final
+    // transcript from index 0 on every event and deliver only the suffix that
+    // hasn't been delivered yet.
+    let deliveredFinal = "";
     recognition.onresult = (event) => {
+      let finalFull = "";
       let interim = "";
-      for (let i = event.resultIndex; i < event.results.length; i++) {
-        const result = event.results[i];
-        if (!result) continue;
+      for (const result of event.results) {
         const transcript = result[0]?.transcript ?? "";
-        if (result.isFinal) {
-          const finalText = transcript.trim();
-          if (finalText) onFinalRef.current(finalText);
-        } else {
-          interim += transcript;
-        }
+        if (result.isFinal) finalFull += transcript;
+        else interim += transcript;
+      }
+      if (finalFull !== deliveredFinal) {
+        // An engine may also revise an earlier final in place. Extension
+        // delivers the new suffix; a non-extension revision resyncs the mark
+        // without re-delivering (better to miss a correction than repeat).
+        const chunk = finalFull.startsWith(deliveredFinal)
+          ? finalFull.slice(deliveredFinal.length).trim()
+          : "";
+        deliveredFinal = finalFull;
+        if (chunk) onFinalRef.current(chunk);
       }
       setInterimTranscript(interim);
     };
@@ -156,9 +187,15 @@ export function useSpeechDictation({ onFinal }: UseSpeechDictationOptions) {
     else void start();
   }, [start, stop]);
 
-  // Strict-Mode-safe teardown: abort drops pending results immediately.
+  // Strict-Mode-safe teardown: abort drops pending results immediately, and
+  // the token bump cancels a start() still awaiting its permission preflight.
   useEffect(() => {
     return () => {
+      // Intentional: invalidate any in-flight start() preflight on unmount so
+      // it can't start a recognizer after teardown.
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+      startTokenRef.current++;
+      listeningRef.current = false;
       recognitionRef.current?.abort();
       recognitionRef.current = null;
     };

@@ -16,6 +16,8 @@ export interface SpeechRecognitionResult {
 export interface SpeechRecognitionResultList {
   readonly length: number;
   readonly [index: number]: SpeechRecognitionResult;
+  // DOM result lists are iterable in every engine that ships the API.
+  [Symbol.iterator](): IterableIterator<SpeechRecognitionResult>;
 }
 
 export interface SpeechRecognitionEvent extends Event {
