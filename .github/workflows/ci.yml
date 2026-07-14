@@ -1,0 +1,67 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+env:
+  # src/env.ts validates required server vars at import time; CI has no
+  # database or secrets, so skip validation (honoured when NODE_ENV is not
+  # production).
+  SKIP_ENV_VALIDATION: "1"
+
+jobs:
+  checks:
+    name: Lint and typecheck
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm lint
+      - run: pnpm typecheck
+
+  test:
+    name: Unit tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm test
+
+  # E2E (Playwright) is intentionally not wired up yet: e2e/first-chat.spec.ts
+  # needs a database plus a running app, and there is no verified green
+  # baseline. To enable later:
+  #
+  # e2e:
+  #   name: E2E tests
+  #   runs-on: ubuntu-latest
+  #   services:
+  #     postgres:
+  #       image: pgvector/pgvector:pg16
+  #       env: { POSTGRES_PASSWORD: postgres, POSTGRES_DB: trustclaw }
+  #       ports: ["5432:5432"]
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #     - uses: pnpm/action-setup@v4
+  #     - uses: actions/setup-node@v4
+  #       with: { node-version: 22, cache: pnpm }
+  #     - run: pnpm install --frozen-lockfile
+  #     - run: pnpm exec playwright install --with-deps chromium
+  #     - run: pnpm exec prisma migrate deploy
+  #       env: { DATABASE_URL: "postgresql://postgres:postgres@localhost:5432/trustclaw" }
+  #     - run: pnpm test:e2e
+  #       env:
+  #         DATABASE_URL: "postgresql://postgres:postgres@localhost:5432/trustclaw"
+  #         BETTER_AUTH_SECRET: ci-only-secret
+  #         CRON_SECRET: ci-only-secret
