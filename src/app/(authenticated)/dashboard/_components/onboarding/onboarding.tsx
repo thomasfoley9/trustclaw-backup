@@ -310,7 +310,6 @@ export function Onboarding({
               <motion.div variants={itemVariants}>
                 <Button
                   variant="outline"
-                  className="min-h-[44px]"
                   onClick={() => void handleModelNext()}
                 >
                   Retry

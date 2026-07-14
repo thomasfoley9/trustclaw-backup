@@ -11,7 +11,16 @@ export default function DashboardLayout({
 }) {
   return (
     <TooltipProvider>
-      <div className="flex h-screen flex-col">
+      {/* h-dvh (not h-screen/100vh): iOS Safari's 100vh includes the browser
+          chrome and, with the on-screen keyboard up, keeps the composer
+          hidden below the fold. dvh tracks the actual visible viewport. */}
+      <div className="flex h-dvh flex-col">
+        <a
+          href="#main-content"
+          className="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:z-50 focus:rounded-md focus:bg-primary focus:px-4 focus:py-2 focus:text-sm focus:font-medium focus:text-primary-foreground"
+        >
+          Skip to content
+        </a>
         <ErrorBoundary>
           <DashboardNavbar />
         </ErrorBoundary>
@@ -21,7 +30,9 @@ export default function DashboardLayout({
         <ErrorBoundary>
           <ComposioKeyBanner />
         </ErrorBoundary>
-        <main className="min-h-0 flex-1 overflow-y-auto">{children}</main>
+        <main id="main-content" className="min-h-0 flex-1 overflow-y-auto">
+          {children}
+        </main>
       </div>
     </TooltipProvider>
   );

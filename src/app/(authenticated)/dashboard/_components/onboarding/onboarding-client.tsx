@@ -1,6 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import { MotionConfig } from "framer-motion";
 import { trpc } from "~/clients/trpc";
 import { trpcToastOnError } from "~/components/core/toast-notifications";
 import { Onboarding } from "./onboarding";
@@ -33,22 +34,27 @@ export function OnboardingClient({
   }
 
   return (
-    <Onboarding
-      hasExistingInstance={hasExistingInstance}
-      savedState={data?.onboardingState ?? null}
-      onComplete={() => {
-        void (async () => {
-          try {
-            await completeOnboarding.mutateAsync();
-          } catch {
-            // Toasted by onError; stay on the wizard rather than refreshing
-            // into a loop where the redo flag is still set.
-            return;
-          }
-          void utils.trustclaw.getStatus.invalidate();
-          router.refresh();
-        })();
-      }}
-    />
+    // reducedMotion="user" makes every framer-motion animation in the wizard
+    // honor the OS prefers-reduced-motion setting (transforms disabled,
+    // opacity fades kept).
+    <MotionConfig reducedMotion="user">
+      <Onboarding
+        hasExistingInstance={hasExistingInstance}
+        savedState={data?.onboardingState ?? null}
+        onComplete={() => {
+          void (async () => {
+            try {
+              await completeOnboarding.mutateAsync();
+            } catch {
+              // Toasted by onError; stay on the wizard rather than refreshing
+              // into a loop where the redo flag is still set.
+              return;
+            }
+            void utils.trustclaw.getStatus.invalidate();
+            router.refresh();
+          })();
+        }}
+      />
+    </MotionConfig>
   );
 }

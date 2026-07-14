@@ -210,6 +210,7 @@ export function ConversationSidebarContent({
                       >
                         <input
                           autoFocus
+                          aria-label="Chat title"
                           value={renameValue}
                           onChange={(e) => setRenameValue(e.target.value)}
                           onKeyDown={(e) => {
@@ -223,7 +224,7 @@ export function ConversationSidebarContent({
                         <button
                           type="button"
                           onClick={() => void commitRename(c.id, c.title)}
-                          className="text-muted-foreground hover:text-foreground shrink-0 p-1"
+                          className="text-muted-foreground hover:text-foreground shrink-0 p-1 [@media(pointer:coarse)]:min-h-11 [@media(pointer:coarse)]:min-w-9"
                           aria-label="Save title"
                         >
                           <Check className="h-4 w-4" />
@@ -231,7 +232,7 @@ export function ConversationSidebarContent({
                         <button
                           type="button"
                           onClick={cancelRename}
-                          className="text-muted-foreground hover:text-foreground shrink-0 p-1"
+                          className="text-muted-foreground hover:text-foreground shrink-0 p-1 [@media(pointer:coarse)]:min-h-11 [@media(pointer:coarse)]:min-w-9"
                           aria-label="Cancel rename"
                         >
                           <X className="h-4 w-4" />
@@ -280,7 +281,7 @@ export function ConversationSidebarContent({
                         type="button"
                         disabled={busy}
                         onClick={() => setSavingConvId(c.id)}
-                        className="text-muted-foreground hover:text-foreground shrink-0 px-1.5 py-2 opacity-100 transition-opacity duration-fast ease-out-quad focus-visible:opacity-100 md:opacity-0 md:group-hover:opacity-100"
+                        className="text-muted-foreground hover:text-foreground shrink-0 px-1.5 py-2 opacity-100 transition-opacity duration-fast ease-out-quad focus-visible:opacity-100 md:opacity-0 md:group-hover:opacity-100 [@media(pointer:coarse)]:min-h-11 [@media(pointer:coarse)]:min-w-9"
                         aria-label="Save chat to knowledge"
                       >
                         <BookmarkPlus className="h-3.5 w-3.5" />
@@ -289,7 +290,7 @@ export function ConversationSidebarContent({
                         type="button"
                         disabled={busy}
                         onClick={() => beginRename(c.id, c.title)}
-                        className="text-muted-foreground hover:text-foreground shrink-0 px-1.5 py-2 opacity-100 transition-opacity duration-fast ease-out-quad focus-visible:opacity-100 md:opacity-0 md:group-hover:opacity-100"
+                        className="text-muted-foreground hover:text-foreground shrink-0 px-1.5 py-2 opacity-100 transition-opacity duration-fast ease-out-quad focus-visible:opacity-100 md:opacity-0 md:group-hover:opacity-100 [@media(pointer:coarse)]:min-h-11 [@media(pointer:coarse)]:min-w-9"
                         aria-label="Rename chat"
                       >
                         <Pencil className="h-3.5 w-3.5" />
@@ -306,7 +307,7 @@ export function ConversationSidebarContent({
                           <button
                             type="button"
                             disabled={busy}
-                            className="text-muted-foreground hover:text-destructive shrink-0 px-1.5 py-2 opacity-100 transition-opacity duration-fast ease-out-quad focus-visible:opacity-100 md:opacity-0 md:group-hover:opacity-100"
+                            className="text-muted-foreground hover:text-destructive shrink-0 px-1.5 py-2 opacity-100 transition-opacity duration-fast ease-out-quad focus-visible:opacity-100 md:opacity-0 md:group-hover:opacity-100 [@media(pointer:coarse)]:min-h-11 [@media(pointer:coarse)]:min-w-9"
                             aria-label="Delete chat"
                           >
                             <Trash2 className="h-3.5 w-3.5" />

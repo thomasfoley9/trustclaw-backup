@@ -63,7 +63,7 @@ export function SaveToKnowledgeDialog({
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-2">
-          <Label>Bucket</Label>
+          <Label htmlFor="knowledge-bucket-select">Bucket</Label>
           {error ? (
             // A failed fetch would otherwise render an empty picker that looks
             // like "you have no buckets" - surface it and offer a retry.
@@ -82,7 +82,7 @@ export function SaveToKnowledgeDialog({
             </div>
           ) : (
             <Select value={effectiveSlug} onValueChange={setBucketSlug}>
-              <SelectTrigger>
+              <SelectTrigger id="knowledge-bucket-select">
                 <SelectValue placeholder="Pick a bucket" />
               </SelectTrigger>
               <SelectContent>

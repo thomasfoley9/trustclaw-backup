@@ -19,6 +19,7 @@ export function ToolkitSearch({ onSearch, isLoading }: ToolkitSearchProps) {
       )}
       <SearchInput
         placeholder="Search across 500+ toolkits..."
+        aria-label="Search toolkits"
         className="pl-9"
         debounceMs={300}
         onSearch={onSearch}

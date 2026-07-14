@@ -271,7 +271,9 @@ export function ChatInput({
   return (
     <div
       className={cn(
-        "border-border bg-background border-t p-3 md:p-4",
+        // pb-[max(...)] keeps the composer clear of the home-indicator area
+        // on notched phones without adding padding elsewhere.
+        "border-border bg-background border-t p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] md:p-4 md:pb-[max(1rem,env(safe-area-inset-bottom))]",
         dragOver && "bg-accent/40",
       )}
       onDragOver={(e) => {
@@ -327,7 +329,11 @@ export function ChatInput({
                 : "border-primary/30 bg-primary/10",
             )}
           >
+            {/* role=status scoped to the label (not the whole pill) so phase
+                changes announce without re-reading the mute button. */}
             <div
+              role="status"
+              aria-live="polite"
               className={cn(
                 "flex items-center gap-2 text-sm font-medium",
                 conversationMuted ? "text-muted-foreground" : "text-primary",
@@ -401,7 +407,7 @@ export function ChatInput({
           <Button
             variant="ghost"
             size="icon"
-            className="size-9 shrink-0 rounded-xl"
+            className="shrink-0 rounded-xl"
             onClick={() => fileInputRef.current?.click()}
             aria-label="Attach files"
           >
@@ -414,7 +420,7 @@ export function ChatInput({
               variant="ghost"
               size="icon"
               className={cn(
-                "size-9 shrink-0 rounded-xl",
+                "shrink-0 rounded-xl",
                 isListening && "bg-primary/15 text-primary",
               )}
               onClick={toggleDictation}
@@ -433,7 +439,7 @@ export function ChatInput({
             variant="ghost"
             size="icon"
             className={cn(
-              "size-9 shrink-0 rounded-xl",
+              "shrink-0 rounded-xl",
               voiceEnabled && "bg-primary/15 text-primary",
             )}
             onClick={onToggleVoice}
@@ -459,7 +465,7 @@ export function ChatInput({
               variant="ghost"
               size="icon"
               className={cn(
-                "size-9 shrink-0 rounded-xl",
+                "shrink-0 rounded-xl",
                 conversationActive && "bg-primary/15 text-primary",
               )}
               onClick={

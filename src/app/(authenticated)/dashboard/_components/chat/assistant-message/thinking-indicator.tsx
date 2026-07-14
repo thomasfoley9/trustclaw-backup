@@ -14,8 +14,14 @@ export function ThinkingIndicator() {
   }, []);
 
   return (
-    <div className="py-2">
-      <span className="text-muted-foreground animate-pulse text-sm font-medium">
+    <div className="py-2" role="status">
+      {/* The rotating word is decorative flavor; announce a stable label
+          instead of re-reading every 2.5s tick. */}
+      <span className="sr-only">Assistant is thinking</span>
+      <span
+        aria-hidden="true"
+        className="text-muted-foreground animate-pulse text-sm font-medium"
+      >
         {THINKING_WORDS[index]}...
       </span>
     </div>

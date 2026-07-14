@@ -127,8 +127,14 @@
   --card-foreground: oklch(0.965 0.006 286);
   --popover: oklch(0.205 0.016 284);
   --popover-foreground: oklch(0.965 0.006 286);
+  /* Dark ink on the violet: white text on 0.645/0.19/287 is only 3.42:1
+     (AA fail). Darkening the violet instead would sink text-primary accents
+     against --background below 4.5:1, so the foreground flips dark.
+     Computed WCAG contrast: primary vs primary-foreground = 5.53:1;
+     primary vs background = 5.48:1 (text-primary accents). The light theme
+     pair is 4.91:1 - both >= 4.5:1. */
   --primary: oklch(0.645 0.19 287);
-  --primary-foreground: oklch(0.99 0.005 287);
+  --primary-foreground: oklch(0.16 0.02 287);
   --secondary: oklch(0.255 0.021 285);
   --secondary-foreground: oklch(0.965 0.006 286);
   --muted: oklch(0.255 0.021 285);
@@ -147,7 +153,7 @@
   --sidebar: oklch(0.145 0.013 283);
   --sidebar-foreground: oklch(0.965 0.006 286);
   --sidebar-primary: oklch(0.645 0.19 287);
-  --sidebar-primary-foreground: oklch(0.99 0.005 287);
+  --sidebar-primary-foreground: oklch(0.16 0.02 287);
   --sidebar-accent: oklch(0.275 0.032 287);
   --sidebar-accent-foreground: oklch(0.985 0.005 286);
   --sidebar-border: oklch(1 0 0 / 8%);
@@ -320,16 +326,18 @@
       oklch(0.8 0.12 213)
     );
   }
-  /* Gradient fills carry text-primary-foreground (near-white), so both themes
+  /* Gradient fills carry their own near-white text (set here, not via
+     --primary-foreground, which is dark ink in .dark mode), so both themes
      need stops dark enough for AA. Computed WCAG contrast vs white:
-     :root 0.48/287 = 7.1:1, 0.52/220 = 5.0:1; .dark 0.55/287 = 5.2:1,
-     0.52/220 = 5.0:1. All >= 4.5:1. */
+     :root 0.48/287 = 6.9:1, 0.52/220 = 4.9:1; .dark 0.55/287 = 5.1:1,
+     0.52/220 = 4.9:1. All >= 4.5:1. */
   .bg-accent-gradient {
     background-image: linear-gradient(
       120deg,
       oklch(0.48 0.19 287),
       oklch(0.52 0.13 220)
     );
+    color: oklch(0.99 0 0);
   }
   .dark .bg-accent-gradient {
     background-image: linear-gradient(
@@ -377,6 +385,26 @@
       );
   }
 }
+/* Honor the OS "reduce motion" preference. Decorative infinite loops (mascot
+   float/blink/wiggle, hero scatter + float-y, landing float-y-sm, glow pulses)
+   collapse to a single near-instant iteration - i.e. they freeze at their
+   resting frame. Functional transitions and entrance fades still happen, just
+   near-instantly, so state changes stay visible without movement.
+   framer-motion (onboarding) is handled separately via
+   <MotionConfig reducedMotion="user">. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  ::before,
+  ::after {
+    animation-duration: 0.01ms !important;
+    animation-delay: 0ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    transition-delay: 0ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
 /* react-resizable-panels puts className on an INNER content div, so responsive
    hiding of a panel must target the outer element (which receives rest props)
    via this attribute. Below Tailwind's md breakpoint the panel vanishes

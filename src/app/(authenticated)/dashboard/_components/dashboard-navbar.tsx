@@ -67,7 +67,7 @@ export function DashboardNavbar() {
         <TrustClawBrand size="sm" logoLink="/dashboard" />
       </div>
 
-      <div className="flex items-center gap-1">
+      <nav aria-label="Primary" className="flex items-center gap-1">
         {isChat && (
           <div className="hidden items-center gap-1 md:flex">
             <PersonalityControl />
@@ -166,7 +166,7 @@ export function DashboardNavbar() {
           </TooltipTrigger>
           <TooltipContent>Logout</TooltipContent>
         </Tooltip>
-      </div>
+      </nav>
     </header>
   );
 }

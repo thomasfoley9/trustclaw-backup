@@ -237,13 +237,13 @@ export function VoiceSettings() {
         {!error && !isLoading && (
         <div className="space-y-4 border-t pt-4">
           <div className="space-y-2">
-            <Label>Voice</Label>
+            <Label htmlFor="voice-select">Voice</Label>
             <div className="flex gap-2">
               <Select
                 value={data?.voiceId}
                 onValueChange={(v) => void setVoice.mutateAsync({ voiceId: v })}
               >
-                <SelectTrigger className="flex-1">
+                <SelectTrigger id="voice-select" className="flex-1">
                   <SelectValue placeholder="Pick a voice" />
                 </SelectTrigger>
                 <SelectContent>

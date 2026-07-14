@@ -188,6 +188,31 @@ export function ChatView({
   const atBottomRef = useRef(true);
   const [atBottom, setAtBottom] = useState(true);
 
+  // Screen-reader announcements for streaming: announcing every token would
+  // be noise, so a visually-hidden polite live region announces only the
+  // state transitions (reply started / finished / failed).
+  const [liveAnnouncement, setLiveAnnouncement] = useState("");
+  const announceStatusRef = useRef(status);
+  useEffect(() => {
+    const prev = announceStatusRef.current;
+    announceStatusRef.current = status;
+    if (prev === status) return;
+    if (
+      (status === "submitted" || status === "streaming") &&
+      prev !== "submitted" &&
+      prev !== "streaming"
+    ) {
+      setLiveAnnouncement("Assistant is replying");
+    } else if (
+      (prev === "submitted" || prev === "streaming") &&
+      status === "ready"
+    ) {
+      setLiveAnnouncement("Reply finished");
+    } else if (status === "error") {
+      setLiveAnnouncement("Response failed");
+    }
+  }, [status]);
+
   const isStreaming = status === "streaming" || status === "submitted";
   const lastMessage = messages[messages.length - 1];
   // Show the thinking indicator both for a live local stream and for a
@@ -467,6 +492,9 @@ export function ChatView({
     >
       <ResizablePanel id="conversation" className="min-w-0">
         <div className="flex h-full min-h-0 min-w-0 flex-col">
+        <div aria-live="polite" role="status" className="sr-only">
+          {liveAnnouncement}
+        </div>
         <div className="relative min-h-0 flex-1">
           {isEmpty ? (
             <div className="flex h-full flex-col items-center justify-center gap-6 px-4 text-center">
@@ -630,7 +658,10 @@ export function ChatView({
 
       {isMobile && (
         <Sheet open={mobileTerminalOpen} onOpenChange={setMobileTerminalOpen}>
-          <SheetContent side="bottom" className="h-[80vh] p-0">
+          <SheetContent
+            side="bottom"
+            className="h-[80dvh] p-0 pb-[env(safe-area-inset-bottom)]"
+          >
             <SheetHeader className="sr-only">
               <SheetTitle>Activity</SheetTitle>
             </SheetHeader>

@@ -10,12 +10,12 @@ export function LandingNav() {
     <header className="border-border bg-background/70 supports-[backdrop-filter]:bg-background/50 fixed top-0 right-0 left-0 z-50 border-b backdrop-blur-xl">
       <div className="mx-auto flex h-14 max-w-6xl items-center justify-between px-4 md:px-6">
         <TrustClawBrand size="md" />
-        <div className="flex items-center gap-2">
+        <nav aria-label="Primary" className="flex items-center gap-2">
           <ThemeToggle />
           <Button asChild size="sm" variant="brand">
             <Link href="/login?tab=register">Get started</Link>
           </Button>
-        </div>
+        </nav>
       </div>
     </header>
   );

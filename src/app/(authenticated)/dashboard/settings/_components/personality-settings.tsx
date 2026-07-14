@@ -354,6 +354,7 @@ export function PersonalitySettings() {
                         <FormControl>
                           <Input
                             placeholder="Name (e.g. Acme Corp, Unhinged)"
+                            aria-label="Personality name"
                             {...field}
                           />
                         </FormControl>
@@ -400,6 +401,7 @@ export function PersonalitySettings() {
                       <FormControl>
                         <Textarea
                           placeholder="Describe how the agent should talk and behave..."
+                          aria-label="Personality prompt"
                           rows={9}
                           {...field}
                         />

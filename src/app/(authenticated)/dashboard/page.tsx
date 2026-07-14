@@ -35,6 +35,10 @@ export default async function Page() {
   return (
     <HydrateClient>
       <div className="flex h-full min-h-0">
+        {/* The chat page has no visible heading (the empty-state h2 only
+            exists before the first message); screen readers still need a
+            page-level h1. */}
+        <h1 className="sr-only">Chat</h1>
         <ConversationDrawer />
         <DashboardPanels
           sidebar={

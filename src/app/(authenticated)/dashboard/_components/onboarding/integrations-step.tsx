@@ -86,11 +86,7 @@ export function IntegrationsStep({
         onSkip={onSkip}
       >
         <motion.div variants={itemVariants} className="flex justify-center">
-          <Button
-            variant="outline"
-            className="min-h-[44px]"
-            onClick={() => void refetch()}
-          >
+          <Button variant="outline" onClick={() => void refetch()}>
             Try again
           </Button>
         </motion.div>

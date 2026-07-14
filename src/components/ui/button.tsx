@@ -10,8 +10,10 @@ const buttonVariants = cva(
     variants: {
       variant: {
         default: "bg-primary text-primary-foreground hover:bg-primary/90",
+        // Text color comes from .bg-accent-gradient itself (always near-white;
+        // dark-mode --primary-foreground is dark ink and would fail AA here).
         brand:
-          "bg-accent-gradient text-primary-foreground rounded-lg border-0 shadow-sm duration-base hover:-translate-y-px hover:shadow-md active:translate-y-0 active:shadow-sm active:brightness-95 disabled:hover:translate-y-0 disabled:hover:shadow-sm",
+          "bg-accent-gradient rounded-lg border-0 shadow-sm duration-base hover:-translate-y-px hover:shadow-md active:translate-y-0 active:shadow-sm active:brightness-95 disabled:hover:translate-y-0 disabled:hover:shadow-sm",
         destructive:
           "bg-destructive text-white hover:bg-destructive/90 focus-visible:ring-destructive/20 dark:focus-visible:ring-destructive/40 dark:bg-destructive/60",
         outline:
@@ -22,15 +24,19 @@ const buttonVariants = cva(
           "hover:bg-accent hover:text-accent-foreground dark:hover:bg-accent/50",
         link: "text-primary underline-offset-4 hover:underline",
       },
+      // On coarse pointers (touch) every non-dense size grows to a >= 44px
+      // target; desktop (fine pointer) stays identical. xs/icon-xs are
+      // deliberate dense-context escape hatches and keep their size.
       size: {
-        default: "h-9 px-4 py-2 has-[>svg]:px-3",
+        default:
+          "h-9 px-4 py-2 has-[>svg]:px-3 [@media(pointer:coarse)]:min-h-11",
         xs: "h-6 gap-1 rounded-md px-2 text-xs has-[>svg]:px-1.5 [&_svg:not([class*='size-'])]:size-3",
-        sm: "h-8 rounded-md gap-1.5 px-3 has-[>svg]:px-2.5",
-        lg: "h-10 rounded-md px-6 has-[>svg]:px-4",
-        icon: "size-9",
+        sm: "h-8 rounded-md gap-1.5 px-3 has-[>svg]:px-2.5 [@media(pointer:coarse)]:min-h-11",
+        lg: "h-10 rounded-md px-6 has-[>svg]:px-4 [@media(pointer:coarse)]:min-h-11",
+        icon: "size-9 [@media(pointer:coarse)]:size-11",
         "icon-xs": "size-6 rounded-md [&_svg:not([class*='size-'])]:size-3",
-        "icon-sm": "size-8",
-        "icon-lg": "size-10",
+        "icon-sm": "size-8 [@media(pointer:coarse)]:size-11",
+        "icon-lg": "size-10 [@media(pointer:coarse)]:size-11",
       },
     },
     defaultVariants: {

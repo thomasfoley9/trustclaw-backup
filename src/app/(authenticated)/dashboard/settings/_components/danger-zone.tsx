@@ -79,10 +79,11 @@ export function DangerZone() {
                 </DialogDescription>
               </DialogHeader>
               <div className="space-y-2 py-4">
-                <Label>
+                <Label htmlFor="delete-confirm-text">
                   Type <strong>{CONFIRM_TEXT}</strong> to confirm
                 </Label>
                 <Input
+                  id="delete-confirm-text"
                   value={confirmText}
                   onChange={(e) => setConfirmText(e.target.value)}
                   placeholder={CONFIRM_TEXT}

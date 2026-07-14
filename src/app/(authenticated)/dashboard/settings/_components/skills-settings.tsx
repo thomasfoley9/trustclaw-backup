@@ -354,6 +354,7 @@ export function SkillsSettings() {
                             <FormControl>
                               <Input
                                 placeholder="Describe a step…"
+                                aria-label={`Step ${i + 1}`}
                                 maxLength={1000}
                                 {...field}
                               />
@@ -409,6 +410,7 @@ export function SkillsSettings() {
                             <FormControl>
                               <Input
                                 placeholder="Input name"
+                                aria-label={`Required input ${i + 1} name`}
                                 maxLength={60}
                                 {...field}
                               />
@@ -425,6 +427,7 @@ export function SkillsSettings() {
                             <FormControl>
                               <Input
                                 placeholder="What it is"
+                                aria-label={`Required input ${i + 1} description`}
                                 maxLength={200}
                                 {...field}
                               />

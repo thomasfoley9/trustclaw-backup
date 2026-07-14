@@ -38,9 +38,13 @@ export const metadata: Metadata = {
 
 // Without this, mobile browsers render at ~980px desktop width and ignore
 // every responsive breakpoint. This is the single highest-impact mobile fix.
+// interactiveWidget makes the layout viewport shrink when the on-screen
+// keyboard opens, so the chat composer stays visible above it (with h-dvh
+// shells) instead of being covered.
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
+  interactiveWidget: "resizes-content",
 };
 
 export default async function RootLayout({

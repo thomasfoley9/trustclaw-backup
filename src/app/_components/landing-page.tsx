@@ -20,9 +20,15 @@ export function LandingPage() {
         className="ambient-glow pointer-events-none absolute inset-0 h-[820px]"
         aria-hidden
       />
+      <a
+        href="#main-content"
+        className="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:z-[60] focus:rounded-md focus:bg-primary focus:px-4 focus:py-2 focus:text-sm focus:font-medium focus:text-primary-foreground"
+      >
+        Skip to content
+      </a>
       <LandingNav />
 
-      <main className="relative flex-1">
+      <main id="main-content" className="relative flex-1">
         <section className="mx-auto flex max-w-3xl flex-col items-center px-4 pt-20 pb-24 text-center md:pt-28">
           <span className="border-border bg-card/60 text-muted-foreground mb-8 inline-flex items-center gap-2 rounded-full border px-4 py-1.5 text-xs font-medium backdrop-blur">
             <TrainFront className="size-3.5" aria-hidden />

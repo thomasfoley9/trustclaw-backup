@@ -152,9 +152,11 @@ export function ModelSettings({
           </div>
         )}
         <div className="space-y-2">
-          <Label>Main model - chat, work &amp; tools</Label>
+          <Label htmlFor="main-model-select">
+            Main model - chat, work &amp; tools
+          </Label>
           <Select value={selectedB} onValueChange={setSelectedB}>
-            <SelectTrigger className="w-full sm:w-72">
+            <SelectTrigger id="main-model-select" className="w-full sm:w-72">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>{modelGroups}</SelectContent>
@@ -166,9 +168,11 @@ export function ModelSettings({
         </div>
 
         <div className="space-y-2">
-          <Label>Voice narrator - spoken replies only</Label>
+          <Label htmlFor="voice-model-select">
+            Voice narrator - spoken replies only
+          </Label>
           <Select value={selectedA} onValueChange={setSelectedA}>
-            <SelectTrigger className="w-full sm:w-72">
+            <SelectTrigger id="voice-model-select" className="w-full sm:w-72">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>

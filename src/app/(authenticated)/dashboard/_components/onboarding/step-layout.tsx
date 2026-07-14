@@ -66,7 +66,7 @@ export function StepLayout({
             <Button
               variant="outline"
               onClick={onSkip}
-              className="min-h-[44px] w-full sm:w-auto"
+              className="w-full sm:w-auto"
             >
               {skipLabel ?? "Skip"}
             </Button>
@@ -76,7 +76,7 @@ export function StepLayout({
               onClick={onNext}
               disabled={nextDisabled}
               variant="brand"
-              className="min-h-[44px] w-full shadow-md sm:w-auto"
+              className="w-full shadow-md sm:w-auto"
             >
               {nextLabel ?? "Continue"}
             </Button>
