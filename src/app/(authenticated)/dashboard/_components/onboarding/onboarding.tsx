@@ -5,7 +5,10 @@ import { AnimatePresence, motion } from "framer-motion";
 import { Loader2 } from "lucide-react";
 import type { z } from "zod";
 import { trpc } from "~/clients/trpc";
-import { showTrpcErrorToast } from "~/components/core/toast-notifications";
+import {
+  showTrpcErrorToast,
+  trpcToastOnError,
+} from "~/components/core/toast-notifications";
 import { ErrorBoundary } from "~/components/core/error-boundary";
 import { Button } from "~/components/ui/button";
 import { onboardingModelSchema } from "~/server/api/routers/trustclaw/createInstance.schema";
@@ -162,7 +165,11 @@ export function Onboarding({
 
   const updateModel = trpc.trustclaw.updateSettings.useMutation();
 
-  const saveState = trpc.trustclaw.saveOnboardingState.useMutation();
+  // Persists are fire-and-forget (void persistState) - without onError a
+  // failed save would silently lose the user's progress.
+  const saveState = trpc.trustclaw.saveOnboardingState.useMutation({
+    onError: trpcToastOnError,
+  });
 
   const persistState = async (
     nextStep: Step,
@@ -332,7 +339,12 @@ export function Onboarding({
           />
         </div>
 
-        <ProgressDots current={STEP_ORDER.indexOf(step) + 1} />
+        <ProgressDots
+          current={STEP_ORDER.indexOf(step) + 1}
+          // The telegram step only exists when the deployment has a bot, so
+          // the flow really ends at integrations otherwise.
+          total={telegramConfigured ? STEP_ORDER.length : STEP_ORDER.length - 1}
+        />
 
         <AnimatePresence mode="wait">
           {step === "name" && (

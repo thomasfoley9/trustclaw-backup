@@ -44,3 +44,24 @@ export function parseTrpcError(error: unknown): {
 
   return { title: defaultMessage };
 }
+
+// Only fire one redirect no matter how many parallel calls hit 401.
+let loginRedirectScheduled = false;
+
+// An expired session means every subsequent call fails too - "Please log in
+// again" alone strands the user, so send them to /login with a deep link back.
+export function redirectToLoginOnUnauthorized(error: unknown) {
+  if (typeof window === "undefined" || loginRedirectScheduled) return;
+  if (!isTrpcError(error)) return;
+  const code = (error.data as Record<string, unknown> | undefined)?.code;
+  if (code !== "UNAUTHORIZED") return;
+  if (window.location.pathname.startsWith("/login")) return;
+  loginRedirectScheduled = true;
+  const next = window.location.pathname + window.location.search;
+  // Brief pause so the toast is readable before the full-page navigation.
+  // window.location (not useRouter) because this isn't a component - there's
+  // no hook context to reach the router from here.
+  setTimeout(() => {
+    window.location.assign(`/login?next=${encodeURIComponent(next)}`);
+  }, 1500);
+}

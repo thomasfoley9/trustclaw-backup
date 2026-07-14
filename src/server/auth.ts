@@ -98,7 +98,9 @@ function emailAllowed(email: string): boolean {
   return ALLOWED_DOMAINS.includes(domain);
 }
 
-function signupRestrictionMessage(): string {
+// Exported so the login page can show the real gate (actual allowed domains,
+// invite-code availability) instead of a hardcoded guess.
+export function signupRestrictionMessage(): string {
   const domains = ALLOWED_DOMAINS.map((d) => `@${d}`).join(", ");
   const extra = ALLOWED_EMAILS.length
     ? " (and specifically-invited addresses)"

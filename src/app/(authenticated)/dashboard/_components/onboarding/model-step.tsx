@@ -144,7 +144,8 @@ export function ModelStep({
             >
               Anthropic console
             </a>
-            . We validate it before continuing.
+            . We validate it before continuing. Stored encrypted (AES-256-GCM);
+            only this instance can read it.
           </p>
         </motion.div>
       )}

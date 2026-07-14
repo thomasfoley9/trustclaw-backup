@@ -64,14 +64,14 @@ export function BrandLanding({ brand }: { brand: Brand }) {
         </p>
         <div className="mt-11 flex flex-col items-center gap-4 sm:flex-row">
           <Link
-            href="/login"
+            href="/login?tab=register"
             className="rounded-full px-8 py-3.5 text-base font-semibold transition hover:brightness-95"
             style={{ backgroundColor: accent, color: brand.onAccent }}
           >
             Take the wheel
           </Link>
           <Link
-            href="/login"
+            href="/login?tab=register"
             className="rounded-full border border-white/20 px-8 py-3.5 text-base font-medium text-white transition hover:bg-white/5"
           >
             See it drive

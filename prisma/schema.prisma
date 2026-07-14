@@ -422,6 +422,9 @@ model OnboardingState {
   emoji           String?
   lore           String   @default("") @db.Text
   anthropicModel String   @default("claude-sonnet-4-5-20250929")
+  // Set by Settings -> "Re-run setup": the dashboard shows the wizard again
+  // (answers above are preserved) even though the instance already exists.
+  redoRequested Boolean  @default(false)
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 

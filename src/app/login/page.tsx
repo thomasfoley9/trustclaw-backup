@@ -1,17 +1,18 @@
 import { redirect } from "next/navigation";
 import { headers } from "next/headers";
 import { LoginPage } from "./_components/login-page";
-import { auth } from "~/server/auth";
+import { auth, signupRestrictionMessage } from "~/server/auth";
 import { db } from "~/server/clients/db";
 import { env } from "~/env";
+import { safeNextPath } from "~/lib/login-redirect";
 import { ErrorDisplay } from "~/components/core/error-display";
 
 export default async function Page({
   searchParams,
 }: {
-  searchParams: Promise<{ tab?: string; error?: string }>;
+  searchParams: Promise<{ tab?: string; error?: string; next?: string }>;
 }) {
-  const { tab, error } = await searchParams;
+  const { tab, error, next } = await searchParams;
   const defaultTab = tab === "register" ? "register" : undefined;
   let session;
   try {
@@ -29,7 +30,7 @@ export default async function Page({
   }
 
   if (session) {
-    redirect("/dashboard");
+    redirect(safeNextPath(next));
   }
 
   let firstTime = false;
@@ -50,6 +51,8 @@ export default async function Page({
       signupOpen={signupOpen}
       defaultTab={defaultTab}
       errorCode={error}
+      restrictionMessage={signupOpen ? undefined : signupRestrictionMessage()}
+      next={next}
     />
   );
 }

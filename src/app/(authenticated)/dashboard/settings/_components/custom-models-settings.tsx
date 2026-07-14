@@ -170,8 +170,9 @@ export function CustomModelsSettings() {
               disabled={isBusy}
             />
             <p className="text-muted-foreground text-xs">
-              Stored encrypted at rest. Required to run the model (Anthropic
-              custom ids reuse your Anthropic key).
+              Stored encrypted (AES-256-GCM); only this instance can read it.
+              Required to run the model (Anthropic custom ids reuse your
+              Anthropic key).
             </p>
           </div>
           <Button

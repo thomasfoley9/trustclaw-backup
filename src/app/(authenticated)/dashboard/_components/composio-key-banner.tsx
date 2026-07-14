@@ -13,11 +13,9 @@ export function ComposioKeyBanner() {
   const { data: status } = trpc.trustclaw.getStatus.useQuery();
 
   if (pathname?.startsWith("/dashboard/settings")) return null;
-  // The /dashboard route owns the full-page activation gate when the Composio
-  // key is missing; a second banner with the same ask above it is noise.
-  if (pathname === "/dashboard") return null;
-  // No instance yet = still onboarding; don't cover the wizard.
-  if (!status?.hasInstance) return null;
+  // No instance yet, or a re-run of setup in progress = the onboarding wizard
+  // is on screen; don't cover it.
+  if (!status?.hasInstance || status.redoOnboarding) return null;
   if (!data || data.hasKey) return null;
 
   return (
@@ -27,7 +25,8 @@ export function ComposioKeyBanner() {
           <KeyRound className="text-chart-4 h-4 w-4 shrink-0" />
           <span>
             No Composio API key set - tools and integrations are disabled until
-            you add one.
+            you add one. Stored encrypted (AES-256-GCM); only this instance can
+            read it.
           </span>
         </div>
         <Link

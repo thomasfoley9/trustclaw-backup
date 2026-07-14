@@ -70,13 +70,14 @@ export function ResetPasswordForm() {
           {invalidLink ? (
             <div className="mt-4 space-y-4">
               <p className="text-muted-foreground text-sm">
-                This reset link is invalid or has expired. Request a new one.
+                This reset link is invalid or has expired. Ask whoever runs
+                this instance to generate a new one.
               </p>
               <Link
-                href="/forgot-password"
+                href="/login"
                 className="text-primary text-sm hover:underline"
               >
-                Request a new link
+                Back to login
               </Link>
             </div>
           ) : (

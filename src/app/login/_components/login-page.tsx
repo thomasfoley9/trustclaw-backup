@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { TrustClawBrand } from "~/app/_components/trustclaw-brand";
 import { Button } from "~/components/ui/button";
@@ -9,6 +8,7 @@ import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
 import { authClient } from "~/clients/auth/react";
+import { safeNextPath } from "~/lib/login-redirect";
 import { showErrorToast } from "~/components/core/toast-notifications";
 import {
   USERNAME_HINT,
@@ -28,9 +28,14 @@ interface LoginPageProps {
   // better-auth error code from ?error=<code>, set when errorCallbackURL
   // bounces a refused OAuth sign-in back to /login.
   errorCode?: string;
+  // The server's own sign-up gate message (actual allowed domains, invite
+  // code availability) - shown when errorCode indicates a refused sign-up.
+  restrictionMessage?: string;
+  // Deep link (from ?next=) to return to after sign-in. Sanitized before use.
+  next?: string;
 }
 
-function authErrorMessage(code: string): string {
+function authErrorMessage(code: string, restrictionMessage?: string): string {
   const normalized = code.trim().toLowerCase();
   // "unable_to_create_user" is what better-auth emits when the signup gate
   // (user.create.before hook) rejects an OAuth sign-up.
@@ -38,7 +43,9 @@ function authErrorMessage(code: string): string {
     normalized.includes("signup") ||
     normalized === "unable_to_create_user"
   ) {
-    return "Sign-in was refused: sign-up is restricted to @composio.dev emails.";
+    return `Sign-in was refused. ${
+      restrictionMessage ?? "Sign-up is restricted on this instance."
+    }`;
   }
   return `Sign-in was refused: ${normalized.replace(/_/g, " ")}.`;
 }
@@ -60,19 +67,26 @@ export function LoginPage({
   signupOpen = true,
   defaultTab,
   errorCode,
+  restrictionMessage,
+  next,
 }: LoginPageProps) {
   const router = useRouter();
   const [pending, setPending] = useState(false);
+  // Where sign-in lands: the (sanitized) deep link, or the dashboard.
+  const destination = safeNextPath(next);
 
   const handleGoogle = async () => {
     setPending(true);
     try {
       const result = await authClient.signIn.social({
         provider: "google",
-        callbackURL: "/dashboard",
+        callbackURL: destination,
         // Gate-rejected OAuth users land back here (with ?error=<code>)
-        // instead of better-auth's bare error page.
-        errorCallbackURL: "/login",
+        // instead of better-auth's bare error page. Keep the deep link so a
+        // retry still lands where the user was headed.
+        errorCallbackURL: next
+          ? `/login?next=${encodeURIComponent(next)}`
+          : "/login",
       });
       if (result.error) {
         showErrorToast(result.error.message ?? "Google sign-in failed - try again");
@@ -114,7 +128,7 @@ export function LoginPage({
       // Keep the button in its pending state through the redirect - resetting
       // it here flips it back to "Sign in" while the dashboard is still
       // loading, which reads as a failed submit and invites a double-click.
-      router.push("/dashboard");
+      router.push(destination);
     } catch {
       showErrorToast("Couldn't reach the server - check your connection and try again.");
       setPending(false);
@@ -155,7 +169,7 @@ export function LoginPage({
         return;
       }
       // Stay pending through the redirect (see handleLogin).
-      router.push("/dashboard");
+      router.push(destination);
     } catch {
       showErrorToast("Couldn't reach the server - check your connection and try again.");
       setPending(false);
@@ -175,7 +189,7 @@ export function LoginPage({
 
         {errorCode && (
           <div className="bg-destructive/10 text-destructive mb-4 rounded-xl px-4 py-3 text-sm">
-            {authErrorMessage(errorCode)}
+            {authErrorMessage(errorCode, restrictionMessage)}
           </div>
         )}
 
@@ -232,12 +246,6 @@ export function LoginPage({
                 <Button type="submit" className="w-full" disabled={pending}>
                   {pending ? "Signing in..." : "Sign in"}
                 </Button>
-                <Link
-                  href="/forgot-password"
-                  className="text-muted-foreground hover:text-foreground block text-center text-sm"
-                >
-                  Forgot password?
-                </Link>
               </form>
             </TabsContent>
 

@@ -1,5 +1,8 @@
 import { toast } from "sonner";
-import { parseTrpcError } from "~/clients/trpc/errors";
+import {
+  parseTrpcError,
+  redirectToLoginOnUnauthorized,
+} from "~/clients/trpc/errors";
 
 export function showSuccessToast(message: string) {
   toast.success(message);
@@ -24,6 +27,7 @@ export function dismissToast(toastId: string | number) {
 export function showTrpcErrorToast(error: unknown) {
   const { title, description } = parseTrpcError(error);
   toast.error(title, { description });
+  redirectToLoginOnUnauthorized(error);
 }
 
 export function trpcToastOnError(error: unknown) {

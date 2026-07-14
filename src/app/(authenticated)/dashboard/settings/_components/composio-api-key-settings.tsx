@@ -145,7 +145,8 @@ export function ComposioApiKeySettings() {
                 disabled={isBusy}
               />
               <p className="text-muted-foreground text-xs">
-                We validate the key with Composio before saving it.
+                We validate the key with Composio before saving it. Stored
+                encrypted (AES-256-GCM); only this instance can read it.
               </p>
             </div>
             <div className="flex gap-2">

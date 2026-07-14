@@ -26,6 +26,8 @@ import { renameConversation } from "./renameConversation";
 import { deleteConversation } from "./deleteConversation";
 import { getIntegrationAuthLinks } from "./getIntegrationAuthLinks";
 import { saveOnboardingState } from "./saveOnboardingState";
+import { restartOnboarding } from "./restartOnboarding";
+import { completeOnboarding } from "./completeOnboarding";
 import { checkConnectionStatus } from "./checkConnectionStatus";
 import { getComposioKeyStatus } from "./getComposioKeyStatus";
 import { setComposioApiKey } from "./setComposioApiKey";
@@ -83,6 +85,8 @@ export const trustclawRouter = router({
   deleteConversation,
   getIntegrationAuthLinks,
   saveOnboardingState,
+  restartOnboarding,
+  completeOnboarding,
   checkConnectionStatus,
   getComposioKeyStatus,
   setComposioApiKey,

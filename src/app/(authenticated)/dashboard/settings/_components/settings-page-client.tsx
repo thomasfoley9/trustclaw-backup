@@ -16,6 +16,7 @@ import { MemorySettings } from "./memory-settings";
 import { KnowledgeBucketsSettings } from "./knowledge-buckets-settings";
 import { PersonalitySettings } from "./personality-settings";
 import { SkillsSettings } from "./skills-settings";
+import { RerunSetup } from "./rerun-setup";
 import { DangerZone } from "./danger-zone";
 import { SettingsPageSkeleton } from "./settings-page.skeleton";
 
@@ -115,6 +116,10 @@ export function SettingsPageClient() {
 
       <ErrorBoundary>
         <MemorySettings />
+      </ErrorBoundary>
+
+      <ErrorBoundary>
+        <RerunSetup />
       </ErrorBoundary>
 
       <ErrorBoundary>
