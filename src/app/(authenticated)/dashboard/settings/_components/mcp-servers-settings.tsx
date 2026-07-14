@@ -1,11 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 import { Loader2, Plug, Plus, Trash2 } from "lucide-react";
 import { trpc } from "~/clients/trpc";
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
-import { Label } from "~/components/ui/label";
 import {
   Card,
   CardContent,
@@ -14,22 +14,39 @@ import {
   CardTitle,
 } from "~/components/ui/card";
 import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "~/components/ui/form";
+import {
   showSuccessToast,
   trpcToastOnError,
 } from "~/components/core/toast-notifications";
+import { ErrorDisplay } from "~/components/core/error-display";
+import { AlertDialog } from "~/components/core/confirm-dialog";
+import {
+  addMcpServerInput,
+  type AddMcpServerInput,
+} from "~/server/api/routers/trustclaw/addMcpServer.schema";
 
 export function McpServersSettings() {
   const utils = trpc.useUtils();
-  const { data, isLoading } = trpc.trustclaw.getMcpServers.useQuery();
+  const { data, isLoading, error, refetch } =
+    trpc.trustclaw.getMcpServers.useQuery();
   const servers = data?.servers ?? [];
-  const [label, setLabel] = useState("");
-  const [url, setUrl] = useState("");
+
+  const form = useForm<AddMcpServerInput>({
+    resolver: zodResolver(addMcpServerInput),
+    defaultValues: { label: "", url: "" },
+  });
 
   const add = trpc.trustclaw.addMcpServer.useMutation({
     onSuccess: (res) => {
       showSuccessToast(`Connected "${res.label}" - ${res.toolCount} tools`);
-      setLabel("");
-      setUrl("");
+      form.reset();
       void utils.trustclaw.getMcpServers.invalidate();
     },
     onError: trpcToastOnError,
@@ -40,10 +57,13 @@ export function McpServersSettings() {
     onError: trpcToastOnError,
   });
 
-  const canAdd =
-    label.trim().length > 0 &&
-    url.trim().startsWith("https://") &&
-    !add.isPending;
+  const onSubmit = async (values: AddMcpServerInput) => {
+    try {
+      await add.mutateAsync(values);
+    } catch {
+      // trpcToastOnError already surfaced the failure.
+    }
+  };
 
   return (
     <Card>
@@ -63,6 +83,12 @@ export function McpServersSettings() {
           <div className="text-muted-foreground flex items-center gap-2 text-sm">
             <Loader2 className="h-4 w-4 animate-spin" /> Loading…
           </div>
+        ) : error ? (
+          <ErrorDisplay
+            message="Failed to load MCP servers"
+            retryText="Try again"
+            onRetry={() => void refetch()}
+          />
         ) : servers.length > 0 ? (
           <ul className="space-y-2">
             {servers.map((s) => (
@@ -76,16 +102,26 @@ export function McpServersSettings() {
                     {s.maskedUrl}
                   </p>
                 </div>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-8 w-8 shrink-0"
-                  onClick={() => void remove.mutateAsync({ id: s.id })}
-                  disabled={remove.isPending}
-                  aria-label={`Remove ${s.label}`}
-                >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
+                <AlertDialog
+                  title={`Remove "${s.label}"?`}
+                  description="Your agent immediately loses this server's tools. You can add it back later with the same URL."
+                  confirmLabel="Remove server"
+                  onConfirm={async () => {
+                    await remove.mutateAsync({ id: s.id });
+                  }}
+                  isPending={remove.isPending}
+                  trigger={
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 shrink-0"
+                      disabled={remove.isPending}
+                      aria-label={`Remove ${s.label}`}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  }
+                />
               </li>
             ))}
           </ul>
@@ -95,56 +131,64 @@ export function McpServersSettings() {
           </p>
         )}
 
-        <div className="space-y-3">
-          <div className="grid gap-3 sm:grid-cols-[180px_1fr]">
-            <div className="space-y-1.5">
-              <Label htmlFor="mcp-label">Label</Label>
-              <Input
-                id="mcp-label"
-                placeholder="GitHub MCP"
-                value={label}
-                onChange={(e) => setLabel(e.target.value)}
-                disabled={add.isPending}
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="mcp-url">MCP server URL</Label>
-              <Input
-                id="mcp-url"
-                type="password"
-                autoComplete="off"
-                placeholder="https://mcp.composio.dev/…"
-                value={url}
-                onChange={(e) => setUrl(e.target.value)}
-                disabled={add.isPending}
-              />
-              {url.trim() && !url.trim().startsWith("https://") && (
-                <p className="text-muted-foreground text-xs">
-                  The URL must start with https://
-                </p>
-              )}
-            </div>
-          </div>
-          <Button
-            variant="outline"
-            disabled={!canAdd}
-            onClick={() =>
-              void add.mutateAsync({ label: label.trim(), url: url.trim() })
-            }
+        <Form {...form}>
+          <form
+            onSubmit={(e) => void form.handleSubmit(onSubmit)(e)}
+            className="space-y-3"
           >
-            {add.isPending ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Connecting…
-              </>
-            ) : (
-              <>
-                <Plus className="mr-2 h-4 w-4" />
-                Add server
-              </>
-            )}
-          </Button>
-        </div>
+            <div className="grid gap-3 sm:grid-cols-[180px_1fr]">
+              <FormField
+                control={form.control}
+                name="label"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Label</FormLabel>
+                    <FormControl>
+                      <Input
+                        placeholder="GitHub MCP"
+                        disabled={add.isPending}
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="url"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>MCP server URL</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="password"
+                        autoComplete="off"
+                        placeholder="https://mcp.composio.dev/…"
+                        disabled={add.isPending}
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+            <Button type="submit" variant="outline" disabled={add.isPending}>
+              {add.isPending ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Connecting…
+                </>
+              ) : (
+                <>
+                  <Plus className="mr-2 h-4 w-4" />
+                  Add server
+                </>
+              )}
+            </Button>
+          </form>
+        </Form>
       </CardContent>
     </Card>
   );

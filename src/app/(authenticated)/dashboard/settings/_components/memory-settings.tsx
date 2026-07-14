@@ -14,16 +14,25 @@ import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
 import { Skeleton } from "~/components/ui/skeleton";
 import { trpcToastOnError } from "~/components/core/toast-notifications";
+import { ErrorDisplay } from "~/components/core/error-display";
+import { AlertDialog } from "~/components/core/confirm-dialog";
 
 export function MemorySettings() {
   const utils = trpc.useUtils();
-  const { data, isLoading, hasNextPage, fetchNextPage, isFetchingNextPage } =
-    trpc.trustclaw.getMemories.useInfiniteQuery(
-      { limit: 50 },
-      {
-        getNextPageParam: (lastPage) => lastPage.nextCursor,
-      },
-    );
+  const {
+    data,
+    isLoading,
+    error,
+    refetch,
+    hasNextPage,
+    fetchNextPage,
+    isFetchingNextPage,
+  } = trpc.trustclaw.getMemories.useInfiniteQuery(
+    { limit: 50 },
+    {
+      getNextPageParam: (lastPage) => lastPage.nextCursor,
+    },
+  );
 
   const memories = data?.pages.flatMap((page) => page.items) ?? [];
 
@@ -48,6 +57,12 @@ export function MemorySettings() {
             <Skeleton className="h-12 w-full" />
             <Skeleton className="h-12 w-full" />
           </div>
+        ) : error ? (
+          <ErrorDisplay
+            message="Failed to load memories"
+            retryText="Try again"
+            onRetry={() => void refetch()}
+          />
         ) : memories.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-8">
             <Brain className="text-muted-foreground mb-2 h-8 w-8" />
@@ -74,18 +89,26 @@ export function MemorySettings() {
                       </span>
                     </div>
                   </div>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="text-muted-foreground hover:text-destructive h-7 w-7 shrink-0"
-                    onClick={() =>
-                      void deleteMemory.mutateAsync({ id: memory.id })
+                  <AlertDialog
+                    title="Delete this memory?"
+                    description={`"${memory.content.length > 120 ? `${memory.content.slice(0, 120)}...` : memory.content}" will be permanently forgotten. This can't be undone.`}
+                    confirmLabel="Delete"
+                    onConfirm={async () => {
+                      await deleteMemory.mutateAsync({ id: memory.id });
+                    }}
+                    isPending={deleteMemory.isPending}
+                    trigger={
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="text-muted-foreground hover:text-destructive h-7 w-7 shrink-0"
+                        disabled={deleteMemory.isPending}
+                        aria-label="Delete memory"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
                     }
-                    disabled={deleteMemory.isPending}
-                    aria-label="Delete memory"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
+                  />
                 </li>
               ))}
             </ul>

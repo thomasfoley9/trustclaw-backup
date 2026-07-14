@@ -58,7 +58,11 @@ export function ModelSettings({
   );
 
   const utils = trpc.useUtils();
-  const { data: customData } = trpc.trustclaw.getCustomModels.useQuery();
+  const {
+    data: customData,
+    error: customError,
+    refetch: refetchCustom,
+  } = trpc.trustclaw.getCustomModels.useQuery();
   const customModels = customData?.models ?? [];
 
   const updateSettings = trpc.trustclaw.updateSettings.useMutation({
@@ -129,6 +133,23 @@ export function ModelSettings({
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-5">
+        {customError && (
+          // Without this, a failed fetch silently drops the Custom group and
+          // the pickers look like you have no custom models.
+          <div className="flex items-center gap-2 text-sm">
+            <span className="text-destructive">
+              Couldn&apos;t load your custom models.
+            </span>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => void refetchCustom()}
+            >
+              Try again
+            </Button>
+          </div>
+        )}
         <div className="space-y-2">
           <Label>Main model - chat, work &amp; tools</Label>
           <Select value={selectedB} onValueChange={setSelectedB}>

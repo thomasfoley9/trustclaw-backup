@@ -1,6 +1,9 @@
 "use client";
 
 import { useState } from "react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import type { z } from "zod";
 import { Pencil, Plus, Trash2, FolderTree, Loader2 } from "lucide-react";
 import { trpc } from "~/clients/trpc";
 import { Button } from "~/components/ui/button";
@@ -8,7 +11,6 @@ import { Badge } from "~/components/ui/badge";
 import { Input } from "~/components/ui/input";
 import { Textarea } from "~/components/ui/textarea";
 import { Switch } from "~/components/ui/switch";
-import { Label } from "~/components/ui/label";
 import {
   Card,
   CardContent,
@@ -35,27 +37,47 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "~/components/ui/alert-dialog";
+import {
+  Form,
+  FormControl,
+  FormDescription,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "~/components/ui/form";
 import { Skeleton } from "~/components/ui/skeleton";
 import {
   showSuccessToast,
   showTrpcErrorToast,
   trpcToastOnError,
 } from "~/components/core/toast-notifications";
+import { ErrorDisplay } from "~/components/core/error-display";
+import {
+  createBucketInput,
+  type CreateBucketInput,
+} from "~/server/api/routers/trustclaw/createBucket.schema";
 import type { RouterOutputs } from "~/clients/trpc";
 
 type Bucket = RouterOutputs["trustclaw"]["getBuckets"]["buckets"][number];
+// alwaysInject carries a Zod default, so the form's raw (input) type differs
+// from the parsed (output) type handleSubmit delivers.
+type CreateBucketFormInput = z.input<typeof createBucketInput>;
 
 const DEFAULT_SLUG = "general";
 
 export function KnowledgeBucketsSettings() {
   const utils = trpc.useUtils();
-  const { data, isLoading } = trpc.trustclaw.getBuckets.useQuery();
+  const { data, isLoading, error, refetch } =
+    trpc.trustclaw.getBuckets.useQuery();
 
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<Bucket | null>(null);
-  const [label, setLabel] = useState("");
-  const [description, setDescription] = useState("");
-  const [alwaysInject, setAlwaysInject] = useState(false);
+
+  const form = useForm<CreateBucketFormInput, unknown, CreateBucketInput>({
+    resolver: zodResolver(createBucketInput),
+    defaultValues: { label: "", description: "", alwaysInject: false },
+  });
 
   // Bucket changes ripple beyond the list: the server can reassign the active
   // bucket (navbar selector) and recategorize memories (list badges).
@@ -78,35 +100,37 @@ export function KnowledgeBucketsSettings() {
 
   const openCreate = () => {
     setEditing(null);
-    setLabel("");
-    setDescription("");
-    setAlwaysInject(false);
+    form.reset({ label: "", description: "", alwaysInject: false });
     setDialogOpen(true);
   };
 
   const openEdit = (bucket: Bucket) => {
     setEditing(bucket);
-    setLabel(bucket.label);
-    setDescription(bucket.description ?? "");
-    setAlwaysInject(bucket.alwaysInject);
+    form.reset({
+      label: bucket.label,
+      description: bucket.description ?? "",
+      alwaysInject: bucket.alwaysInject,
+    });
     setDialogOpen(true);
   };
 
-  const handleSave = async () => {
+  const onSubmit = async (values: CreateBucketInput) => {
     try {
       if (editing) {
         await updateMutation.mutateAsync({
           id: editing.id,
-          label,
-          description: description.trim() || null,
-          alwaysInject,
+          label: values.label,
+          description: values.description?.length ? values.description : null,
+          alwaysInject: values.alwaysInject,
         });
         showSuccessToast("Bucket updated");
       } else {
         await createMutation.mutateAsync({
-          label,
-          description: description.trim() || undefined,
-          alwaysInject,
+          label: values.label,
+          description: values.description?.length
+            ? values.description
+            : undefined,
+          alwaysInject: values.alwaysInject,
         });
         showSuccessToast("Bucket created");
       }
@@ -117,7 +141,6 @@ export function KnowledgeBucketsSettings() {
   };
 
   const saving = createMutation.isPending || updateMutation.isPending;
-  const canSave = label.trim().length > 0;
 
   return (
     <Card>
@@ -141,6 +164,12 @@ export function KnowledgeBucketsSettings() {
             <Skeleton className="h-14 w-full" />
             <Skeleton className="h-14 w-full" />
           </div>
+        ) : error ? (
+          <ErrorDisplay
+            message="Failed to load knowledge buckets"
+            retryText="Try again"
+            onRetry={() => void refetch()}
+          />
         ) : !data || data.buckets.length === 0 ? (
           <p className="text-muted-foreground text-sm">No buckets yet.</p>
         ) : (
@@ -230,49 +259,82 @@ export function KnowledgeBucketsSettings() {
               for curated knowledge the agent should use in every reply.
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-3">
-            <Input
-              placeholder="Name (e.g. Competitors, Onboarding)"
-              value={label}
-              onChange={(e) => setLabel(e.target.value)}
-              maxLength={40}
-            />
-            <Textarea
-              placeholder="What goes in this bucket? (optional)"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              rows={3}
-              maxLength={200}
-            />
-            <div className="flex items-center justify-between gap-3">
-              <div className="space-y-0.5">
-                <Label className="text-sm">Always inject</Label>
-                <p className="text-muted-foreground text-xs">
-                  Add this bucket&apos;s memories to every reply, like a skill.
-                </p>
-              </div>
-              <Switch
-                checked={alwaysInject}
-                onCheckedChange={setAlwaysInject}
+          <Form {...form}>
+            <form
+              onSubmit={(e) => void form.handleSubmit(onSubmit)(e)}
+              className="space-y-3"
+            >
+              <FormField
+                control={form.control}
+                name="label"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormControl>
+                      <Input
+                        placeholder="Name (e.g. Competitors, Onboarding)"
+                        maxLength={40}
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
               />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button
-              variant="ghost"
-              onClick={() => setDialogOpen(false)}
-              disabled={saving}
-            >
-              Cancel
-            </Button>
-            <Button
-              onClick={() => void handleSave()}
-              disabled={!canSave || saving}
-            >
-              {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              {editing ? "Save" : "Create"}
-            </Button>
-          </DialogFooter>
+              <FormField
+                control={form.control}
+                name="description"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormControl>
+                      <Textarea
+                        placeholder="What goes in this bucket? (optional)"
+                        rows={3}
+                        maxLength={200}
+                        {...field}
+                        value={field.value ?? ""}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="alwaysInject"
+                render={({ field }) => (
+                  <FormItem className="flex flex-row items-center justify-between gap-3 space-y-0">
+                    <div className="space-y-0.5">
+                      <FormLabel className="text-sm">Always inject</FormLabel>
+                      <FormDescription className="text-xs">
+                        Add this bucket&apos;s memories to every reply, like a
+                        skill.
+                      </FormDescription>
+                    </div>
+                    <FormControl>
+                      <Switch
+                        checked={field.value ?? false}
+                        onCheckedChange={field.onChange}
+                      />
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
+              <DialogFooter>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  onClick={() => setDialogOpen(false)}
+                  disabled={saving}
+                >
+                  Cancel
+                </Button>
+                <Button type="submit" disabled={saving}>
+                  {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  {editing ? "Save" : "Create"}
+                </Button>
+              </DialogFooter>
+            </form>
+          </Form>
         </DialogContent>
       </Dialog>
     </Card>

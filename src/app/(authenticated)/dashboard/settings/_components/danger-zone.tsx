@@ -47,8 +47,10 @@ export function DangerZone() {
           <div>
             <p className="text-sm font-medium">Delete Claw Instance</p>
             <p className="text-muted-foreground text-sm">
-              Permanently deletes your instance, all messages, memories, and
-              cron jobs.
+              Permanently deletes your instance and everything in it:
+              conversations and messages, memories and knowledge buckets,
+              scheduled tasks, personalities, skills, custom models and their
+              stored keys, MCP servers, and generated images.
             </p>
           </div>
           <Dialog
@@ -69,8 +71,10 @@ export function DangerZone() {
               <DialogHeader>
                 <DialogTitle>Delete Claw Instance</DialogTitle>
                 <DialogDescription>
-                  This action cannot be undone. All messages, memories, cron
-                  jobs, and settings will be permanently deleted.
+                  This action cannot be undone. All conversations, messages,
+                  memories, knowledge buckets, scheduled tasks, personalities,
+                  skills, custom models and their stored keys, MCP servers,
+                  generated images, and settings will be permanently deleted.
                 </DialogDescription>
               </DialogHeader>
               <div className="space-y-2 py-4">

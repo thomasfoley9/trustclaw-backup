@@ -1,12 +1,15 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { Loader2, Unplug } from "lucide-react";
 import { Button } from "~/components/ui/button";
 import { trpc } from "~/clients/trpc";
 import {
+  showSuccessToast,
   trpcToastOnError,
 } from "~/components/core/toast-notifications";
+import { AlertDialog } from "~/components/core/confirm-dialog";
+import { useToolkitConnect } from "./use-toolkit-connect";
 import type { RouterOutputs } from "~/clients/trpc";
 
 type ToolkitItem = RouterOutputs["toolkits"]["getToolkits"]["items"][number];
@@ -17,12 +20,19 @@ interface ToolkitCardProps {
 
 export function ToolkitCard({ toolkit }: ToolkitCardProps) {
   const [logoLoaded, setLogoLoaded] = useState(false);
-  const router = useRouter();
 
   const utils = trpc.useUtils();
-  const getAuthLink = trpc.toolkits.getAuthLink.useMutation({
+  const { connect, isMinting, isWaiting } = useToolkitConnect(
+    toolkit.slug,
+    toolkit.name,
+  );
+
+  const disconnect = trpc.toolkits.disconnect.useMutation({
+    onSuccess: () => {
+      showSuccessToast(`${toolkit.name} disconnected`);
+      void utils.toolkits.getToolkits.invalidate();
+    },
     onError: trpcToastOnError,
-    onSuccess: () => void utils.toolkits.getToolkits.invalidate(),
   });
 
   const isConnected = toolkit.connected || toolkit.noAuth;
@@ -31,19 +41,6 @@ export function ToolkitCard({ toolkit }: ToolkitCardProps) {
     : toolkit.noAuth
       ? "Active"
       : null;
-
-  const handleConnect = async (e: React.MouseEvent) => {
-    e.stopPropagation();
-
-    try {
-      const { redirectUrl } = await getAuthLink.mutateAsync({
-        toolkit: toolkit.slug,
-      });
-      router.push(redirectUrl);
-    } catch {
-      // trpcToastOnError already handles the toast
-    }
-  };
 
   return (
     <article
@@ -74,20 +71,66 @@ export function ToolkitCard({ toolkit }: ToolkitCardProps) {
 
         {/* Card content */}
         <div className="relative z-[2] flex h-full flex-col items-center justify-center gap-1.5 p-4 pt-10">
-          {/* Top-right: status badge or connect button */}
-          <div className="absolute right-3 top-3 z-[1]">
+          {/* Top-right: status badge (+ disconnect) or connect button */}
+          <div className="absolute right-3 top-3 z-[1] flex items-center gap-1">
             {isConnected ? (
-              <span className="bg-chart-2/15 text-chart-2 rounded-full px-2 py-0.5 text-xs font-medium">
-                {statusLabel}
-              </span>
+              <>
+                <span className="bg-chart-2/15 text-chart-2 rounded-full px-2 py-0.5 text-xs font-medium">
+                  {statusLabel}
+                </span>
+                {/* noAuth toolkits have no connected account to remove */}
+                {toolkit.connected && (
+                  <AlertDialog
+                    title={`Disconnect ${toolkit.name}?`}
+                    description={`Your agent immediately loses access to ${toolkit.name} and the stored authorization is revoked. You can reconnect any time.`}
+                    confirmLabel="Disconnect"
+                    onConfirm={async () => {
+                      await disconnect
+                        .mutateAsync({ toolkit: toolkit.slug })
+                        .catch(() => undefined);
+                    }}
+                    isPending={disconnect.isPending}
+                    trigger={
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="text-muted-foreground hover:text-destructive h-6 w-6"
+                        disabled={disconnect.isPending}
+                        aria-label={`Disconnect ${toolkit.name}`}
+                        title={`Disconnect ${toolkit.name}`}
+                      >
+                        {disconnect.isPending ? (
+                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                        ) : (
+                          <Unplug className="h-3.5 w-3.5" />
+                        )}
+                      </Button>
+                    }
+                  />
+                )}
+              </>
+            ) : isWaiting ? (
+              <Button
+                size="sm"
+                variant="ghost"
+                className="text-muted-foreground h-7 px-2 text-xs"
+                onClick={() => void connect()}
+                title="Reopen the connection window"
+              >
+                <Loader2 className="mr-1 h-3 w-3 animate-spin" />
+                Waiting...
+              </Button>
             ) : (
               <Button
                 size="sm"
                 className="h-7 px-2.5 text-xs transition-all duration-200 group-hover:scale-105 group-hover:shadow-md"
-                onClick={handleConnect}
-                disabled={getAuthLink.isPending}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  void connect();
+                }}
+                disabled={isMinting}
               >
-                {getAuthLink.isPending ? "Connecting..." : "Connect"}
+                {isMinting ? "Connecting..." : "Connect"}
               </Button>
             )}
           </div>

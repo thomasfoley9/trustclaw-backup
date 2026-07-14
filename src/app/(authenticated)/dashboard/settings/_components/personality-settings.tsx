@@ -1,6 +1,8 @@
 "use client";
 
 import { useState } from "react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 import { Check, Pencil, Plus, Trash2, Drama, Loader2 } from "lucide-react";
 import { trpc } from "~/clients/trpc";
 import { Button } from "~/components/ui/button";
@@ -33,6 +35,13 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "~/components/ui/alert-dialog";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormMessage,
+} from "~/components/ui/form";
 import { Skeleton } from "~/components/ui/skeleton";
 import { cn } from "~/lib/utils";
 import {
@@ -40,6 +49,7 @@ import {
   showTrpcErrorToast,
   trpcToastOnError,
 } from "~/components/core/toast-notifications";
+import { ErrorDisplay } from "~/components/core/error-display";
 import {
   PersonalityAvatar,
   PERSONALITY_AVATARS,
@@ -50,6 +60,10 @@ import {
   buildPersonaPrompt,
   type StarterPersonality,
 } from "~/server/api/routers/trustclaw/personalities";
+import {
+  createPersonalityInput,
+  type CreatePersonalityInput,
+} from "~/server/api/routers/trustclaw/createPersonality.schema";
 import type { RouterOutputs } from "~/clients/trpc";
 
 type Personality =
@@ -62,13 +76,17 @@ function randomAvatarKey(): string {
 
 export function PersonalitySettings() {
   const utils = trpc.useUtils();
-  const { data, isLoading } = trpc.trustclaw.getPersonalities.useQuery();
+  const { data, isLoading, error, refetch } =
+    trpc.trustclaw.getPersonalities.useQuery();
 
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<Personality | null>(null);
-  const [name, setName] = useState("");
-  const [avatarKey, setAvatarKey] = useState<string>(DEFAULT_AVATAR_KEY);
-  const [prompt, setPrompt] = useState("");
+
+  const form = useForm<CreatePersonalityInput>({
+    resolver: zodResolver(createPersonalityInput),
+    defaultValues: { name: "", prompt: "", avatarKey: DEFAULT_AVATAR_KEY },
+  });
+  const avatarKey = form.watch("avatarKey") ?? DEFAULT_AVATAR_KEY;
 
   const invalidate = () => void utils.trustclaw.getPersonalities.invalidate();
 
@@ -89,17 +107,17 @@ export function PersonalitySettings() {
 
   const openCreate = () => {
     setEditing(null);
-    setName("");
-    setAvatarKey(randomAvatarKey());
-    setPrompt("");
+    form.reset({ name: "", prompt: "", avatarKey: randomAvatarKey() });
     setDialogOpen(true);
   };
 
   const openEdit = (personality: Personality) => {
     setEditing(personality);
-    setName(personality.name);
-    setAvatarKey(personality.avatarKey ?? DEFAULT_AVATAR_KEY);
-    setPrompt(personality.prompt);
+    form.reset({
+      name: personality.name,
+      prompt: personality.prompt,
+      avatarKey: personality.avatarKey ?? DEFAULT_AVATAR_KEY,
+    });
     setDialogOpen(true);
   };
 
@@ -115,28 +133,26 @@ export function PersonalitySettings() {
     for (let i = 2; taken.has(candidate.toLowerCase()) && i < 100; i++) {
       candidate = `${t.name} ${i}`;
     }
-    setName(candidate);
-    setAvatarKey(t.avatarKey);
-    setPrompt(buildPersonaPrompt(t.voice));
+    form.reset({
+      name: candidate,
+      prompt: buildPersonaPrompt(t.voice),
+      avatarKey: t.avatarKey,
+    });
   };
 
-  const handleSave = async () => {
+  const onSubmit = async (values: CreatePersonalityInput) => {
     try {
       if (editing) {
         await updateMutation.mutateAsync({
           id: editing.id,
-          name,
-          prompt,
-          avatarKey,
+          name: values.name,
+          prompt: values.prompt,
+          avatarKey: values.avatarKey,
           emoji: null,
         });
         showSuccessToast("Personality updated");
       } else {
-        await createMutation.mutateAsync({
-          name,
-          prompt,
-          avatarKey,
-        });
+        await createMutation.mutateAsync(values);
         showSuccessToast("Personality created");
       }
       setDialogOpen(false);
@@ -146,7 +162,6 @@ export function PersonalitySettings() {
   };
 
   const saving = createMutation.isPending || updateMutation.isPending;
-  const canSave = name.trim().length > 0 && prompt.trim().length > 0;
 
   return (
     <Card>
@@ -170,6 +185,12 @@ export function PersonalitySettings() {
             <Skeleton className="h-14 w-full" />
             <Skeleton className="h-14 w-full" />
           </div>
+        ) : error ? (
+          <ErrorDisplay
+            message="Failed to load personalities"
+            retryText="Try again"
+            onRetry={() => void refetch()}
+          />
         ) : !data || data.personalities.length === 0 ? (
           <p className="text-muted-foreground text-sm">
             No personalities yet. Create one to get started.
@@ -281,87 +302,123 @@ export function PersonalitySettings() {
               always enforced regardless of personality.
             </DialogDescription>
           </DialogHeader>
-          <div className="max-h-[70vh] space-y-3 overflow-y-auto pr-1">
-            {!editing && (
-              <div className="space-y-1.5">
-                <p className="text-muted-foreground text-xs font-medium">
-                  Start from a template{" "}
-                  <span className="font-normal">(optional - edit anything after)</span>
-                </p>
-                <div className="flex gap-2 overflow-x-auto pb-1">
-                  {STARTER_PERSONALITIES.map((t) => (
-                    <button
-                      key={t.key}
-                      type="button"
-                      title={t.blurb}
-                      onClick={() => applyTemplate(t)}
-                      className="border-border hover:border-primary/50 hover:bg-accent flex w-28 shrink-0 flex-col items-center gap-1 rounded-md border p-2 text-center transition-colors"
-                    >
-                      <PersonalityAvatar
-                        avatarKey={t.avatarKey}
-                        size={32}
-                        fallback={false}
-                      />
-                      <span className="text-foreground text-xs leading-tight font-medium">
-                        {t.name}
+          <Form {...form}>
+            <form onSubmit={(e) => void form.handleSubmit(onSubmit)(e)}>
+              <div className="max-h-[70vh] space-y-3 overflow-y-auto pr-1">
+                {!editing && (
+                  <div className="space-y-1.5">
+                    <p className="text-muted-foreground text-xs font-medium">
+                      Start from a template{" "}
+                      <span className="font-normal">
+                        (optional - edit anything after)
                       </span>
-                      <span className="text-muted-foreground line-clamp-2 text-[10px] leading-tight">
-                        {t.blurb}
-                      </span>
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-            <div className="flex items-center gap-3">
-              <PersonalityAvatar avatarKey={avatarKey} size={44} />
-              <Input
-                placeholder="Name (e.g. Acme Corp, Unhinged)"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                className="flex-1"
-              />
-            </div>
-            <div className="space-y-1.5">
-              <p className="text-muted-foreground text-xs font-medium">Avatar</p>
-              <div className="grid max-h-60 grid-cols-5 gap-1 overflow-y-auto rounded-md border p-2 sm:grid-cols-8 md:grid-cols-10">
-                {PERSONALITY_AVATARS.map((a) => (
-                  <button
-                    key={a.key}
-                    type="button"
-                    title={a.label}
-                    aria-label={a.label}
-                    onClick={() => setAvatarKey(a.key)}
-                    className={cn(
-                      "flex items-center justify-center rounded-md p-1 transition-colors hover:bg-accent",
-                      avatarKey === a.key && "bg-accent ring-ring ring-2",
+                    </p>
+                    <div className="flex gap-2 overflow-x-auto pb-1">
+                      {STARTER_PERSONALITIES.map((t) => (
+                        <button
+                          key={t.key}
+                          type="button"
+                          title={t.blurb}
+                          onClick={() => applyTemplate(t)}
+                          className="border-border hover:border-primary/50 hover:bg-accent flex w-28 shrink-0 flex-col items-center gap-1 rounded-md border p-2 text-center transition-colors"
+                        >
+                          <PersonalityAvatar
+                            avatarKey={t.avatarKey}
+                            size={32}
+                            fallback={false}
+                          />
+                          <span className="text-foreground text-xs leading-tight font-medium">
+                            {t.name}
+                          </span>
+                          <span className="text-muted-foreground line-clamp-2 text-[10px] leading-tight">
+                            {t.blurb}
+                          </span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                <div className="flex items-start gap-3">
+                  <PersonalityAvatar avatarKey={avatarKey} size={44} />
+                  <FormField
+                    control={form.control}
+                    name="name"
+                    render={({ field }) => (
+                      <FormItem className="flex-1">
+                        <FormControl>
+                          <Input
+                            placeholder="Name (e.g. Acme Corp, Unhinged)"
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
                     )}
-                  >
-                    <PersonalityAvatar avatarKey={a.key} size={30} fallback={false} />
-                  </button>
-                ))}
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <p className="text-muted-foreground text-xs font-medium">
+                    Avatar
+                  </p>
+                  <div className="grid max-h-60 grid-cols-5 gap-1 overflow-y-auto rounded-md border p-2 sm:grid-cols-8 md:grid-cols-10">
+                    {PERSONALITY_AVATARS.map((a) => (
+                      <button
+                        key={a.key}
+                        type="button"
+                        title={a.label}
+                        aria-label={a.label}
+                        onClick={() =>
+                          form.setValue("avatarKey", a.key, {
+                            shouldDirty: true,
+                          })
+                        }
+                        className={cn(
+                          "flex items-center justify-center rounded-md p-1 transition-colors hover:bg-accent",
+                          avatarKey === a.key && "bg-accent ring-ring ring-2",
+                        )}
+                      >
+                        <PersonalityAvatar
+                          avatarKey={a.key}
+                          size={30}
+                          fallback={false}
+                        />
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <FormField
+                  control={form.control}
+                  name="prompt"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormControl>
+                        <Textarea
+                          placeholder="Describe how the agent should talk and behave..."
+                          rows={9}
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
               </div>
-            </div>
-            <Textarea
-              placeholder="Describe how the agent should talk and behave..."
-              value={prompt}
-              onChange={(e) => setPrompt(e.target.value)}
-              rows={9}
-            />
-          </div>
-          <DialogFooter>
-            <Button
-              variant="ghost"
-              onClick={() => setDialogOpen(false)}
-              disabled={saving}
-            >
-              Cancel
-            </Button>
-            <Button onClick={() => void handleSave()} disabled={!canSave || saving}>
-              {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              {editing ? "Save" : "Create"}
-            </Button>
-          </DialogFooter>
+              <DialogFooter className="mt-4">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  onClick={() => setDialogOpen(false)}
+                  disabled={saving}
+                >
+                  Cancel
+                </Button>
+                <Button type="submit" disabled={saving}>
+                  {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  {editing ? "Save" : "Create"}
+                </Button>
+              </DialogFooter>
+            </form>
+          </Form>
         </DialogContent>
       </Dialog>
     </Card>

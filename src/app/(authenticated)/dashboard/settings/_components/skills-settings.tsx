@@ -1,6 +1,8 @@
 "use client";
 
 import { useState } from "react";
+import { useFieldArray, useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 import { Plus, Pencil, Trash2, Sparkles, Wrench, X, Loader2 } from "lucide-react";
 import { trpc } from "~/clients/trpc";
 import { Button } from "~/components/ui/button";
@@ -33,30 +35,56 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "~/components/ui/alert-dialog";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "~/components/ui/form";
 import { Skeleton } from "~/components/ui/skeleton";
 import {
   showSuccessToast,
   showTrpcErrorToast,
   trpcToastOnError,
 } from "~/components/core/toast-notifications";
+import { ErrorDisplay } from "~/components/core/error-display";
 import { SkillCreatorDialog } from "./skill-creator-dialog";
+import {
+  createSkillInput,
+  type CreateSkillInput,
+} from "~/server/api/routers/trustclaw/createSkill.schema";
 import type { RouterOutputs } from "~/clients/trpc";
 import type { SkillDraft } from "~/server/api/routers/trustclaw/generateSkill.schema";
 
 type Skill = RouterOutputs["trustclaw"]["getSkills"]["skills"][number];
-type RequiredInput = { name: string; description: string };
+
+const EMPTY_SKILL: CreateSkillInput = {
+  name: "",
+  whenToUse: "",
+  instructions: [""],
+  requiredInputs: [],
+};
 
 export function SkillsSettings() {
   const utils = trpc.useUtils();
-  const { data, isLoading } = trpc.trustclaw.getSkills.useQuery();
+  const { data, isLoading, error, refetch } =
+    trpc.trustclaw.getSkills.useQuery();
 
   const [editorOpen, setEditorOpen] = useState(false);
   const [creatorOpen, setCreatorOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [name, setName] = useState("");
-  const [whenToUse, setWhenToUse] = useState("");
-  const [instructions, setInstructions] = useState<string[]>([""]);
-  const [requiredInputs, setRequiredInputs] = useState<RequiredInput[]>([]);
+
+  const form = useForm<CreateSkillInput>({
+    resolver: zodResolver(createSkillInput),
+    defaultValues: EMPTY_SKILL,
+  });
+  const instructions = form.watch("instructions");
+  const requiredInputsArray = useFieldArray({
+    control: form.control,
+    name: "requiredInputs",
+  });
 
   const invalidate = () => void utils.trustclaw.getSkills.invalidate();
 
@@ -75,56 +103,37 @@ export function SkillsSettings() {
     onSuccess: invalidate,
   });
 
-  const loadFields = (s: {
-    name: string;
-    whenToUse: string;
-    instructions: string[];
-    requiredInputs: RequiredInput[];
-  }) => {
-    setName(s.name);
-    setWhenToUse(s.whenToUse);
-    setInstructions(s.instructions.length > 0 ? s.instructions : [""]);
-    setRequiredInputs(s.requiredInputs);
-  };
-
   const openCreate = () => {
     setEditingId(null);
-    loadFields({ name: "", whenToUse: "", instructions: [""], requiredInputs: [] });
+    form.reset(EMPTY_SKILL);
     setEditorOpen(true);
   };
   const openEdit = (s: Skill) => {
     setEditingId(s.id);
-    loadFields(s);
+    form.reset({
+      name: s.name,
+      whenToUse: s.whenToUse,
+      instructions: s.instructions.length > 0 ? s.instructions : [""],
+      requiredInputs: s.requiredInputs,
+    });
     setEditorOpen(true);
   };
   const openFromDraft = (draft: SkillDraft) => {
     setEditingId(null);
-    loadFields(draft);
+    form.reset({
+      ...draft,
+      instructions: draft.instructions.length > 0 ? draft.instructions : [""],
+    });
     setEditorOpen(true);
   };
 
-  const handleSave = async () => {
-    const cleanInstructions = instructions.map((i) => i.trim()).filter(Boolean);
-    const cleanInputs = requiredInputs
-      .map((r) => ({ name: r.name.trim(), description: r.description.trim() }))
-      .filter((r) => r.name && r.description);
+  const onSubmit = async (values: CreateSkillInput) => {
     try {
       if (editingId) {
-        await updateMutation.mutateAsync({
-          id: editingId,
-          name,
-          whenToUse,
-          instructions: cleanInstructions,
-          requiredInputs: cleanInputs,
-        });
+        await updateMutation.mutateAsync({ id: editingId, ...values });
         showSuccessToast("Skill updated");
       } else {
-        await createMutation.mutateAsync({
-          name,
-          whenToUse,
-          instructions: cleanInstructions,
-          requiredInputs: cleanInputs,
-        });
+        await createMutation.mutateAsync(values);
         showSuccessToast("Skill created");
       }
       setEditorOpen(false);
@@ -133,17 +142,31 @@ export function SkillsSettings() {
     }
   };
 
+  // Blank rows are a UI affordance, not user intent - prune fully-empty step
+  // and input rows before validating so they don't block the save. Rows with
+  // only one side filled are kept so the field-level message points at them.
+  const handleFormSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    const values = form.getValues();
+    const keptInstructions = values.instructions.filter(
+      (i) => i.trim().length > 0,
+    );
+    if (keptInstructions.length !== values.instructions.length) {
+      form.setValue(
+        "instructions",
+        keptInstructions.length > 0 ? keptInstructions : [""],
+      );
+    }
+    const keptInputs = values.requiredInputs.filter(
+      (r) => r.name.trim().length > 0 || r.description.trim().length > 0,
+    );
+    if (keptInputs.length !== values.requiredInputs.length) {
+      requiredInputsArray.replace(keptInputs);
+    }
+    void form.handleSubmit(onSubmit)(e);
+  };
+
   const saving = createMutation.isPending || updateMutation.isPending;
-  const validInstructions = instructions.some((i) => i.trim().length > 0);
-  // A half-filled input row would be silently dropped on save - block instead.
-  const hasPartialInput = requiredInputs.some(
-    (r) => (r.name.trim().length > 0) !== (r.description.trim().length > 0),
-  );
-  const canSave =
-    name.trim().length > 0 &&
-    whenToUse.trim().length > 0 &&
-    validInstructions &&
-    !hasPartialInput;
 
   return (
     <Card>
@@ -172,6 +195,12 @@ export function SkillsSettings() {
             <Skeleton className="h-14 w-full" />
             <Skeleton className="h-14 w-full" />
           </div>
+        ) : error ? (
+          <ErrorDisplay
+            message="Failed to load skills"
+            retryText="Try again"
+            onRetry={() => void refetch()}
+          />
         ) : !data || data.skills.length === 0 ? (
           <p className="text-muted-foreground text-sm">
             No skills yet. Describe one and the agent will draft it.
@@ -262,147 +291,178 @@ export function SkillsSettings() {
               before running the steps.
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-4">
-            <div className="space-y-1.5">
-              <Label>Name</Label>
-              <Input
-                placeholder="Draft a contract"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                maxLength={60}
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label>When to use</Label>
-              <Input
-                placeholder="When the user asks to create a new contract"
-                value={whenToUse}
-                onChange={(e) => setWhenToUse(e.target.value)}
-                maxLength={300}
-              />
-            </div>
+          <Form {...form}>
+            <form onSubmit={handleFormSubmit}>
+              <div className="space-y-4">
+                <FormField
+                  control={form.control}
+                  name="name"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Name</FormLabel>
+                      <FormControl>
+                        <Input
+                          placeholder="Draft a contract"
+                          maxLength={60}
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="whenToUse"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>When to use</FormLabel>
+                      <FormControl>
+                        <Input
+                          placeholder="When the user asks to create a new contract"
+                          maxLength={300}
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
 
-            <div className="space-y-1.5">
-              <Label>Steps</Label>
-              {instructions.map((step, i) => (
-                <div key={i} className="flex items-center gap-2">
-                  <span className="text-muted-foreground w-4 text-xs">
-                    {i + 1}.
-                  </span>
-                  <Input
-                    value={step}
-                    onChange={(e) =>
-                      setInstructions((prev) =>
-                        prev.map((s, idx) => (idx === i ? e.target.value : s)),
-                      )
-                    }
-                    placeholder="Describe a step…"
-                    maxLength={1000}
-                  />
+                <div className="space-y-1.5">
+                  <Label>Steps</Label>
+                  {instructions.map((_, i) => (
+                    <div key={i} className="flex items-start gap-2">
+                      <span className="text-muted-foreground w-4 pt-2 text-xs">
+                        {i + 1}.
+                      </span>
+                      <FormField
+                        control={form.control}
+                        name={`instructions.${i}`}
+                        render={({ field }) => (
+                          <FormItem className="flex-1">
+                            <FormControl>
+                              <Input
+                                placeholder="Describe a step…"
+                                maxLength={1000}
+                                {...field}
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <Button
+                        type="button"
+                        size="icon"
+                        variant="ghost"
+                        className="h-8 w-8 shrink-0"
+                        aria-label={`Remove step ${i + 1}`}
+                        onClick={() => {
+                          const current = form.getValues("instructions");
+                          if (current.length > 1) {
+                            form.setValue(
+                              "instructions",
+                              current.filter((_, idx) => idx !== i),
+                            );
+                          }
+                        }}
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  ))}
                   <Button
                     type="button"
-                    size="icon"
+                    size="sm"
                     variant="ghost"
-                    className="h-8 w-8 shrink-0"
                     onClick={() =>
-                      setInstructions((prev) =>
-                        prev.length > 1
-                          ? prev.filter((_, idx) => idx !== i)
-                          : prev,
-                      )
+                      form.setValue("instructions", [
+                        ...form.getValues("instructions"),
+                        "",
+                      ])
                     }
                   >
-                    <X className="h-4 w-4" />
+                    <Plus className="h-4 w-4" /> Add step
                   </Button>
                 </div>
-              ))}
-              <Button
-                type="button"
-                size="sm"
-                variant="ghost"
-                onClick={() => setInstructions((prev) => [...prev, ""])}
-              >
-                <Plus className="h-4 w-4" /> Add step
-              </Button>
-            </div>
 
-            <div className="space-y-1.5">
-              <Label>Required inputs</Label>
-              {requiredInputs.map((inp, i) => (
-                <div key={i} className="flex items-center gap-2">
-                  <Input
-                    value={inp.name}
-                    onChange={(e) =>
-                      setRequiredInputs((prev) =>
-                        prev.map((r, idx) =>
-                          idx === i ? { ...r, name: e.target.value } : r,
-                        ),
-                      )
-                    }
-                    placeholder="Input name"
-                    className="w-1/3"
-                    maxLength={60}
-                  />
-                  <Input
-                    value={inp.description}
-                    onChange={(e) =>
-                      setRequiredInputs((prev) =>
-                        prev.map((r, idx) =>
-                          idx === i ? { ...r, description: e.target.value } : r,
-                        ),
-                      )
-                    }
-                    placeholder="What it is"
-                    maxLength={200}
-                  />
+                <div className="space-y-1.5">
+                  <Label>Required inputs</Label>
+                  {requiredInputsArray.fields.map((fieldItem, i) => (
+                    <div key={fieldItem.id} className="flex items-start gap-2">
+                      <FormField
+                        control={form.control}
+                        name={`requiredInputs.${i}.name`}
+                        render={({ field }) => (
+                          <FormItem className="w-1/3">
+                            <FormControl>
+                              <Input
+                                placeholder="Input name"
+                                maxLength={60}
+                                {...field}
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name={`requiredInputs.${i}.description`}
+                        render={({ field }) => (
+                          <FormItem className="flex-1">
+                            <FormControl>
+                              <Input
+                                placeholder="What it is"
+                                maxLength={200}
+                                {...field}
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <Button
+                        type="button"
+                        size="icon"
+                        variant="ghost"
+                        className="h-8 w-8 shrink-0"
+                        aria-label={`Remove input ${i + 1}`}
+                        onClick={() => requiredInputsArray.remove(i)}
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  ))}
                   <Button
                     type="button"
-                    size="icon"
+                    size="sm"
                     variant="ghost"
-                    className="h-8 w-8 shrink-0"
                     onClick={() =>
-                      setRequiredInputs((prev) =>
-                        prev.filter((_, idx) => idx !== i),
-                      )
+                      requiredInputsArray.append({ name: "", description: "" })
                     }
                   >
-                    <X className="h-4 w-4" />
+                    <Plus className="h-4 w-4" /> Add input
                   </Button>
                 </div>
-              ))}
-              {hasPartialInput && (
-                <p className="text-destructive text-xs">
-                  Fill both fields or remove the row.
-                </p>
-              )}
-              <Button
-                type="button"
-                size="sm"
-                variant="ghost"
-                onClick={() =>
-                  setRequiredInputs((prev) => [
-                    ...prev,
-                    { name: "", description: "" },
-                  ])
-                }
-              >
-                <Plus className="h-4 w-4" /> Add input
-              </Button>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button
-              variant="ghost"
-              onClick={() => setEditorOpen(false)}
-              disabled={saving}
-            >
-              Cancel
-            </Button>
-            <Button onClick={() => void handleSave()} disabled={!canSave || saving}>
-              {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              {editingId ? "Save" : "Create"}
-            </Button>
-          </DialogFooter>
+              </div>
+              <DialogFooter className="mt-4">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  onClick={() => setEditorOpen(false)}
+                  disabled={saving}
+                >
+                  Cancel
+                </Button>
+                <Button type="submit" disabled={saving}>
+                  {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  {editingId ? "Save" : "Create"}
+                </Button>
+              </DialogFooter>
+            </form>
+          </Form>
         </DialogContent>
       </Dialog>
     </Card>

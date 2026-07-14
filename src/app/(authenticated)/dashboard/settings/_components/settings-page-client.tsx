@@ -11,6 +11,7 @@ import { ComposioApiKeySettings } from "./composio-api-key-settings";
 import { AnthropicApiKeySettings } from "./anthropic-api-key-settings";
 import { VoiceSettings } from "./voice-settings";
 import { TelegramSettings } from "./telegram-settings";
+import { TimezoneSettings } from "./timezone-settings";
 import { CronJobsSettings } from "./cron-jobs-settings";
 import { MemorySettings } from "./memory-settings";
 import { KnowledgeBucketsSettings } from "./knowledge-buckets-settings";
@@ -105,6 +106,10 @@ export function SettingsPageClient() {
           <TelegramSettings />
         </ErrorBoundary>
       )}
+
+      <ErrorBoundary>
+        <TimezoneSettings currentTimezone={data?.timezone ?? "UTC"} />
+      </ErrorBoundary>
 
       <ErrorBoundary>
         <CronJobsSettings />

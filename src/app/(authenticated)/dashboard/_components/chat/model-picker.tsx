@@ -27,11 +27,22 @@ function shortLabel(modelId: string): string {
 // Cursor-style inline model switcher that lives at the bottom of the chat bar.
 export function ModelPicker() {
   const utils = trpc.useUtils();
-  const { data: instanceData } = trpc.trustclaw.getInstance.useQuery();
-  const { data: customData } = trpc.trustclaw.getCustomModels.useQuery();
+  const {
+    data: instanceData,
+    error: instanceError,
+    refetch: refetchInstance,
+  } = trpc.trustclaw.getInstance.useQuery();
+  const {
+    data: customData,
+    error: customError,
+    refetch: refetchCustom,
+  } = trpc.trustclaw.getCustomModels.useQuery();
   const current = instanceData?.instance?.anthropicModel ?? DEFAULT_MODEL;
   const customModels = customData?.models ?? [];
   const [open, setOpen] = useState(false);
+  // A failed fetch would otherwise show the default model as selected and an
+  // empty Custom section - indistinguishable from having none.
+  const loadError = instanceError ?? customError;
 
   const updateSettings = trpc.trustclaw.updateSettings.useMutation({
     // Cold-starting the heavy tRPC function can 503 at the Vercel edge even
@@ -91,6 +102,21 @@ export function ModelPicker() {
         side="top"
         className="max-h-[min(60vh,480px)] w-64 overflow-y-auto p-1"
       >
+        {loadError && (
+          <div className="flex items-center justify-between gap-2 px-2 py-1.5 text-xs">
+            <span className="text-destructive">Couldn&apos;t load models.</span>
+            <button
+              type="button"
+              className="text-primary hover:underline"
+              onClick={() => {
+                if (instanceError) void refetchInstance();
+                if (customError) void refetchCustom();
+              }}
+            >
+              Try again
+            </button>
+          </div>
+        )}
         <div className="text-muted-foreground px-2 py-1.5 text-xs font-semibold">
           Claude
         </div>

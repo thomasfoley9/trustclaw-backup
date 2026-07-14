@@ -1,11 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 import { Boxes, CheckCircle2, KeyRound, Loader2, Trash2 } from "lucide-react";
 import { trpc } from "~/clients/trpc";
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
-import { Label } from "~/components/ui/label";
 import { Badge } from "~/components/ui/badge";
 import {
   Card,
@@ -15,19 +15,35 @@ import {
   CardTitle,
 } from "~/components/ui/card";
 import {
+  Form,
+  FormControl,
+  FormDescription,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "~/components/ui/form";
+import {
   showSuccessToast,
   trpcToastOnError,
 } from "~/components/core/toast-notifications";
+import { ErrorDisplay } from "~/components/core/error-display";
 import { AlertDialog } from "~/components/core/confirm-dialog";
+import {
+  addCustomModelInput,
+  type AddCustomModelInput,
+} from "~/server/api/routers/trustclaw/addCustomModel.schema";
 
 export function CustomModelsSettings() {
   const utils = trpc.useUtils();
-  const { data, isLoading } = trpc.trustclaw.getCustomModels.useQuery();
+  const { data, isLoading, error, refetch } =
+    trpc.trustclaw.getCustomModels.useQuery();
   const models = data?.models ?? [];
 
-  const [modelId, setModelId] = useState("");
-  const [label, setLabel] = useState("");
-  const [apiKey, setApiKey] = useState("");
+  const form = useForm<AddCustomModelInput>({
+    resolver: zodResolver(addCustomModelInput),
+    defaultValues: { modelId: "" },
+  });
 
   const invalidate = () => {
     void utils.trustclaw.getCustomModels.invalidate();
@@ -37,9 +53,7 @@ export function CustomModelsSettings() {
   const addModel = trpc.trustclaw.addCustomModel.useMutation({
     onSuccess: () => {
       showSuccessToast("Custom model saved");
-      setModelId("");
-      setLabel("");
-      setApiKey("");
+      form.reset({ modelId: "" });
       invalidate();
     },
     onError: trpcToastOnError,
@@ -54,7 +68,14 @@ export function CustomModelsSettings() {
   });
 
   const isBusy = addModel.isPending || deleteModel.isPending;
-  const canAdd = /^[a-z0-9-]+\/[\w.:/-]+$/i.test(modelId.trim()) && !isBusy;
+
+  const onSubmit = async (values: AddCustomModelInput) => {
+    try {
+      await addModel.mutateAsync(values);
+    } catch {
+      // trpcToastOnError already surfaced the failure.
+    }
+  };
 
   return (
     <Card>
@@ -75,6 +96,12 @@ export function CustomModelsSettings() {
           <div className="text-muted-foreground flex items-center gap-2 text-sm">
             <Loader2 className="h-4 w-4 animate-spin" /> Loading…
           </div>
+        ) : error ? (
+          <ErrorDisplay
+            message="Failed to load custom models"
+            retryText="Try again"
+            onRetry={() => void refetch()}
+          />
         ) : models.length > 0 ? (
           <ul className="space-y-2">
             {models.map((m) => (
@@ -129,74 +156,94 @@ export function CustomModelsSettings() {
           </ul>
         ) : null}
 
-        <div className="space-y-3 border-t pt-4">
-          <div className="grid gap-3 sm:grid-cols-2">
-            <div className="space-y-1.5">
-              <Label htmlFor="cm-model-id">Model id</Label>
-              <Input
-                id="cm-model-id"
-                placeholder="openai/gpt-4o"
-                value={modelId}
-                onChange={(e) => setModelId(e.target.value)}
-                disabled={isBusy}
-              />
-              {modelId.trim() && !canAdd && (
-                <p className="text-muted-foreground text-xs">
-                  Use provider/model format, e.g. openai/gpt-4o.
-                </p>
-              )}
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="cm-label">Label (optional)</Label>
-              <Input
-                id="cm-label"
-                placeholder="GPT-4o"
-                value={label}
-                onChange={(e) => setLabel(e.target.value)}
-                maxLength={60}
-                disabled={isBusy}
-              />
-            </div>
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="cm-key">Provider API key (optional)</Label>
-            <Input
-              id="cm-key"
-              type="password"
-              autoComplete="off"
-              placeholder="sk-…"
-              value={apiKey}
-              onChange={(e) => setApiKey(e.target.value)}
-              disabled={isBusy}
-            />
-            <p className="text-muted-foreground text-xs">
-              Stored encrypted (AES-256-GCM); only this instance can read it.
-              Required to run the model (Anthropic custom ids reuse your
-              Anthropic key).
-            </p>
-          </div>
-          <Button
-            variant="outline"
-            disabled={!canAdd}
-            onClick={() =>
-              void addModel.mutateAsync({
-                modelId: modelId.trim(),
-                label: label.trim() || undefined,
-                providerApiKey: apiKey.trim() || undefined,
-              })
-            }
+        <Form {...form}>
+          <form
+            onSubmit={(e) => void form.handleSubmit(onSubmit)(e)}
+            className="space-y-3 border-t pt-4"
           >
-            {addModel.isPending ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Saving…
-              </>
-            ) : (
-              <>
-                <CheckCircle2 className="mr-2 h-4 w-4" /> Add model
-              </>
-            )}
-          </Button>
-        </div>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <FormField
+                control={form.control}
+                name="modelId"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Model id</FormLabel>
+                    <FormControl>
+                      <Input
+                        placeholder="openai/gpt-4o"
+                        disabled={isBusy}
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="label"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Label (optional)</FormLabel>
+                    <FormControl>
+                      <Input
+                        placeholder="GPT-4o"
+                        maxLength={60}
+                        disabled={isBusy}
+                        {...field}
+                        value={field.value ?? ""}
+                        onChange={(e) =>
+                          field.onChange(e.target.value || undefined)
+                        }
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+            <FormField
+              control={form.control}
+              name="providerApiKey"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Provider API key (optional)</FormLabel>
+                  <FormControl>
+                    <Input
+                      type="password"
+                      autoComplete="off"
+                      placeholder="sk-…"
+                      disabled={isBusy}
+                      {...field}
+                      value={field.value ?? ""}
+                      onChange={(e) =>
+                        field.onChange(e.target.value || undefined)
+                      }
+                    />
+                  </FormControl>
+                  <FormDescription className="text-xs">
+                    We validate the key with the provider before saving it.
+                    Stored encrypted (AES-256-GCM); only this instance can read
+                    it. Required to run the model (Anthropic custom ids reuse
+                    your Anthropic key).
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <Button type="submit" variant="outline" disabled={isBusy}>
+              {addModel.isPending ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Validating…
+                </>
+              ) : (
+                <>
+                  <CheckCircle2 className="mr-2 h-4 w-4" /> Add model
+                </>
+              )}
+            </Button>
+          </form>
+        </Form>
       </CardContent>
     </Card>
   );

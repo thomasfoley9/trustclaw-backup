@@ -34,7 +34,7 @@ export function SaveToKnowledgeDialog({
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }) {
-  const { data } = trpc.trustclaw.getBuckets.useQuery();
+  const { data, error, refetch } = trpc.trustclaw.getBuckets.useQuery();
   const buckets = data?.buckets ?? [];
   const [bucketSlug, setBucketSlug] = useState("");
   const effectiveSlug = bucketSlug !== "" ? bucketSlug : (buckets[0]?.slug ?? "");
@@ -63,18 +63,36 @@ export function SaveToKnowledgeDialog({
         </DialogHeader>
         <div className="space-y-2">
           <Label>Bucket</Label>
-          <Select value={effectiveSlug} onValueChange={setBucketSlug}>
-            <SelectTrigger>
-              <SelectValue placeholder="Pick a bucket" />
-            </SelectTrigger>
-            <SelectContent>
-              {buckets.map((b) => (
-                <SelectItem key={b.slug} value={b.slug}>
-                  {b.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          {error ? (
+            // A failed fetch would otherwise render an empty picker that looks
+            // like "you have no buckets" - surface it and offer a retry.
+            <div className="flex items-center gap-2 text-sm">
+              <span className="text-destructive">
+                Couldn&apos;t load your buckets.
+              </span>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => void refetch()}
+              >
+                Try again
+              </Button>
+            </div>
+          ) : (
+            <Select value={effectiveSlug} onValueChange={setBucketSlug}>
+              <SelectTrigger>
+                <SelectValue placeholder="Pick a bucket" />
+              </SelectTrigger>
+              <SelectContent>
+                {buckets.map((b) => (
+                  <SelectItem key={b.slug} value={b.slug}>
+                    {b.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
         </div>
         <DialogFooter>
           <Button

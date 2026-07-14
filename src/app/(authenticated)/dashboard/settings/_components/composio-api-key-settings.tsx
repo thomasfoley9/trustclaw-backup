@@ -17,11 +17,13 @@ import {
   showSuccessToast,
   trpcToastOnError,
 } from "~/components/core/toast-notifications";
+import { ErrorDisplay } from "~/components/core/error-display";
 import { AlertDialog } from "~/components/core/confirm-dialog";
 
 export function ComposioApiKeySettings() {
   const utils = trpc.useUtils();
-  const { data, isLoading } = trpc.trustclaw.getComposioKeyStatus.useQuery();
+  const { data, isLoading, error, refetch } =
+    trpc.trustclaw.getComposioKeyStatus.useQuery();
   const [apiKey, setApiKey] = useState("");
   const [editing, setEditing] = useState(false);
 
@@ -76,7 +78,16 @@ export function ComposioApiKeySettings() {
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        {onSharedKey && !editing && (
+        {/* A failed status fetch must not render the "no key yet" input - the
+            key may exist. Show the failure and let the user retry. */}
+        {error && (
+          <ErrorDisplay
+            message="Failed to load your Composio key status"
+            retryText="Try again"
+            onRetry={() => void refetch()}
+          />
+        )}
+        {!error && onSharedKey && !editing && (
           <div className="flex items-center gap-2 rounded-md border bg-muted/30 px-3 py-2 text-sm">
             <CheckCircle2 className="text-chart-2 h-4 w-4 shrink-0" />
             <span className="font-medium">Tools active</span>
@@ -85,7 +96,7 @@ export function ComposioApiKeySettings() {
             </span>
           </div>
         )}
-        {hasKey && !editing && (
+        {!error && hasKey && !editing && (
           <div className="flex flex-col gap-2 rounded-md border bg-muted/30 px-3 py-2 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex min-w-0 items-center gap-2 text-sm">
               <CheckCircle2 className="text-chart-2 h-4 w-4 shrink-0" />
@@ -125,7 +136,7 @@ export function ComposioApiKeySettings() {
           </div>
         )}
 
-        {showInput && (
+        {!error && showInput && (
           <div className="space-y-3">
             <div className="space-y-2">
               <Label htmlFor="composio-api-key">API key</Label>

@@ -31,11 +31,13 @@ import {
   showErrorToast,
   trpcToastOnError,
 } from "~/components/core/toast-notifications";
+import { ErrorDisplay } from "~/components/core/error-display";
 import { AlertDialog } from "~/components/core/confirm-dialog";
 
 export function VoiceSettings() {
   const utils = trpc.useUtils();
-  const { data, isLoading } = trpc.trustclaw.getVoiceKeyStatus.useQuery();
+  const { data, isLoading, error, refetch } =
+    trpc.trustclaw.getVoiceKeyStatus.useQuery();
   const [apiKey, setApiKey] = useState("");
   const [editing, setEditing] = useState(false);
   const [testing, setTesting] = useState(false);
@@ -125,7 +127,16 @@ export function VoiceSettings() {
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        {hasKey && !editing && (
+        {/* A failed status fetch must not render the "no key yet" input or an
+            empty voice list - show the failure and let the user retry. */}
+        {error && (
+          <ErrorDisplay
+            message="Failed to load your voice settings"
+            retryText="Try again"
+            onRetry={() => void refetch()}
+          />
+        )}
+        {!error && hasKey && !editing && (
           <div className="flex flex-col gap-2 rounded-md border bg-muted/30 px-3 py-2 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex min-w-0 items-center gap-2 text-sm">
               <CheckCircle2 className="text-chart-2 h-4 w-4 shrink-0" />
@@ -165,7 +176,7 @@ export function VoiceSettings() {
           </div>
         )}
 
-        {showInput && (
+        {!error && showInput && (
           <div className="space-y-3">
             <div className="space-y-2">
               <Label htmlFor="voice-api-key">API key</Label>
@@ -220,6 +231,7 @@ export function VoiceSettings() {
           </div>
         )}
 
+        {!error && (
         <div className="space-y-4 border-t pt-4">
           <div className="space-y-2">
             <Label>Voice</Label>
@@ -280,6 +292,7 @@ export function VoiceSettings() {
             </p>
           </div>
         </div>
+        )}
       </CardContent>
     </Card>
   );

@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import moment from "moment";
 import {
   Calendar,
   Clock,
@@ -20,52 +19,28 @@ import {
   showSuccessToast,
   trpcToastOnError,
 } from "~/components/core/toast-notifications";
+import { ErrorDisplay } from "~/components/core/error-display";
 import { VirtualizedList } from "~/components/core/virtualized-list";
+import { formatCronExpression, formatCronDate } from "~/lib/cron-format";
 import { CronRunHistory } from "./cron-run-history";
 
 // Mirrors AUTO_PAUSE_THRESHOLD in ~/server/cron/run-single-job (not imported:
 // that module pulls the whole server runtime into the client bundle).
 const AUTO_PAUSE_THRESHOLD = 3;
 
-function formatCronExpression(expression: string): string {
-  const parts = expression.split(" ");
-  if (parts.length !== 5) return expression;
-
-  const minute = parts[0] ?? "0";
-  const hour = parts[1] ?? "*";
-  const dayOfMonth = parts[2] ?? "*";
-  const month = parts[3] ?? "*";
-  const dayOfWeek = parts[4] ?? "*";
-
-  if (dayOfMonth === "*" && month === "*" && dayOfWeek === "*") {
-    if (minute === "0" && hour === "*") return "Every hour";
-    if (hour === "*") return `Every hour at :${minute.padStart(2, "0")}`;
-    return `Daily at ${hour}:${minute.padStart(2, "0")}`;
-  }
-
-  if (dayOfWeek !== "*" && dayOfMonth === "*" && month === "*") {
-    const days: Record<string, string> = {
-      "0": "Sunday", "1": "Monday", "2": "Tuesday", "3": "Wednesday",
-      "4": "Thursday", "5": "Friday", "6": "Saturday",
-    };
-    const dayName = days[dayOfWeek] ?? dayOfWeek;
-    return `Every ${dayName} at ${hour}:${minute.padStart(2, "0")}`;
-  }
-
-  return expression;
-}
-
-function formatDate(date: Date | null): string {
-  if (!date) return "-";
-  return moment(date).format("MMM D, h:mm A");
-}
-
 export function CronJobsSettings() {
   const utils = trpc.useUtils();
   const [expandedJobId, setExpandedJobId] = useState<string | null>(null);
 
-  const { data, isLoading, hasNextPage, fetchNextPage, isFetchingNextPage } =
-    trpc.trustclaw.getCronJobs.useInfiniteQuery(
+  const {
+    data,
+    isLoading,
+    error,
+    refetch,
+    hasNextPage,
+    fetchNextPage,
+    isFetchingNextPage,
+  } = trpc.trustclaw.getCronJobs.useInfiniteQuery(
       { limit: 20 },
       {
         getNextPageParam: (lastPage) => lastPage.nextCursor,
@@ -147,6 +122,12 @@ export function CronJobsSettings() {
           <div className="flex items-center justify-center py-8">
             <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
           </div>
+        ) : error ? (
+          <ErrorDisplay
+            message="Failed to load scheduled tasks"
+            retryText="Try again"
+            onRetry={() => void refetch()}
+          />
         ) : cronJobs.length === 0 ? (
           <div className="rounded-lg border border-dashed border-border p-6 text-center">
             <Calendar className="mx-auto mb-2 h-8 w-8 text-muted-foreground" />
@@ -177,7 +158,10 @@ export function CronJobsSettings() {
                           {formatCronExpression(job.expression)}
                         </span>
                         {job.nextRunAt && (
-                          <span>Next: {formatDate(job.nextRunAt)}</span>
+                          <span>
+                            Next: {formatCronDate(job.nextRunAt)} (
+                            {job.timezone ?? "UTC"})
+                          </span>
                         )}
                         {isRunning && (
                           <Badge variant="secondary" className="gap-1">
@@ -230,6 +214,9 @@ export function CronJobsSettings() {
                       </Button>
                       <Switch
                         checked={job.enabled}
+                        // Guard the race: a second flip while the first write
+                        // is in flight would clobber the optimistic state.
+                        disabled={toggleCronJob.isPending}
                         aria-label={job.enabled ? "Disable schedule" : "Enable schedule"}
                         onCheckedChange={(checked) =>
                           void toggleCronJob.mutateAsync({
