@@ -126,7 +126,7 @@ export function Onboarding({
       lore: savedState?.lore ?? "",
       anthropicModel: parsedModel.success
         ? parsedModel.data
-        : "claude-sonnet-5",
+        : "house/kimi-k3",
       anthropicApiKey: "",
     };
   });
@@ -242,11 +242,11 @@ export function Onboarding({
       if (!instanceCreated) {
         const nextState: OnboardingWizardState = {
           ...wizardState,
-          anthropicModel: "house/kimi-k2",
+          anthropicModel: "house/kimi-k3",
         };
         // Commit the wizard state before the instance bakes prompts from it.
         await persistState("model", nextState);
-        await createInstance.mutateAsync({ anthropicModel: "house/kimi-k2" });
+        await createInstance.mutateAsync({ anthropicModel: "house/kimi-k3" });
         setInstanceCreated(true);
         setWizardState(nextState);
         setStep("integrations");
@@ -303,7 +303,9 @@ export function Onboarding({
                 Setting things up...
               </h2>
               <p className="text-muted-foreground mt-1 text-sm">
-                Setting up your instance and validating your Anthropic key
+                {setAnthropicKey.isPending
+                  ? "Validating your Anthropic key"
+                  : "Setting up your instance"}
               </p>
             </motion.div>
             {(createInstance.isError || setAnthropicKey.isError) && (

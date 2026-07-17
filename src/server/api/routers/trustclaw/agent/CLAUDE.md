@@ -2,7 +2,7 @@
 
 ## Overview
 
-This is the AI agent runtime for TrustClaw. It orchestrates Anthropic Claude calls with Composio tools (external service integrations) and custom tools (memory, scheduling), while managing the context window through a 3-layer system adapted from [pi-mono](https://github.com/nicholasgasior/pi-mono) and [OpenClaw](https://github.com/nicholasgasior/openclaw).
+This is the AI agent runtime for TrustClaw. It orchestrates LLM calls (the owner-funded house models - default `house/kimi-k3` - or Anthropic Claude with the user's own key) with Composio tools (external service integrations) and custom tools (memory, scheduling), while managing the context window through a 3-layer system adapted from [pi-mono](https://github.com/nicholasgasior/pi-mono) and [OpenClaw](https://github.com/nicholasgasior/openclaw).
 
 Entry point: `prepareAgentRun()` in `setup.ts`, consumed by `app/api/chat/route.ts` (web), `app/api/telegram-webhook/route.ts`, and `app/api/cron/trustclaw/execute/route.ts`.
 
@@ -21,7 +21,7 @@ User message (web / telegram / cron)
 │  4. Prune context (trim/clear old tools)  ◄─── context/context-pruning.ts
 │  5. Save user message to DB                     │
 │  6. Init Composio session + tools               │
-│  7. Create ToolLoopAgent with Anthropic   ◄─── Vercel AI SDK
+│  7. Create ToolLoopAgent (house/Claude)   ◄─── Vercel AI SDK
 │     (memory_save / memory_search tools           │
 │      backed by pgvector + OpenAI embeddings)     │
 │  8. Return agent + messages to caller           │
@@ -46,7 +46,7 @@ agent/
 │
 ├── context/                    # Context window management
 │   ├── build-context.ts        # DB loading, message reconstruction, post-response orchestration
-│   ├── context-window.ts       # Maps model IDs → context window size (200K for all Claude 4.x)
+│   ├── context-window.ts       # Maps model IDs → context window size (256K house models, 200K Claude)
 │   ├── token-estimation.ts     # chars/4 heuristic, shouldCompact()
 │   └── context-pruning.ts      # 2-phase pruning: soft trim then hard clear of tool results
 │
@@ -142,7 +142,7 @@ Built by `system-prompt.ts`. Sections:
 
 | Constant | Value | Location |
 |----------|-------|----------|
-| Context window | 200,000 tokens | `context/context-window.ts` |
+| Context window | 256K house models; 200K Claude/BYO | `context/context-window.ts` |
 | Reserve tokens | 20,000 | `context/token-estimation.ts` |
 | Keep recent tokens | 20,000 | `context/token-estimation.ts` |
 | Message safety cap | 200 | `context/build-context.ts` |

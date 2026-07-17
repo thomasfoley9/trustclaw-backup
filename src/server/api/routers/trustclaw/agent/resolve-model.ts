@@ -26,11 +26,18 @@ const OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1";
 // OpenRouter key.
 // The "house/..." ids are stable routing keys stored on instances - upgrade
 // the concrete provider model HERE and every user upgrades with it.
-// Ids verified against the providers' live catalogs 2026-07-03.
+// Ids verified against the providers' live catalogs 2026-07-16.
 const HOUSE_MODELS: Record<
   string,
   { nativeBaseURL: string; nativeModel: string; openrouterModel: string }
 > = {
+  "house/kimi-k3": {
+    nativeBaseURL: "https://api.moonshot.ai/v1",
+    // Moonshot's new flagship (launched 2026-07-16): 2.8T MoE, 1M ctx. Only
+    // one API model id shipped at launch - no highspeed/turbo tier yet.
+    nativeModel: "kimi-k3",
+    openrouterModel: "moonshotai/kimi-k3",
+  },
   "house/deepseek": {
     nativeBaseURL: "https://api.deepseek.com/v1",
     nativeModel: "deepseek-v4-flash",
@@ -119,11 +126,13 @@ function missingKey(message: string): never {
   throw new TRPCError({ code: "PRECONDITION_FAILED", message });
 }
 
-// Single source of truth for turning a model id into an AI-SDK model - always
-// billed to the USER, never the owner's gateway. Bare Claude presets use the
-// instance's own Anthropic key; provider-prefixed custom models use their own
-// BYO key (Anthropic customs may fall back to the instance Anthropic key). If
-// no user key is available we fail closed so nobody rides the owner's spend.
+// Single source of truth for turning a model id into an AI-SDK model. House
+// models (the default) are the one owner-funded path - free to every user.
+// Everything else bills to the USER: bare Claude presets use the instance's
+// own Anthropic key; provider-prefixed custom models use their own BYO key
+// (Anthropic customs may fall back to the instance Anthropic key). If no user
+// key is available we fail closed so nobody rides the owner's spend beyond
+// the house models.
 export async function resolveAgentModel(
   instanceId: string,
   modelId: string,

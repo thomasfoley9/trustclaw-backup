@@ -13,7 +13,7 @@ import {
 import { trpcToastOnError } from "~/components/core/toast-notifications";
 import { MODELS, HOUSE_MODELS } from "../onboarding/onboarding.consts";
 
-const DEFAULT_MODEL = "claude-opus-4-8";
+const DEFAULT_MODEL = "house/kimi-k3";
 
 // Short trigger label, e.g. "Opus 4.8" / "gpt-4o".
 function shortLabel(modelId: string): string {

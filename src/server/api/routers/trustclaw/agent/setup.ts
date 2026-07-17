@@ -316,10 +316,16 @@ export async function prepareAgentRun(
       : `[Your active personality was just turned off. Starting with this reply, drop that voice entirely and return to your default voice.]\n\n${userMessage}`;
   }
 
-  // Build attachment parts. Images/PDFs are native model parts (Claude reads
-  // them directly); text-like files are inlined into the message text. The
-  // persisted message stores lightweight markers only (no bytes), so DB and
-  // future context stay lean - attachments inform the turn they're sent on.
+  // Anthropic prompt-caching options are meaningless to OpenAI-compatible house
+  // models - only attach them for Anthropic-backed models.
+  const isHouse = isHouseModel(instance.anthropicModel);
+
+  // Build attachment parts. Images are native model parts everywhere; PDFs are
+  // native parts only on Anthropic-backed models (the OpenAI-compatible chat
+  // completions path the house models use rejects file parts); text-like files
+  // are inlined into the message text. The persisted message stores lightweight
+  // markers only (no bytes), so DB and future context stay lean - attachments
+  // inform the turn they're sent on.
   type ImagePart = { type: "image"; image: Uint8Array; mediaType: string };
   type FilePart = {
     type: "file";
@@ -354,13 +360,15 @@ export async function prepareAgentRun(
         image: new Uint8Array(bytes),
         mediaType: att.mediaType,
       });
-    } else if (att.mediaType === "application/pdf") {
+    } else if (att.mediaType === "application/pdf" && !isHouse) {
       mediaParts.push({
         type: "file",
         data: new Uint8Array(bytes),
         mediaType: "application/pdf",
         filename: att.name,
       });
+    } else if (att.mediaType === "application/pdf") {
+      modelUserMessage += `\n\n[Attached PDF "${att.name}" - the free house models can't read PDFs natively; ask the user to share it as text/CSV or switch to a Claude model to read it directly.]`;
     } else if (isTextual(att)) {
       const text = bytes.toString("utf8").slice(0, 200_000);
       modelUserMessage += `\n\n--- Attached file: ${att.name} ---\n${text}`;
@@ -391,10 +399,6 @@ export async function prepareAgentRun(
 
   const contextWindow = getContextWindow(instance.anthropicModel);
   const { messages: prunedMessages } = pruneContext(aiMessages, contextWindow);
-
-  // Anthropic prompt-caching options are meaningless to OpenAI-compatible house
-  // models - only attach them for Anthropic-backed models.
-  const isHouse = isHouseModel(instance.anthropicModel);
 
   // Add cache breakpoint to last history message (before new user message)
   // so the conversation prefix is cached across turns
@@ -480,8 +484,9 @@ export async function prepareAgentRun(
     ...mcp.tools,
   });
 
-  // Resolve the model first (per-user Anthropic key). Fails closed with a
-  // PRECONDITION_FAILED before we create the assistant row if no key is set.
+  // Resolve the model first (house models ride owner keys; Claude/custom
+  // models ride the user's own key). Fails closed with a PRECONDITION_FAILED
+  // before we create the assistant row if the needed key is missing.
   const model = await resolveAgentModel(instanceId, instance.anthropicModel);
 
   // Pre-create assistant message row so we can update it in onFinish

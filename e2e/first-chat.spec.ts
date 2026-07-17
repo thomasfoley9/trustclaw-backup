@@ -106,14 +106,20 @@ test("register, onboard with the free house model, and get a first reply", async
   await page.getByRole("button", { name: "Skip" }).click();
 
   // 6. Model: pick the free house model explicitly, then continue.
-  await page.getByRole("button", { name: /Kimi K2\.7 Code/ }).click();
+  await page.getByRole("button", { name: /Kimi K3/ }).click();
   await page.getByRole("button", { name: "Continue" }).click();
 
   // 7. Integrations: zero integrations - skip. When TELEGRAM_BOT_TOKEN is set
-  //    a Telegram step follows; skip that too. Loop until the composer shows.
+  //    a Telegram step follows; skip that too. Completion runs a mutation +
+  //    router.refresh() (a server roundtrip), so wait between clicks instead
+  //    of hammering Skip while the step is still transitioning.
   for (let i = 0; i < 3; i++) {
     const composer = page.getByPlaceholder("Ask me anything...");
-    if (await composer.isVisible().catch(() => false)) break;
+    const appeared = await composer
+      .waitFor({ state: "visible", timeout: 10_000 })
+      .then(() => true)
+      .catch(() => false);
+    if (appeared) break;
     await page
       .getByRole("button", { name: /^Skip/ })
       .first()
@@ -124,7 +130,7 @@ test("register, onboard with the free house model, and get a first reply", async
   await mockChatEndpoint(page);
 
   const composer = page.getByPlaceholder("Ask me anything...");
-  await expect(composer).toBeVisible();
+  await expect(composer).toBeVisible({ timeout: 15_000 });
   await composer.fill("Hello, are you alive?");
   await composer.press("Enter");
 

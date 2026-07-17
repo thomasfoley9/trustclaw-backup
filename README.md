@@ -34,7 +34,7 @@ That's it. The CLI handles the entire flow.
 - A [GitHub account](https://github.com) (`gh auth login` once)
 - A free [Composio API key](https://dashboard.composio.dev/login?next=%2F~%2Fproject%2Fsettings%2Fapi-keys&flow=developer) (install the cli `curl -fsSL https://composio.dev/install | bash`)
 
-LLM and embedding calls route through Vercel AI Gateway - **no Anthropic or OpenAI API keys required.**
+Chat defaults to the **free house model** (`house/kimi-k3`, owner-funded via `MOONSHOT_API_KEY` or `OPENROUTER_API_KEY`) - users chat immediately with no key, and can bring their own Anthropic key for the Claude models. Embeddings and image generation route through Vercel AI Gateway.
 
 ---
 
@@ -153,6 +153,9 @@ For Telegram, point your bot's webhook at `<NEXT_PUBLIC_APP_URL>/api/telegram-we
 | `DATABASE_URL` | Postgres + pgvector connection string |
 | `BETTER_AUTH_SECRET` | Session signing key (32+ random bytes) |
 | `CRON_SECRET` | Auth for `/api/cron/*` routes (auto-injected on Vercel) |
+| `MOONSHOT_API_KEY` _(recommended)_ | Powers the default free house model (`house/kimi-k3`) and the other Kimi house models, billed to you |
+| `OPENROUTER_API_KEY` _(optional)_ | Fallback that serves ALL house models when a native key is missing |
+| `DEEPSEEK_API_KEY` _(optional)_ | Native key for the DeepSeek house models |
 | `ENCRYPTION_KEY` _(optional)_ | Encrypts per-user Composio keys at rest (32 bytes, hex/base64). Plaintext when unset - set it in any shared deploy |
 | `REDIS_URL` _(optional)_ | Resumable streams + abort flags |
 | `TELEGRAM_BOT_TOKEN` _(optional)_ | Telegram bot |

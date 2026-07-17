@@ -13,6 +13,8 @@ const MODEL_CONTEXT_WINDOWS: Record<string, number> = {
   // well before the provider's real ceiling.
   "house/deepseek": 256_000,
   "house/deepseek-pro": 256_000,
+  // Kimi K3 advertises 1M too; same conservative treatment as DeepSeek V4.
+  "house/kimi-k3": 256_000,
   // The Kimi K2.x family is 262,144 - stay at 256K.
   "house/kimi-k2": 256_000,
   "house/kimi-k2.7-highspeed": 256_000,

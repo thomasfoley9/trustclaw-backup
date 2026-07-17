@@ -17,6 +17,7 @@ export const allowedAnthropicModelSchema = z.enum(ALLOWED_ANTHROPIC_MODELS);
 // Keep in sync with HOUSE_MODELS in agent/resolve-model.ts and the UI list in
 // onboarding.consts.ts.
 export const HOUSE_MODEL_IDS = [
+  "house/kimi-k3",
   "house/kimi-k2",
   "house/kimi-k2.7-highspeed",
   "house/kimi-k2.6",
@@ -51,7 +52,7 @@ export const selectableModelSchema = z.union([
 ]);
 
 export const createInstanceInput = z.object({
-  anthropicModel: onboardingModelSchema.default("claude-sonnet-5"),
+  anthropicModel: onboardingModelSchema.default("house/kimi-k3"),
 });
 
 export type CreateInstanceInput = z.infer<typeof createInstanceInput>;

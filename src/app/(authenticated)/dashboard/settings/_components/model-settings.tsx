@@ -162,8 +162,8 @@ export function ModelSettings({
             <SelectContent>{modelGroups}</SelectContent>
           </Select>
           <p className="text-muted-foreground text-xs">
-            Powers every chat and does the heavy multi-tool work on your key.
-            Opus-grade recommended for serious automation.
+            Powers every chat and the heavy multi-tool work. House models run
+            free on the house; Claude and custom models bill to your own key.
           </p>
         </div>
 

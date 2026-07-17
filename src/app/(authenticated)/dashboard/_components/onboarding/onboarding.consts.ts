@@ -92,6 +92,12 @@ export const MODELS = [
 // concrete provider model behind each lives in agent/resolve-model.ts.
 export const HOUSE_MODELS = [
   {
+    value: "house/kimi-k3" as const,
+    label: "Kimi K3",
+    description: "Free · uncensored · new flagship, 1M context",
+    cost: "free",
+  },
+  {
     value: "house/kimi-k2" as const,
     label: "Kimi K2.7 Code",
     description: "Free · uncensored · on the house",

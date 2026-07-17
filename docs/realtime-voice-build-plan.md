@@ -134,8 +134,9 @@ the **real build is Design C**, which kills the off-label fragility.
 - **Agent B = the existing `/api/voice-turn` agent** (Composio + tools, user's
   model) invoked via `delegate`. A passes a concise *intent* + the conversation id;
   B is the smart executor and returns a result; A condenses it for voice.
-- **Models (shipped):** A = `agentAModel` (Settings, default house Kimi K2 - agentic
-  /tool-calling); B = `anthropicModel` (user's key, Opus-grade for serious work).
+- **Models (shipped):** A = `agentAModel` (Settings; null = falls back to B);
+  B = `anthropicModel` (default `house/kimi-k3` on the house, or the user's own
+  key for Claude/custom models).
 - **Memory/thread = SEPARATE.** Voice gets its **own conversation thread** (clean,
   fast, no concurrency races with text) but **inherits the shared instance-level
   pgvector memory** automatically (so it still "knows you"). Optional future:

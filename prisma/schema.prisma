@@ -103,7 +103,7 @@ model ComposioClawInstance {
   // the heavy reasoning). agentAModel = Agent A (the conversational voice/
   // narrator front); null falls back to a sensible default per surface -
   // Agent B's model for the text narrator, a house model for the voice front.
-  anthropicModel String  @default("claude-sonnet-4-5-20250929")
+  anthropicModel String  @default("house/kimi-k3")
   agentAModel    String?
 
   // Per-user Composio API key. Each user brings their own - no shared key.
@@ -111,8 +111,9 @@ model ComposioClawInstance {
   composioApiKey String?
 
   // Per-user Anthropic API key (encrypted, enc:v1: envelope). Each user pays
-  // for their own Claude usage - chat fails closed if this isn't set (no shared
-  // gateway fallback). OpenAI/Google models use their own CustomModel key.
+  // for their own Claude usage - the Claude presets fail closed if this isn't
+  // set. The house models (the default) run on owner keys and don't need it.
+  // OpenAI/Google models use their own CustomModel key.
   anthropicApiKey String?
 
   // Voice. voiceId is an OpenAI Realtime voice for live calls (the read-aloud
@@ -422,7 +423,7 @@ model OnboardingState {
   personality     String?
   emoji           String?
   lore           String   @default("") @db.Text
-  anthropicModel String   @default("claude-sonnet-4-5-20250929")
+  anthropicModel String   @default("house/kimi-k3")
   // Set by Settings -> "Re-run setup": the dashboard shows the wizard again
   // (answers above are preserved) even though the instance already exists.
   redoRequested Boolean  @default(false)

@@ -62,7 +62,8 @@ export function AnthropicApiKeySettings() {
         </CardTitle>
         <CardDescription>
           Bring your own key - your Claude usage is billed to your own Anthropic
-          account. Chat won&apos;t run until this is set. Grab one from the{" "}
+          account. Only needed for the Claude models; the free house models run
+          without it. Grab one from the{" "}
           <a
             href="https://console.anthropic.com/settings/keys"
             target="_blank"
@@ -105,7 +106,7 @@ export function AnthropicApiKeySettings() {
               </Button>
               <AlertDialog
                 title="Remove your Anthropic key?"
-                description="Chat stops working until you add a key again. Your conversations and settings are kept."
+                description="The Claude models stop working until you add a key again; the free house models keep running. Your conversations and settings are kept."
                 confirmLabel="Remove key"
                 onConfirm={async () => {
                   await clearKey.mutateAsync();

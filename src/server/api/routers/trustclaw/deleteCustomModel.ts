@@ -3,7 +3,9 @@ import { TRPCError } from "@trpc/server";
 import { protectedProcedure } from "~/server/api/trpc";
 import { db } from "~/server/clients/db";
 
-const DEFAULT_MODEL = "claude-sonnet-5";
+// Falls back to the free house default so the agent keeps working even if
+// the user never added an Anthropic key.
+const DEFAULT_MODEL = "house/kimi-k3";
 
 export const deleteCustomModel = protectedProcedure
   .input(z.object({ id: z.string() }))
