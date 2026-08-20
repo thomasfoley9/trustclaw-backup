@@ -8,9 +8,10 @@ vi.mock("~/server/clients/db", () => ({ db: {} }));
 import { createCustomTools } from "./index";
 
 describe("createCustomTools", () => {
-  it("includes memory, schedule, and image tools by default", () => {
+  it("includes memory, schedule, task, and image tools by default", () => {
     const tools = createCustomTools("instance-1");
     expect(Object.keys(tools).sort()).toEqual([
+      "ea_task",
       "generate_image",
       "memory_save",
       "memory_search",
@@ -22,7 +23,11 @@ describe("createCustomTools", () => {
     // Advertising absent tools makes the model call undeclared names and
     // hallucinate saves - incognito must remove them entirely, not stub them.
     const tools = createCustomTools("instance-1", "UTC", { incognito: true });
-    expect(Object.keys(tools).sort()).toEqual(["generate_image", "schedule"]);
+    expect(Object.keys(tools).sort()).toEqual([
+      "ea_task",
+      "generate_image",
+      "schedule",
+    ]);
     expect(tools).not.toHaveProperty("memory_save");
     expect(tools).not.toHaveProperty("memory_search");
   });

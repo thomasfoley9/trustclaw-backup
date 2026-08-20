@@ -3,6 +3,7 @@ import { createMemorySaveTool } from "./memory-save";
 import { createMemorySearchTool } from "./memory-search";
 import { createScheduleTool } from "./schedule";
 import { createGenerateImageTool } from "./generate-image";
+import { createEaTaskTool } from "./ea-task";
 export { searchMemoriesForContext, getBucketMemories } from "./memory-search";
 
 interface CustomToolOptions {
@@ -22,6 +23,7 @@ export function createCustomTools(
   const tools: ToolSet = {
     schedule: createScheduleTool(instanceId, userTimezone),
     generate_image: createGenerateImageTool(instanceId),
+    ea_task: createEaTaskTool(instanceId),
   };
 
   if (!incognito) {
