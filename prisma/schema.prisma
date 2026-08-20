@@ -151,6 +151,11 @@ model ComposioClawInstance {
   tokensAtCompaction    Int?
   memoryFlushCount      Int       @default(0)
 
+  // EA (Presence Mode): per-instance counter that issues EaTask short public
+  // IDs (T-14). Bumped atomically (UPDATE ... RETURNING) so concurrent task
+  // creation can never mint the same number twice.
+  eaTaskCounter Int @default(0)
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -166,6 +171,9 @@ model ComposioClawInstance {
   skills          Skill[]
   mcpServers      McpServer[]
   generatedImages GeneratedImage[]
+  eaTasks         EaTask[]
+  eaWatches       EaWatch[]
+  eaEvents        EaEvent[]
 
   @@index([userId])
   @@map("composio_claw_instance")
@@ -426,6 +434,94 @@ model CronRun {
   @@index([jobId, startedAt(sort: Desc)])
   @@index([instanceId, startedAt(sort: Desc)])
   @@map("composio_claw_cron_run")
+}
+
+// EA (Presence Mode) task ledger. One row per thing owed: born from calls,
+// emails, promises, meeting prep, or Thomas saying so. shortId renders as
+// "T-14" and is issued from ComposioClawInstance.eaTaskCounter, never parsed
+// back out of titles. Chase state (rung, counts, acks) lives here so the
+// ladder is computed from task state, not inferred from message history.
+model EaTask {
+  id         String @id @default(cuid())
+  instanceId String
+  shortId    Int
+
+  title    String
+  status   String @default("open") // open | waiting | done | snoozed | killed
+  priority String @default("normal") // low | normal | high | critical
+
+  dueAt        DateTime?
+  snoozedUntil DateTime?
+
+  source    String // call | email | promise | prep | manual | approval
+  sourceRef String? // Fireflies id, Gmail thread id, SFDC opp id
+  draftRef  String? // Gmail draft id / doc url attached to nudges
+
+  // Chase state
+  lastNudgedAt   DateTime?
+  nudgeCount     Int       @default(0)
+  escalationRung Int       @default(0)
+  ackedAt        DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  instance ComposioClawInstance @relation(fields: [instanceId], references: [id], onDelete: Cascade)
+
+  @@unique([instanceId, shortId])
+  @@index([instanceId, status, dueAt])
+  @@map("composio_claw_ea_task")
+}
+
+// One row per tracked thread or person the dropped-ball detector watches.
+// direction: they_owe_me (counterparty silent) vs i_owe_them (Thomas silent).
+// The chase sweep diffs lastActivityAt against chaseAfterHrs instead of
+// re-deriving the world from the inbox every tick.
+model EaWatch {
+  id         String @id @default(cuid())
+  instanceId String
+
+  kind      String // thread | person | deal
+  ref       String // Gmail thread id / email address / SFDC opp id
+  label     String // "Dmitry re: security review"
+  direction String // they_owe_me | i_owe_them
+
+  lastActivityAt DateTime
+  chaseAfterHrs  Int       @default(24)
+  lastNudgedAt   DateTime?
+  state          String    @default("watching") // watching | nudged | resolved | muted
+  mutedUntil     DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  instance ComposioClawInstance @relation(fields: [instanceId], references: [id], onDelete: Cascade)
+
+  @@unique([instanceId, kind, ref])
+  @@index([instanceId, state, lastActivityAt])
+  @@map("composio_claw_ea_watch")
+}
+
+// The EA's idempotency keystone. Every inbound event (Gmail message id,
+// Fireflies transcript id, Slack ts, Twilio sid), every outbound nudge
+// ("nudge:T-14:rung2"), and every message the EA posts as Thomas (the Slack
+// loop guard) writes a row. The unique fingerprint makes replayed webhooks,
+// double sweeps, and self-triggering physically impossible, not just unlikely.
+model EaEvent {
+  id         String @id @default(cuid())
+  instanceId String
+
+  fingerprint String
+  kind        String // email_in | slack_in | sms_in | transcript | nudge_sent | slack_out | sms_out | call_placed
+  payload     Json
+
+  createdAt DateTime @default(now())
+
+  instance ComposioClawInstance @relation(fields: [instanceId], references: [id], onDelete: Cascade)
+
+  @@unique([instanceId, fingerprint])
+  @@index([instanceId, kind, createdAt(sort: Desc)])
+  @@map("composio_claw_ea_event")
 }
 
 model OnboardingState {
