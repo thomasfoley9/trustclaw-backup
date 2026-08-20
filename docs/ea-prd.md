@@ -68,7 +68,7 @@ Engine:
 
 - `ea_task` agent tool (create, complete, snooze, list) registered on every surface.
 - `slack.ts` outbound through the Composio Slack user connection; `sms.ts` outbound plus a Twilio inbound webhook (shipped dark until A2P clears); both beside `telegram.ts`.
-- Seeded system crons: 7am brief, chase sweep riding the existing 10-minute sweeper, pre-call lookahead with a 2-hour horizon. No new always-on polling, ever; real-time comes from triggers in slice 2. Neon compute stays flat.
+- Seeded system crons: 7am brief (an agent run; it composes prose), chase sweep riding the existing 10-minute sweeper, pre-call lookahead with a 2-hour horizon. The sweep and lookahead are deterministic code, never an LLM run per tick: caps and ladder state are never subject to model judgment, and a tick with nothing due makes zero LLM calls. The sweep includes a bounded Gmail delta scan (stored cursor) that maintains EaWatch in slice 1; the slice 2 Gmail trigger retires that scan. No new always-on polling, ever; real-time comes from triggers in slice 2. Neon compute stays flat.
 - Inbound day one: sweeper reads #ea since a stored cursor; slice 2 moves this to the `/api/triggers/composio` endpoint (signature-verified, EaEvent dedup, dispatch via the cron executor pattern) alongside Gmail, Calendar, and Fireflies triggers.
 - Policy layer, slice 1 minimal form: the destination allowlist from principle 3, wrapping the Composio toolset before the agent sees it. Slice 3 formalizes it into a policy table with the per-action-type allowlist column that is the Layer 4 lever.
 - Control plane: every channel lands as a dedicated conversation (the `dedicatedConversationTitle` pattern) with a source badge (web, telegram, cron, sms, slack, voice), rendered read-only in the UI.
@@ -88,6 +88,8 @@ Guarantees, enforced in code: at most 5 standalone pings per day, summed across 
 Reply grammar, honored on any verified-Thomas door: `done`, `snooze til X`, `kill`, `draft it`, `what's due`, `send-ready`. Anything unparseable goes to the full agent as natural language.
 
 **send-ready semantics (the trust hinge).** `send-ready T-14` sends the referenced Gmail draft verbatim and confirms with a link to the sent message. If the draft changed since the nudge, whatever is in the draft is what goes (Thomas's edits are Thomas's words). Each approval covers exactly one message; there is no standing approval. Per-message approval is not Layer 4. Layer 4 remains sending without asking, unlocked per action type only after weeks of unedited approvals.
+
+**Stale-draft guard (added at build kickoff review).** If the thread has inbound activity newer than the draft (the counterparty replied after the draft was written), send-ready does not send. It warns with what changed and offers a refreshed draft. A verbatim send of a pre-reply draft is the trust-costing failure this guard exists to prevent.
 
 ## 7. Slices and acceptance criteria
 
@@ -149,6 +151,17 @@ Added August 20, PM review of the Presence Mode proposal:
 - send-ready defined as per-message approval of one Gmail draft, verbatim; not Layer 4.
 - The minimal policy allowlist moves up into slice 1: the leash ships with the doors.
 - UI makeover phased, UI trails backend: Approvals inbox first, then Today and Tasks, then Watchboard; command palette, PWA pass, and the presence dot are a polish pass.
+
+Added August 20, build kickoff review (Fable, with codebase access):
+
+- Chase sweep and pre-call lookahead are deterministic code; LLM calls happen only when content needs writing. A quiet tick costs zero tokens.
+- EaWatch gets a slice 1 population path: a bounded Gmail delta scan inside the sweep, retired by the slice 2 trigger.
+- send-ready gains the stale-draft guard (section 6).
+- EA system runs pin to the funded Anthropic key model; house models fail closed on owner balance and must not carry scheduled runs.
+- WP0 pre-flight added: audit the instance's Composio tenant connections (Gmail, Calendar, Slack scopes, Fireflies, SFDC) before any code.
+- Repo baseline established: thomasclaw-src was not a git repo (recovered tree); now git-initialized, main = prod baseline, work on ea-phase-1.
+- Presence defaults to off per instance (multi-user codebase).
+- Migration validation path acknowledged: no local database exists on the build Mac, so the first preview deploy (fail-closed migrate) is the real migration gate, and Thomas triggers it.
 
 ## 12. Open items
 

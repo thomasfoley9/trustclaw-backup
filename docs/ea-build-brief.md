@@ -4,6 +4,8 @@ Companion to `ea-prd.md`. The PRD is the what and the why; this is the how. Auth
 
 Amendment note, August 20 PM review: PRD v1.2 (`docs/ea-prd.md`) supersedes v1.1 and folds in the Presence Mode framing. Slice 1 now also includes the SMS webhook and outbound client shipped dark, the Channels page with the master kill switch, and the coded destination allowlist. The full amendment list is in `docs/pm-review-presence-mode.md`; where this brief and PRD v1.2 disagree, the PRD wins.
 
+Amendment note, August 20 build kickoff review (Fable): the WP list below now matches PRD v1.2 slice 1 (WP0 and WP7 through WP9 added; previously the kickoff prompt stopped at WP6 and would have shipped slice 1 without the kill switch, the allowlist, or SMS). Also locked here: the chase sweep is deterministic code, never an LLM run per tick; the sweep includes a watch builder so EaWatch has a Phase 1 population path; send-ready carries a stale-draft guard (PRD section 6); the repo now has a git baseline (`main` = recovered prod tree, work happens on `ea-phase-1`).
+
 ## How to use this document
 
 1. Copy `ea-prd.md` and this file into `thomasclaw-src/docs/`.
@@ -29,6 +31,10 @@ Amendment note, August 20 PM review: PRD v1.2 (`docs/ea-prd.md`) supersedes v1.1
 
 ## Phase 1 work packages
 
+### WP0: Pre-flight audit (no code)
+
+Confirm, inside the Thomasclaw instance's Composio tenant (not any other workspace), that these connections exist and are healthy: Gmail, Google Calendar, Slack (user token with write scope; confirm whether private-channel creation is in scope, else Thomas creates #ea by hand once and setup stores the id), Fireflies, Salesforce. Confirm the instance's model for EA runs is a funded one (house models fail closed when the owner balance is empty; pin EA system runs to the Anthropic key model). Record findings at the top of the build summary.
+
 ### WP1: Data model
 
 Three new tables, named and cased per the existing schema conventions:
@@ -51,15 +57,15 @@ Acceptance: each operation unit-tested; ID stability tested; "what's due" return
 
 Acceptance: a test-mode post lands in #ea; snapshot tests for each message shape.
 
-### WP4: Seeded system crons
+### WP4: Seeded system crons and the sweep engine
 
-On EA enable, seed three system-owned jobs using the existing cron job model:
+On EA enable, seed the daily brief (7:00am America/Los_Angeles) as a system-owned job on the existing cron job model. The chase sweep and pre-call lookahead are NOT agent-prompt cron jobs: they are deterministic code invoked from the sweeper path, because an LLM run every 10 minutes is 144 invocations a day of cost, and the anti-nag caps must never depend on model judgment. The model is only called when content needs writing (a draft, a brief).
 
-1. Daily brief at 7:00am America/Los_Angeles.
-2. Chase sweep riding the existing 10-minute sweeper: walks `EaWatch` and `EaTask`, applies the ladder, respects caps, quiet hours, and snoozes. Every send updates lastNudgedAt, nudgeCount, and escalationRung in the same transaction as its `EaEvent` dedup row.
-3. Pre-call lookahead with a 2-hour horizon. In Phase 1 it creates a prep task; Phase 2 wires the full brief pipeline into it.
+1. Daily brief at 7:00am America/Los_Angeles (agent run; it composes prose).
+2. Chase sweep, deterministic code riding the existing 10-minute sweeper: walks `EaWatch` and `EaTask`, applies the ladder, respects caps, quiet hours, and snoozes. Every send updates lastNudgedAt, nudgeCount, and escalationRung in the same transaction as its `EaEvent` dedup row. Includes the watch builder: a bounded Gmail delta scan since a stored cursor that upserts `EaWatch` lastActivityAt and creates watches for external threads (this is the Phase 1 population path for EaWatch; the slice 2 Gmail trigger retires it). Draft generation for a nudge is a scoped agent call made only when a nudge is actually due.
+3. Pre-call lookahead with a 2-hour horizon, deterministic scan of the calendar. In Phase 1 it creates a prep task; Phase 2 wires the full brief pipeline into it.
 
-Acceptance: jobs appear in the cron audit trail; a forced run produces exactly one nudge per eligible task; an immediate second run produces zero.
+Acceptance: runs appear in the audit trail; a forced run produces exactly one nudge per eligible task; an immediate second run produces zero; a sweep tick with nothing due makes zero LLM calls.
 
 ### WP5: Inbound polling and the reply grammar
 
@@ -72,6 +78,24 @@ Acceptance: parser unit tests including sloppy phrasing; a replay test proving i
 Escalation rungs 0 through 3 per PRD section 6, computed from task state, never inferred from message history. Caps and quiet hours are constants in one config module: max 5 standalone pings per day with overflow batching into briefs, quiet hours 9:00pm to 6:30am PT, one message per task per rung, snooze always wins, ack means silence.
 
 Acceptance: tests proving never two messages for one task on the same rung, never more than 5 standalone pings across a simulated day, and quiet-hours sends deferred rather than dropped.
+
+### WP7: Destination allowlist (the slice 1 leash)
+
+A coded wrapper around the Composio toolset before the agent sees it. Allowed destinations: posts to #ea by stored channel id, SMS to Thomas's verified number, Gmail draft creation, and reads everywhere. Everything send-class (Gmail send, Slack posts anywhere else, calendar invites) intercepts into a draft plus an approval `EaTask`. send-ready carries the stale-draft guard per PRD section 6: if the thread has inbound activity newer than the draft, warn and offer a refreshed draft instead of sending.
+
+Acceptance: a Gmail send attempt produces a draft and an approval task, not a send; a Slack post to any channel but #ea is blocked with an audit row; send-ready on a stale draft warns instead of sending; send-ready on a fresh draft sends exactly once and confirms with a link.
+
+### WP8: Channels page, kill switch, per-channel toggles
+
+New dashboard page per the Presence doc WF-1. Master `presenceEnabled` toggle (off means zero proactive outreach anywhere; re-enable folds missed nudges into the next brief, never a backfire burst; ladder timers pause, they do not accumulate). Per-channel toggles for Slack and SMS. Quiet hours, ping cap, and chase window shown read-only from the config module in Phase 1. Presence defaults to OFF for every instance; this is a multi-user codebase.
+
+Acceptance: kill switch off plus a forced sweep produces zero outreach; re-enable after a simulated missed day produces zero standalone pings and one brief containing the backlog.
+
+### WP9: SMS dark launch
+
+`twilio.ts` beside `telegram.ts` (direct REST, no Composio dependency); `/api/twilio-webhook` with signature verification and a verified-sender gate; number verification flow on the Channels page (6-digit code, same token pattern as Telegram linking); `sms` added to `MessageSource`. Ships dark: fully built and tested behind the channel toggle, goes live when A2P clears. Inbound SMS from anyone but the verified number is dropped and logged.
+
+Acceptance: webhook signature and sender-gate tests; a mocked round-trip (inbound command, ledger effect, outbound reply); rung 4 stays unreachable while the channel toggle is off.
 
 Phase 1 definition of done: PRD section 7, plus a dry run witnessed by Thomas: one morning brief and one real dropped-ball nudge with a Gmail draft attached.
 
@@ -88,7 +112,7 @@ Policy table plus a tool wrapper that intercepts send-class Composio actions (Gm
 
 ## Phase 4 outline
 
-Allowlist promotions one action type at a time, a twice-daily activity brief (what I did and why), out-of-norm pings, and the SMS rung once a Twilio connection exists in Composio.
+Allowlist promotions one action type at a time, a twice-daily activity brief (what I did and why), and out-of-norm pings. (SMS builds in WP9 as a dark launch; it goes live on A2P approval, not in this phase.)
 
 ## SalesClaw cutover (recommendation; decision pending)
 
@@ -99,9 +123,9 @@ Once the EA brief ships, run both for 3 to 5 days, then Thomas retires SalesClaw
 ```
 Read CLAUDE.md, docs/ea-prd.md, docs/ea-build-brief.md, and docs/pm-review-presence-mode.md in full before doing anything.
 
-Build Phase 1 of the EA exactly as specified: WP1 through WP6, in order. Rules that override anything else you infer: additive migrations only; no new polling loops beyond the existing 10-minute sweeper; draft-only outbound enforced in code; do not deploy; do not touch SalesClaw; keep all existing tests green and add coverage for every work package.
+Build Phase 1 of the EA exactly as specified: WP0 through WP9, in order. Rules that override anything else you infer: additive migrations only; no new polling loops beyond the existing 10-minute sweeper; the chase sweep is deterministic code, never an LLM run per tick; draft-only outbound enforced in code; do not deploy; do not touch SalesClaw; keep all existing tests green and add coverage for every work package.
 
-Work in a branch named ea-phase-1. After each work package, run the full test suite and commit. When WP6 passes, stop and produce a summary of changes, test results, and exactly what Thomas needs to do for the witnessed dry run.
+The repo already has a git baseline: main is the recovered prod tree, and the working branch ea-phase-1 exists. Work there. After each work package, run the full test suite and commit. When WP9 passes, stop and produce a summary of changes, test results, and exactly what Thomas needs to do for the witnessed dry run.
 
 If the codebase contradicts the brief on a mechanical detail, follow the codebase and note the deviation in your summary. If it contradicts the PRD on behavior, stop and ask.
 ```
