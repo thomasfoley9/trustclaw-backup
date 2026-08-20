@@ -1,0 +1,12 @@
+{
+  "crons": [
+    {
+      "path": "/api/cron/trustclaw",
+      "schedule": "*/10 * * * *"
+    },
+    {
+      "path": "/api/voice/keepalive",
+      "schedule": "*/5 * * * *"
+    }
+  ]
+}

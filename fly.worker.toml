@@ -1,0 +1,34 @@
+# Fly.io config for the Thomas Claw agent worker (Phase 2).
+#
+# First time:
+#   fly apps create thomasclaw-worker
+#   fly secrets set -a thomasclaw-worker \
+#       DATABASE_URL=... REDIS_URL=... ENCRYPTION_KEY=... \
+#       BETTER_AUTH_SECRET=... CRON_SECRET=... NEXT_PUBLIC_APP_URL=...
+#   # ^ the worker imports the app's env schema, so it needs the SAME required
+#   #   vars as the web app (even ones it doesn't directly use) or it won't boot.
+#   fly deploy -c fly.worker.toml
+#
+# Scale (queue consumers, scale by hand or by queue depth later):
+#   fly scale count 1 -c fly.worker.toml
+#
+# NOTE: pick primary_region to match your Neon + Upstash region to keep the
+# DB/Redis round-trips local. Co-location is the difference between a snappy
+# worker and a laggy one.
+app = "thomasclaw-worker"
+primary_region = "iad"
+
+[build]
+  dockerfile = "Dockerfile.worker"
+
+# Queue consumer - no inbound HTTP, so deliberately no [http_service] and no
+# public IP. The container just runs the worker CMD and pulls jobs from Redis.
+
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = "1gb"
+
+[deploy]
+  # The worker holds no inbound connections and drains on SIGTERM, so a rolling
+  # restart finishes in-flight jobs cleanly.
+  strategy = "rolling"

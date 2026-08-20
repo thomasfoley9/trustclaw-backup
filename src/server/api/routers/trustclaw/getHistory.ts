@@ -1,0 +1,65 @@
+import { protectedProcedure } from "~/server/api/trpc";
+import { db } from "~/server/clients/db";
+import { getHistoryInput } from "./getHistory.schema";
+
+export const getHistory = protectedProcedure
+  .input(getHistoryInput)
+  .query(async ({ input, ctx }) => {
+    const userId = ctx.session.user.id;
+
+    const instance = await db.composioClawInstance.findUnique({
+      where: { userId },
+      select: { id: true, activeConversationId: true },
+    });
+
+    if (!instance) {
+      return { messages: [], nextCursor: undefined };
+    }
+
+    // Load the requested conversation (verified to belong to this instance) or
+    // fall back to the active one.
+    let conversationId = instance.activeConversationId;
+    if (input.conversationId) {
+      const owned = await db.conversation.findFirst({
+        where: { id: input.conversationId, instanceId: instance.id },
+        select: { id: true },
+      });
+      conversationId = owned?.id ?? null;
+    }
+    if (!conversationId) {
+      return { messages: [], nextCursor: undefined };
+    }
+
+    const messages = await db.message.findMany({
+      where: {
+        conversationId,
+        messageType: "regular",
+        ...(input.cursor ? { createdAt: { lt: new Date(input.cursor) } } : {}),
+      },
+      orderBy: { createdAt: "desc" },
+      take: input.limit + 1,
+      select: {
+        id: true,
+        role: true,
+        content: true,
+        source: true,
+        inputTokens: true,
+        outputTokens: true,
+        createdAt: true,
+      },
+    });
+
+    let nextCursor: string | undefined;
+    if (messages.length > input.limit) {
+      // Cursor must come from the last RETURNED row, not the popped extra:
+      // the next page filters strictly `lt` the cursor, so anchoring on the
+      // popped row would skip it entirely (one message lost per page).
+      messages.pop();
+      nextCursor = messages[messages.length - 1]!.createdAt.toISOString();
+    }
+
+    return {
+      messages: messages.reverse(),
+      nextCursor,
+    };
+  });

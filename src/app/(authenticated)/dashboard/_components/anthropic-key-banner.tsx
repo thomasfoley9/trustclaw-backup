@@ -1,0 +1,49 @@
+"use client";
+
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { Sparkles } from "lucide-react";
+import { trpc } from "~/clients/trpc";
+
+export function AnthropicKeyBanner() {
+  const pathname = usePathname();
+  const { data } = trpc.trustclaw.getAnthropicKeyStatus.useQuery(undefined, {
+    refetchOnWindowFocus: "always",
+  });
+  const { data: status } = trpc.trustclaw.getStatus.useQuery();
+  const { data: instanceData } = trpc.trustclaw.getInstance.useQuery();
+
+  if (pathname?.startsWith("/dashboard/settings")) return null;
+  // No instance yet, or a re-run of setup in progress = the onboarding wizard
+  // is on screen; don't cover it with a "chat disabled" banner whose CTA
+  // navigates them out of setup.
+  if (!status?.hasInstance || status.redoOnboarding) return null;
+  if (!data || data.hasKey) return null;
+  // House models are owner-funded - chat works fine without an Anthropic key,
+  // so "chat is disabled" would be a lie. The model picker's Claude entries
+  // fail with a clear "add your key" error if selected later. Wait for
+  // getInstance to resolve - keyless house users are the DEFAULT population
+  // now, and rendering before the model is known flashes the banner at them.
+  if (!instanceData) return null;
+  if (instanceData.instance?.anthropicModel?.startsWith("house/")) return null;
+
+  return (
+    <div className="bg-destructive/10 border-border border-b px-4 py-2 text-sm">
+      <div className="mx-auto flex max-w-5xl flex-col items-start justify-between gap-2 md:flex-row md:items-center md:gap-3">
+        <div className="text-destructive flex items-center gap-2">
+          <Sparkles className="h-4 w-4 shrink-0" />
+          <span>
+            No Anthropic API key set - chat is disabled until you add your own
+            (your Claude usage bills to your account).
+          </span>
+        </div>
+        <Link
+          href="/dashboard/settings"
+          className="border-destructive/30 bg-destructive/5 text-destructive hover:bg-destructive/15 shrink-0 rounded-md border px-3 py-1 text-xs font-medium"
+        >
+          Add key
+        </Link>
+      </div>
+    </div>
+  );
+}

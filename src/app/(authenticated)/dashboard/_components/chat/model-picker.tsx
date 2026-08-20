@@ -1,0 +1,207 @@
+"use client";
+
+import { useState } from "react";
+import { Check, ChevronDown } from "lucide-react";
+import { trpc } from "~/clients/trpc";
+import { cn } from "~/lib/utils";
+import { Button } from "~/components/ui/button";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "~/components/ui/popover";
+import { trpcToastOnError } from "~/components/core/toast-notifications";
+import { MODELS, HOUSE_MODELS } from "../onboarding/onboarding.consts";
+
+const DEFAULT_MODEL = "house/kimi-k3";
+
+// Short trigger label, e.g. "Opus 4.8" / "gpt-4o".
+function shortLabel(modelId: string): string {
+  const preset = MODELS.find((m) => m.value === modelId);
+  if (preset) return preset.label.replace(/^Claude /, "");
+  const house = HOUSE_MODELS.find((m) => m.value === modelId);
+  if (house) return house.label;
+  return modelId.includes("/") ? (modelId.split("/")[1] ?? modelId) : modelId;
+}
+
+// Cursor-style inline model switcher that lives at the bottom of the chat bar.
+export function ModelPicker() {
+  const utils = trpc.useUtils();
+  const {
+    data: instanceData,
+    error: instanceError,
+    refetch: refetchInstance,
+  } = trpc.trustclaw.getInstance.useQuery();
+  const {
+    data: customData,
+    error: customError,
+    refetch: refetchCustom,
+  } = trpc.trustclaw.getCustomModels.useQuery();
+  const current = instanceData?.instance?.anthropicModel ?? DEFAULT_MODEL;
+  const customModels = customData?.models ?? [];
+  const [open, setOpen] = useState(false);
+  // A failed fetch would otherwise show the default model as selected and an
+  // empty Custom section - indistinguishable from having none.
+  const loadError = instanceError ?? customError;
+
+  const updateSettings = trpc.trustclaw.updateSettings.useMutation({
+    // Cold-starting the heavy tRPC function can 503 at the Vercel edge even
+    // though the write commits server-side. updateSettings is idempotent, so
+    // retry transient 5xx to self-heal instead of showing a false error +
+    // reverting the picker.
+    retry: (failureCount, error) => {
+      if (failureCount >= 3) return false;
+      const status = error.data?.httpStatus;
+      return status === undefined || status >= 500;
+    },
+    retryDelay: (attempt) => Math.min(500 * 2 ** attempt, 2000),
+    onError: trpcToastOnError,
+    onSettled: () => {
+      void utils.trustclaw.getInstance.invalidate();
+    },
+  });
+
+  const selectModel = async (modelId: string) => {
+    setOpen(false);
+    if (modelId === current) return;
+    // Cancel any in-flight refetch so it can't clobber the optimistic value.
+    await utils.trustclaw.getInstance.cancel();
+    // Optimistic: flip the displayed model instantly, like Cursor.
+    utils.trustclaw.getInstance.setData(undefined, (prev) =>
+      prev?.instance
+        ? { ...prev, instance: { ...prev.instance, anthropicModel: modelId } }
+        : prev,
+    );
+    void updateSettings.mutateAsync({ anthropicModel: modelId });
+  };
+
+  const rowClass = (active: boolean) =>
+    cn(
+      "flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm transition-colors duration-fast ease-out-quad",
+      "hover:bg-accent focus-visible:bg-accent focus-visible:ring-ring/50 outline-none focus-visible:ring-2",
+      active && "bg-accent/60",
+    );
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          className="text-muted-foreground hover:text-foreground h-7 gap-1 rounded-lg px-2 text-xs font-medium"
+        >
+          {shortLabel(current)}
+          <ChevronDown className="size-3 opacity-60" />
+        </Button>
+      </PopoverTrigger>
+      {/* The catalog outgrew the viewport (8 Claude + 6 house + customs) -
+          cap the height and scroll instead of clipping. */}
+      <PopoverContent
+        align="start"
+        side="top"
+        className="max-h-[min(60vh,480px)] w-64 overflow-y-auto p-1"
+      >
+        {loadError && (
+          <div className="flex items-center justify-between gap-2 px-2 py-1.5 text-xs">
+            <span className="text-destructive">Couldn&apos;t load models.</span>
+            <button
+              type="button"
+              className="text-primary hover:underline"
+              onClick={() => {
+                if (instanceError) void refetchInstance();
+                if (customError) void refetchCustom();
+              }}
+            >
+              Try again
+            </button>
+          </div>
+        )}
+        <div className="text-muted-foreground px-2 py-1.5 text-xs font-semibold">
+          Claude
+        </div>
+        {MODELS.map((m) => (
+          <button
+            key={m.value}
+            type="button"
+            onClick={() => void selectModel(m.value)}
+            className={rowClass(current === m.value)}
+          >
+            <Check
+              className={cn(
+                "size-4 shrink-0",
+                current === m.value
+                  ? "text-primary opacity-100"
+                  : "opacity-0",
+              )}
+            />
+            <span className="min-w-0 flex-1">
+              <span className="block font-medium">{m.label}</span>
+              <span className="text-muted-foreground block text-xs">
+                {m.description}
+              </span>
+            </span>
+            <span className="text-muted-foreground text-xs">{m.cost}</span>
+          </button>
+        ))}
+
+        <div className="text-muted-foreground mt-1 px-2 py-1.5 text-xs font-semibold">
+          On the house
+        </div>
+        {HOUSE_MODELS.map((m) => (
+          <button
+            key={m.value}
+            type="button"
+            onClick={() => void selectModel(m.value)}
+            className={rowClass(current === m.value)}
+          >
+            <Check
+              className={cn(
+                "size-4 shrink-0",
+                current === m.value ? "text-primary opacity-100" : "opacity-0",
+              )}
+            />
+            <span className="min-w-0 flex-1">
+              <span className="block font-medium">{m.label}</span>
+              <span className="text-muted-foreground block text-xs">
+                {m.description}
+              </span>
+            </span>
+            <span className="text-muted-foreground text-xs">{m.cost}</span>
+          </button>
+        ))}
+
+        {customModels.length > 0 && (
+          <>
+            <div className="text-muted-foreground mt-1 px-2 py-1.5 text-xs font-semibold">
+              Custom
+            </div>
+            {customModels.map((m) => (
+              <button
+                key={m.id}
+                type="button"
+                onClick={() => void selectModel(m.modelId)}
+                className={rowClass(current === m.modelId)}
+              >
+                <Check
+                  className={cn(
+                    "size-4 shrink-0",
+                    current === m.modelId
+                      ? "text-primary opacity-100"
+                      : "opacity-0",
+                  )}
+                />
+                <span className="min-w-0 flex-1">
+                  <span className="block font-medium">{m.label}</span>
+                  <span className="text-muted-foreground block truncate text-xs">
+                    {m.modelId}
+                  </span>
+                </span>
+              </button>
+            ))}
+          </>
+        )}
+      </PopoverContent>
+    </Popover>
+  );
+}

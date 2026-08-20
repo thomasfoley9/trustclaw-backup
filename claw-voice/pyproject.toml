@@ -1,0 +1,17 @@
+[project]
+name = "claw-voice"
+version = "0.1.0"
+description = "Thomas Claw real-time voice agent - LiveKit + OpenAI GPT Realtime"
+requires-python = ">=3.11"
+dependencies = [
+    # LiveKit Agents 1.x + the OpenAI plugin (GPT-4o Realtime handles
+    # speech-to-speech natively), Silero VAD, and turn-detector weights.
+    "livekit-agents[silero,turn-detector,openai]~=1.5",
+    "python-dotenv>=1.0",
+    # Agent A's delegate tool streams the B turn from /api/voice-turn.
+    "httpx>=0.27",
+]
+
+# Managed with uv. Run `uv lock` to generate uv.lock for reproducible Fly builds.
+[tool.uv]
+package = false

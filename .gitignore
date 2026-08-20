@@ -1,0 +1,27 @@
+# deps
+node_modules/
+
+# next.js / build
+.next/
+out/
+tsconfig.tsbuildinfo
+
+# vercel
+.vercel/
+
+# env (never commit secrets; .env.example is tracked)
+.env
+.env.*
+!.env.example
+
+# tests
+test-results/
+playwright-report/
+coverage/
+
+# generated prisma client
+src/generated/
+
+# misc
+.DS_Store
+*.log

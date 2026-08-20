@@ -1,0 +1,1102 @@
+[
+  {
+    "key": "mutant-01",
+    "label": "Triple Eye",
+    "category": "mutants"
+  },
+  {
+    "key": "mutant-02",
+    "label": "Slime Brain",
+    "category": "mutants"
+  },
+  {
+    "key": "mutant-03",
+    "label": "Extra Arm",
+    "category": "mutants"
+  },
+  {
+    "key": "mutant-04",
+    "label": "Melting Face",
+    "category": "mutants"
+  },
+  {
+    "key": "mutant-05",
+    "label": "Tentacle Head",
+    "category": "mutants"
+  },
+  {
+    "key": "mutant-06",
+    "label": "Split Face",
+    "category": "mutants"
+  },
+  {
+    "key": "mutant-07",
+    "label": "Radioactive",
+    "category": "mutants"
+  },
+  {
+    "key": "platformer-01",
+    "label": "Cap Jump",
+    "category": "platformer"
+  },
+  {
+    "key": "platformer-02",
+    "label": "Green Pipe",
+    "category": "platformer"
+  },
+  {
+    "key": "platformer-03",
+    "label": "Star Power",
+    "category": "platformer"
+  },
+  {
+    "key": "platformer-04",
+    "label": "Mustache Plumber",
+    "category": "platformer"
+  },
+  {
+    "key": "platformer-05",
+    "label": "Coin Chaser",
+    "category": "platformer"
+  },
+  {
+    "key": "platformer-06",
+    "label": "Block Breaker",
+    "category": "platformer"
+  },
+  {
+    "key": "platformer-07",
+    "label": "Warp Zone",
+    "category": "platformer"
+  },
+  {
+    "key": "adventure-01",
+    "label": "Green Tunic",
+    "category": "adventure"
+  },
+  {
+    "key": "adventure-02",
+    "label": "Shield Bearer",
+    "category": "adventure"
+  },
+  {
+    "key": "adventure-03",
+    "label": "Forest Spirit",
+    "category": "adventure"
+  },
+  {
+    "key": "adventure-04",
+    "label": "Crystal Sage",
+    "category": "adventure"
+  },
+  {
+    "key": "adventure-05",
+    "label": "Bow Ranger",
+    "category": "adventure"
+  },
+  {
+    "key": "adventure-06",
+    "label": "Ruin Explorer",
+    "category": "adventure"
+  },
+  {
+    "key": "adventure-07",
+    "label": "Triforce Seeker",
+    "category": "adventure"
+  },
+  {
+    "key": "jrpg-01",
+    "label": "Spiky Blonde",
+    "category": "jrpg"
+  },
+  {
+    "key": "jrpg-02",
+    "label": "Dark Knight",
+    "category": "jrpg"
+  },
+  {
+    "key": "jrpg-03",
+    "label": "White Mage",
+    "category": "jrpg"
+  },
+  {
+    "key": "jrpg-04",
+    "label": "Summoner",
+    "category": "jrpg"
+  },
+  {
+    "key": "jrpg-05",
+    "label": "Chocobo Rider",
+    "category": "jrpg"
+  },
+  {
+    "key": "jrpg-06",
+    "label": "Limit Break",
+    "category": "jrpg"
+  },
+  {
+    "key": "jrpg-07",
+    "label": "Materia Mage",
+    "category": "jrpg"
+  },
+  {
+    "key": "blocky-01",
+    "label": "Classic Block",
+    "category": "blocky"
+  },
+  {
+    "key": "blocky-02",
+    "label": "Noob Green",
+    "category": "blocky"
+  },
+  {
+    "key": "blocky-03",
+    "label": "Builder Pro",
+    "category": "blocky"
+  },
+  {
+    "key": "blocky-04",
+    "label": "Neon Avatar",
+    "category": "blocky"
+  },
+  {
+    "key": "blocky-05",
+    "label": "Obby Runner",
+    "category": "blocky"
+  },
+  {
+    "key": "blocky-06",
+    "label": "Tycoon Boss",
+    "category": "blocky"
+  },
+  {
+    "key": "blocky-07",
+    "label": "Rainbow Block",
+    "category": "blocky"
+  },
+  {
+    "key": "voxel-01",
+    "label": "Block Miner",
+    "category": "voxel"
+  },
+  {
+    "key": "voxel-02",
+    "label": "Green Stalker",
+    "category": "voxel"
+  },
+  {
+    "key": "voxel-03",
+    "label": "Pig Snout",
+    "category": "voxel"
+  },
+  {
+    "key": "voxel-04",
+    "label": "Ender Style",
+    "category": "voxel"
+  },
+  {
+    "key": "voxel-05",
+    "label": "Diamond Gear",
+    "category": "voxel"
+  },
+  {
+    "key": "voxel-06",
+    "label": "Villager Nose",
+    "category": "voxel"
+  },
+  {
+    "key": "voxel-07",
+    "label": "Nether Blaze",
+    "category": "voxel"
+  },
+  {
+    "key": "robot-01",
+    "label": "Chrome Bot",
+    "category": "robots"
+  },
+  {
+    "key": "robot-02",
+    "label": "Retro Droid",
+    "category": "robots"
+  },
+  {
+    "key": "robot-03",
+    "label": "Mech Pilot",
+    "category": "robots"
+  },
+  {
+    "key": "robot-04",
+    "label": "Cute Companion",
+    "category": "robots"
+  },
+  {
+    "key": "robot-05",
+    "label": "Rust Bucket",
+    "category": "robots"
+  },
+  {
+    "key": "robot-06",
+    "label": "Laser Unit",
+    "category": "robots"
+  },
+  {
+    "key": "robot-07",
+    "label": "AI Core",
+    "category": "robots"
+  },
+  {
+    "key": "sea-01",
+    "label": "Angler Lure",
+    "category": "sea"
+  },
+  {
+    "key": "sea-02",
+    "label": "Octo Grin",
+    "category": "sea"
+  },
+  {
+    "key": "sea-03",
+    "label": "Blobfish",
+    "category": "sea"
+  },
+  {
+    "key": "sea-04",
+    "label": "Puffer Panic",
+    "category": "sea"
+  },
+  {
+    "key": "sea-05",
+    "label": "Shark Grin",
+    "category": "sea"
+  },
+  {
+    "key": "sea-06",
+    "label": "Jelly Wobble",
+    "category": "sea"
+  },
+  {
+    "key": "ghost-01",
+    "label": "Classic Boo",
+    "category": "ghosts"
+  },
+  {
+    "key": "ghost-02",
+    "label": "Spooky Sheet",
+    "category": "ghosts"
+  },
+  {
+    "key": "ghost-03",
+    "label": "Phantom Glow",
+    "category": "ghosts"
+  },
+  {
+    "key": "ghost-04",
+    "label": "Friendly Float",
+    "category": "ghosts"
+  },
+  {
+    "key": "ghost-05",
+    "label": "Haunted Wisp",
+    "category": "ghosts"
+  },
+  {
+    "key": "ghost-06",
+    "label": "Poltergeist",
+    "category": "ghosts"
+  },
+  {
+    "key": "alien-01",
+    "label": "Grey Visitor",
+    "category": "aliens"
+  },
+  {
+    "key": "alien-02",
+    "label": "One Eye",
+    "category": "aliens"
+  },
+  {
+    "key": "alien-03",
+    "label": "Martian",
+    "category": "aliens"
+  },
+  {
+    "key": "alien-04",
+    "label": "UFO Pilot",
+    "category": "aliens"
+  },
+  {
+    "key": "alien-05",
+    "label": "Tentacle Invader",
+    "category": "aliens"
+  },
+  {
+    "key": "alien-06",
+    "label": "Neon Probe",
+    "category": "aliens"
+  },
+  {
+    "key": "alien-07",
+    "label": "Cosmic Blob",
+    "category": "aliens"
+  },
+  {
+    "key": "monster-01",
+    "label": "Horned Beast",
+    "category": "monsters"
+  },
+  {
+    "key": "monster-02",
+    "label": "Slime King",
+    "category": "monsters"
+  },
+  {
+    "key": "monster-03",
+    "label": "Cyclops Troll",
+    "category": "monsters"
+  },
+  {
+    "key": "monster-04",
+    "label": "Fang Face",
+    "category": "monsters"
+  },
+  {
+    "key": "monster-05",
+    "label": "Eye Monster",
+    "category": "monsters"
+  },
+  {
+    "key": "monster-06",
+    "label": "Moss Golem",
+    "category": "monsters"
+  },
+  {
+    "key": "monster-07",
+    "label": "Chaos Imp",
+    "category": "monsters"
+  },
+  {
+    "key": "animal-01",
+    "label": "Grumpy Cat",
+    "category": "animals"
+  },
+  {
+    "key": "animal-02",
+    "label": "Party Dog",
+    "category": "animals"
+  },
+  {
+    "key": "animal-03",
+    "label": "Wise Owl",
+    "category": "animals"
+  },
+  {
+    "key": "animal-04",
+    "label": "Frog Prince",
+    "category": "animals"
+  },
+  {
+    "key": "animal-05",
+    "label": "Derpy Penguin",
+    "category": "animals"
+  },
+  {
+    "key": "animal-06",
+    "label": "Trash Panda",
+    "category": "animals"
+  },
+  {
+    "key": "funny-01",
+    "label": "Derp Face",
+    "category": "funnyFaces"
+  },
+  {
+    "key": "funny-02",
+    "label": "Big Nose",
+    "category": "funnyFaces"
+  },
+  {
+    "key": "funny-03",
+    "label": "Unibrow",
+    "category": "funnyFaces"
+  },
+  {
+    "key": "funny-04",
+    "label": "Buck Teeth",
+    "category": "funnyFaces"
+  },
+  {
+    "key": "funny-05",
+    "label": "WTF Face",
+    "category": "funnyFaces"
+  },
+  {
+    "key": "funny-06",
+    "label": "Side Eye",
+    "category": "funnyFaces"
+  },
+  {
+    "key": "cryptid-01",
+    "label": "Mothman",
+    "category": "cryptids"
+  },
+  {
+    "key": "cryptid-02",
+    "label": "Bigfoot",
+    "category": "cryptids"
+  },
+  {
+    "key": "cryptid-03",
+    "label": "Jackalope",
+    "category": "cryptids"
+  },
+  {
+    "key": "cryptid-04",
+    "label": "Loch Ness",
+    "category": "cryptids"
+  },
+  {
+    "key": "cryptid-05",
+    "label": "Flatwoods",
+    "category": "cryptids"
+  },
+  {
+    "key": "cryptid-06",
+    "label": "Chupacabra",
+    "category": "cryptids"
+  },
+  {
+    "key": "cryptid-07",
+    "label": "Jersey Devil",
+    "category": "cryptids"
+  },
+  {
+    "key": "skeleton-01",
+    "label": "Classic Skull",
+    "category": "skeletons"
+  },
+  {
+    "key": "skeleton-02",
+    "label": "Zombie",
+    "category": "skeletons"
+  },
+  {
+    "key": "skeleton-03",
+    "label": "Bone Dog",
+    "category": "skeletons"
+  },
+  {
+    "key": "skeleton-04",
+    "label": "Reaper",
+    "category": "skeletons"
+  },
+  {
+    "key": "skeleton-05",
+    "label": "Mummy",
+    "category": "skeletons"
+  },
+  {
+    "key": "skeleton-06",
+    "label": "Lich",
+    "category": "skeletons"
+  },
+  {
+    "key": "retro-platformer-01",
+    "label": "Red Cap Jump",
+    "category": "platformer",
+    "categoryLabel": "Platformer Heroes"
+  },
+  {
+    "key": "retro-platformer-02",
+    "label": "Green Pipe Guy",
+    "category": "platformer",
+    "categoryLabel": "Platformer Heroes"
+  },
+  {
+    "key": "retro-platformer-03",
+    "label": "Star Powered",
+    "category": "platformer",
+    "categoryLabel": "Platformer Heroes"
+  },
+  {
+    "key": "retro-platformer-04",
+    "label": "Mustache Jump",
+    "category": "platformer",
+    "categoryLabel": "Platformer Heroes"
+  },
+  {
+    "key": "retro-platformer-05",
+    "label": "Coin Chaser",
+    "category": "platformer",
+    "categoryLabel": "Platformer Heroes"
+  },
+  {
+    "key": "retro-platformer-06",
+    "label": "Brick Breaker",
+    "category": "platformer",
+    "categoryLabel": "Platformer Heroes"
+  },
+  {
+    "key": "retro-platformer-07",
+    "label": "Warp Pipe",
+    "category": "platformer",
+    "categoryLabel": "Platformer Heroes"
+  },
+  {
+    "key": "retro-platformer-08",
+    "label": "Fire Flower Fan",
+    "category": "platformer",
+    "categoryLabel": "Platformer Heroes"
+  },
+  {
+    "key": "retro-platformer-09",
+    "label": "Tanooki Tail",
+    "category": "platformer",
+    "categoryLabel": "Platformer Heroes"
+  },
+  {
+    "key": "retro-platformer-10",
+    "label": "Ice Slider",
+    "category": "platformer",
+    "categoryLabel": "Platformer Heroes"
+  },
+  {
+    "key": "retro-adventure-01",
+    "label": "Green Tunic",
+    "category": "adventure",
+    "categoryLabel": "Adventure Quest"
+  },
+  {
+    "key": "retro-adventure-02",
+    "label": "Shield Knight",
+    "category": "adventure",
+    "categoryLabel": "Adventure Quest"
+  },
+  {
+    "key": "retro-adventure-03",
+    "label": "Forest Fairy",
+    "category": "adventure",
+    "categoryLabel": "Adventure Quest"
+  },
+  {
+    "key": "retro-adventure-04",
+    "label": "Crystal Sage",
+    "category": "adventure",
+    "categoryLabel": "Adventure Quest"
+  },
+  {
+    "key": "retro-adventure-05",
+    "label": "Bow Ranger",
+    "category": "adventure",
+    "categoryLabel": "Adventure Quest"
+  },
+  {
+    "key": "retro-adventure-06",
+    "label": "Ruin Explorer",
+    "category": "adventure",
+    "categoryLabel": "Adventure Quest"
+  },
+  {
+    "key": "retro-adventure-07",
+    "label": "Triangle Hero",
+    "category": "adventure",
+    "categoryLabel": "Adventure Quest"
+  },
+  {
+    "key": "retro-adventure-08",
+    "label": "Goron Rock",
+    "category": "adventure",
+    "categoryLabel": "Adventure Quest"
+  },
+  {
+    "key": "retro-adventure-09",
+    "label": "Zora Fish",
+    "category": "adventure",
+    "categoryLabel": "Adventure Quest"
+  },
+  {
+    "key": "retro-adventure-10",
+    "label": "Mask Merchant",
+    "category": "adventure",
+    "categoryLabel": "Adventure Quest"
+  },
+  {
+    "key": "retro-pocket-01",
+    "label": "Spark Mouse",
+    "category": "pocket",
+    "categoryLabel": "Pocket Creatures"
+  },
+  {
+    "key": "retro-pocket-02",
+    "label": "Leaf Bulb",
+    "category": "pocket",
+    "categoryLabel": "Pocket Creatures"
+  },
+  {
+    "key": "retro-pocket-03",
+    "label": "Flame Lizard",
+    "category": "pocket",
+    "categoryLabel": "Pocket Creatures"
+  },
+  {
+    "key": "retro-pocket-04",
+    "label": "Aqua Turtle",
+    "category": "pocket",
+    "categoryLabel": "Pocket Creatures"
+  },
+  {
+    "key": "retro-pocket-05",
+    "label": "Volt Ball",
+    "category": "pocket",
+    "categoryLabel": "Pocket Creatures"
+  },
+  {
+    "key": "retro-pocket-06",
+    "label": "Ghost Goo",
+    "category": "pocket",
+    "categoryLabel": "Pocket Creatures"
+  },
+  {
+    "key": "retro-pocket-07",
+    "label": "Rock Snake",
+    "category": "pocket",
+    "categoryLabel": "Pocket Creatures"
+  },
+  {
+    "key": "retro-pocket-08",
+    "label": "Fairy Pixie",
+    "category": "pocket",
+    "categoryLabel": "Pocket Creatures"
+  },
+  {
+    "key": "retro-pocket-09",
+    "label": "Dragon Mini",
+    "category": "pocket",
+    "categoryLabel": "Pocket Creatures"
+  },
+  {
+    "key": "retro-pocket-10",
+    "label": "Ball Capsule",
+    "category": "pocket",
+    "categoryLabel": "Pocket Creatures"
+  },
+  {
+    "key": "retro-kart-01",
+    "label": "Red Racer",
+    "category": "kart",
+    "categoryLabel": "Kart Racers"
+  },
+  {
+    "key": "retro-kart-02",
+    "label": "Green Racer",
+    "category": "kart",
+    "categoryLabel": "Kart Racers"
+  },
+  {
+    "key": "retro-kart-03",
+    "label": "Shell Racer",
+    "category": "kart",
+    "categoryLabel": "Kart Racers"
+  },
+  {
+    "key": "retro-kart-04",
+    "label": "Toadstool Pilot",
+    "category": "kart",
+    "categoryLabel": "Kart Racers"
+  },
+  {
+    "key": "retro-kart-05",
+    "label": "Wario Yellow",
+    "category": "kart",
+    "categoryLabel": "Kart Racers"
+  },
+  {
+    "key": "retro-kart-06",
+    "label": "Princess Driver",
+    "category": "kart",
+    "categoryLabel": "Kart Racers"
+  },
+  {
+    "key": "retro-kart-07",
+    "label": "Banana Peel",
+    "category": "kart",
+    "categoryLabel": "Kart Racers"
+  },
+  {
+    "key": "retro-kart-08",
+    "label": "Blue Shell",
+    "category": "kart",
+    "categoryLabel": "Kart Racers"
+  },
+  {
+    "key": "retro-kart-09",
+    "label": "Rainbow Road",
+    "category": "kart",
+    "categoryLabel": "Kart Racers"
+  },
+  {
+    "key": "retro-kart-10",
+    "label": "Turbo Boost",
+    "category": "kart",
+    "categoryLabel": "Kart Racers"
+  },
+  {
+    "key": "retro-jungle-01",
+    "label": "Barrel Ape",
+    "category": "jungle",
+    "categoryLabel": "Jungle Kongs"
+  },
+  {
+    "key": "retro-jungle-02",
+    "label": "Banana King",
+    "category": "jungle",
+    "categoryLabel": "Jungle Kongs"
+  },
+  {
+    "key": "retro-jungle-03",
+    "label": "Tie Fighter",
+    "category": "jungle",
+    "categoryLabel": "Jungle Kongs"
+  },
+  {
+    "key": "retro-jungle-04",
+    "label": "Jungle Bongo",
+    "category": "jungle",
+    "categoryLabel": "Jungle Kongs"
+  },
+  {
+    "key": "retro-jungle-05",
+    "label": "Mini Kong",
+    "category": "jungle",
+    "categoryLabel": "Jungle Kongs"
+  },
+  {
+    "key": "retro-jungle-06",
+    "label": "Gorilla Grip",
+    "category": "jungle",
+    "categoryLabel": "Jungle Kongs"
+  },
+  {
+    "key": "retro-jungle-07",
+    "label": "Vine Swinger",
+    "category": "jungle",
+    "categoryLabel": "Jungle Kongs"
+  },
+  {
+    "key": "retro-jungle-08",
+    "label": "Coconut Toss",
+    "category": "jungle",
+    "categoryLabel": "Jungle Kongs"
+  },
+  {
+    "key": "retro-jungle-09",
+    "label": "Jungle DJ",
+    "category": "jungle",
+    "categoryLabel": "Jungle Kongs"
+  },
+  {
+    "key": "retro-jungle-10",
+    "label": "Treehouse Boss",
+    "category": "jungle",
+    "categoryLabel": "Jungle Kongs"
+  },
+  {
+    "key": "retro-space-01",
+    "label": "Fox Pilot",
+    "category": "space",
+    "categoryLabel": "Space Pilots"
+  },
+  {
+    "key": "retro-space-02",
+    "label": "Frog Pilot",
+    "category": "space",
+    "categoryLabel": "Space Pilots"
+  },
+  {
+    "key": "retro-space-03",
+    "label": "Bunny Pilot",
+    "category": "space",
+    "categoryLabel": "Space Pilots"
+  },
+  {
+    "key": "retro-space-04",
+    "label": "Bird Pilot",
+    "category": "space",
+    "categoryLabel": "Space Pilots"
+  },
+  {
+    "key": "retro-space-05",
+    "label": "Arwing Ace",
+    "category": "space",
+    "categoryLabel": "Space Pilots"
+  },
+  {
+    "key": "retro-space-06",
+    "label": "Giant Eye Boss",
+    "category": "space",
+    "categoryLabel": "Space Pilots"
+  },
+  {
+    "key": "retro-space-07",
+    "label": "Grey Wolf Ace",
+    "category": "space",
+    "categoryLabel": "Space Pilots"
+  },
+  {
+    "key": "retro-space-08",
+    "label": "Lylat Cadet",
+    "category": "space",
+    "categoryLabel": "Space Pilots"
+  },
+  {
+    "key": "retro-space-09",
+    "label": "Meteo Dodger",
+    "category": "space",
+    "categoryLabel": "Space Pilots"
+  },
+  {
+    "key": "retro-space-10",
+    "label": "Barrel Roll",
+    "category": "space",
+    "categoryLabel": "Space Pilots"
+  },
+  {
+    "key": "retro-haunted-01",
+    "label": "Shy Boo",
+    "category": "haunted",
+    "categoryLabel": "Haunted Mansion"
+  },
+  {
+    "key": "retro-haunted-02",
+    "label": "Vacuum Hero",
+    "category": "haunted",
+    "categoryLabel": "Haunted Mansion"
+  },
+  {
+    "key": "retro-haunted-03",
+    "label": "Portrait Ghost",
+    "category": "haunted",
+    "categoryLabel": "Haunted Mansion"
+  },
+  {
+    "key": "retro-haunted-04",
+    "label": "Gold Ghost",
+    "category": "haunted",
+    "categoryLabel": "Haunted Mansion"
+  },
+  {
+    "key": "retro-haunted-05",
+    "label": "Polterpup",
+    "category": "haunted",
+    "categoryLabel": "Haunted Mansion"
+  },
+  {
+    "key": "retro-haunted-06",
+    "label": "Dark Moon",
+    "category": "haunted",
+    "categoryLabel": "Haunted Mansion"
+  },
+  {
+    "key": "retro-haunted-07",
+    "label": "Cursed Mansion",
+    "category": "haunted",
+    "categoryLabel": "Haunted Mansion"
+  },
+  {
+    "key": "retro-haunted-08",
+    "label": "Flashlight Face",
+    "category": "haunted",
+    "categoryLabel": "Haunted Mansion"
+  },
+  {
+    "key": "retro-haunted-09",
+    "label": "Mushroom Butler",
+    "category": "haunted",
+    "categoryLabel": "Haunted Mansion"
+  },
+  {
+    "key": "retro-haunted-10",
+    "label": "Crown Ghost",
+    "category": "haunted",
+    "categoryLabel": "Haunted Mansion"
+  },
+  {
+    "key": "retro-puff-01",
+    "label": "Pink Puff",
+    "category": "puff",
+    "categoryLabel": "Puff Balls"
+  },
+  {
+    "key": "retro-puff-02",
+    "label": "Inhale Face",
+    "category": "puff",
+    "categoryLabel": "Puff Balls"
+  },
+  {
+    "key": "retro-puff-03",
+    "label": "Copy Puff",
+    "category": "puff",
+    "categoryLabel": "Puff Balls"
+  },
+  {
+    "key": "retro-puff-04",
+    "label": "Fire Puff",
+    "category": "puff",
+    "categoryLabel": "Puff Balls"
+  },
+  {
+    "key": "retro-puff-05",
+    "label": "Ice Puff",
+    "category": "puff",
+    "categoryLabel": "Puff Balls"
+  },
+  {
+    "key": "retro-puff-06",
+    "label": "Sleep Puff",
+    "category": "puff",
+    "categoryLabel": "Puff Balls"
+  },
+  {
+    "key": "retro-puff-07",
+    "label": "Mask Knight",
+    "category": "puff",
+    "categoryLabel": "Puff Balls"
+  },
+  {
+    "key": "retro-puff-08",
+    "label": "Stubby Orange",
+    "category": "puff",
+    "categoryLabel": "Puff Balls"
+  },
+  {
+    "key": "retro-puff-09",
+    "label": "Cloud Kingdom",
+    "category": "puff",
+    "categoryLabel": "Puff Balls"
+  },
+  {
+    "key": "retro-puff-10",
+    "label": "Star Rod",
+    "category": "puff",
+    "categoryLabel": "Puff Balls"
+  },
+  {
+    "key": "retro-shell-01",
+    "label": "Brown Stomp",
+    "category": "shell",
+    "categoryLabel": "Shell Squad"
+  },
+  {
+    "key": "retro-shell-02",
+    "label": "Green Shell",
+    "category": "shell",
+    "categoryLabel": "Shell Squad"
+  },
+  {
+    "key": "retro-shell-03",
+    "label": "Red Shell",
+    "category": "shell",
+    "categoryLabel": "Shell Squad"
+  },
+  {
+    "key": "retro-shell-04",
+    "label": "Spike Shell",
+    "category": "shell",
+    "categoryLabel": "Shell Squad"
+  },
+  {
+    "key": "retro-shell-05",
+    "label": "Hammer Toss",
+    "category": "shell",
+    "categoryLabel": "Shell Squad"
+  },
+  {
+    "key": "retro-shell-06",
+    "label": "Propeller Guy",
+    "category": "shell",
+    "categoryLabel": "Shell Squad"
+  },
+  {
+    "key": "retro-shell-07",
+    "label": "Chain Bite",
+    "category": "shell",
+    "categoryLabel": "Shell Squad"
+  },
+  {
+    "key": "retro-shell-08",
+    "label": "Round Bomb",
+    "category": "shell",
+    "categoryLabel": "Shell Squad"
+  },
+  {
+    "key": "retro-shell-09",
+    "label": "Red Fish",
+    "category": "shell",
+    "categoryLabel": "Shell Squad"
+  },
+  {
+    "key": "retro-shell-10",
+    "label": "Crusher Block",
+    "category": "shell",
+    "categoryLabel": "Shell Squad"
+  },
+  {
+    "key": "retro-powerup-01",
+    "label": "Super Mushroom",
+    "category": "powerup",
+    "categoryLabel": "Power-Ups"
+  },
+  {
+    "key": "retro-powerup-02",
+    "label": "Green Plus Shroom",
+    "category": "powerup",
+    "categoryLabel": "Power-Ups"
+  },
+  {
+    "key": "retro-powerup-03",
+    "label": "Fire Flower",
+    "category": "powerup",
+    "categoryLabel": "Power-Ups"
+  },
+  {
+    "key": "retro-powerup-04",
+    "label": "Invincibility Star",
+    "category": "powerup",
+    "categoryLabel": "Power-Ups"
+  },
+  {
+    "key": "retro-powerup-05",
+    "label": "Super Leaf",
+    "category": "powerup",
+    "categoryLabel": "Power-Ups"
+  },
+  {
+    "key": "retro-powerup-06",
+    "label": "Mega Mushroom",
+    "category": "powerup",
+    "categoryLabel": "Power-Ups"
+  },
+  {
+    "key": "retro-powerup-07",
+    "label": "Question Block",
+    "category": "powerup",
+    "categoryLabel": "Power-Ups"
+  },
+  {
+    "key": "retro-powerup-08",
+    "label": "Coin Shine",
+    "category": "powerup",
+    "categoryLabel": "Power-Ups"
+  },
+  {
+    "key": "retro-powerup-09",
+    "label": "Ice Flower",
+    "category": "powerup",
+    "categoryLabel": "Power-Ups"
+  },
+  {
+    "key": "retro-powerup-10",
+    "label": "Wing Boost",
+    "category": "powerup",
+    "categoryLabel": "Power-Ups"
+  }
+]

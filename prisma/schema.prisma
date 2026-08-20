@@ -1,0 +1,451 @@
+generator client {
+  provider        = "prisma-client"
+  output          = "../src/generated/prisma"
+  previewFeatures = ["postgresqlExtensions"]
+}
+
+datasource db {
+  provider   = "postgresql"
+  extensions = [vector]
+}
+
+enum MessageRole {
+  user
+  assistant
+}
+
+enum MessageSource {
+  web
+  telegram
+  cron
+}
+
+enum MessageType {
+  regular
+  compaction_summary
+  memory_flush
+  hidden
+}
+
+model User {
+  id              String                 @id
+  name            String
+  email           String
+  emailVerified   Boolean                @default(false)
+  image           String?
+  timezone        String                 @default("UTC")
+  username        String?                @unique
+  displayUsername String?
+  createdAt       DateTime               @default(now())
+  updatedAt       DateTime               @updatedAt
+  sessions        Session[]
+  accounts        Account[]
+  instances       ComposioClawInstance[]
+  onboardingState OnboardingState?
+
+  @@unique([email])
+  @@map("user")
+}
+
+model Session {
+  id        String   @id
+  expiresAt DateTime
+  token     String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  ipAddress String?
+  userAgent String?
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([token])
+  @@index([userId])
+  @@map("session")
+}
+
+model Account {
+  id                    String    @id
+  accountId             String
+  providerId            String
+  userId                String
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accessToken           String?
+  refreshToken          String?
+  idToken               String?
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?
+  password              String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  @@index([userId])
+  @@map("account")
+}
+
+model Verification {
+  id         String   @id
+  identifier String
+  value      String
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([identifier])
+  @@map("verification")
+}
+
+model ComposioClawInstance {
+  id     String @id @default(cuid())
+  userId String @unique
+
+  // Model config. anthropicModel = Agent B (the worker that runs tools + does
+  // the heavy reasoning). agentAModel = Agent A (the conversational voice/
+  // narrator front); null falls back to a sensible default per surface -
+  // Agent B's model for the text narrator, a house model for the voice front.
+  anthropicModel String  @default("house/kimi-k3")
+  agentAModel    String?
+
+  // Per-user Composio API key. Each user brings their own - no shared key.
+  // Tool calls and toolkit listings require this to be set.
+  composioApiKey String?
+
+  // Per-user Anthropic API key (encrypted, enc:v1: envelope). Each user pays
+  // for their own Claude usage - the Claude presets fail closed if this isn't
+  // set. The house models (the default) run on owner keys and don't need it.
+  // OpenAI/Google models use their own CustomModel key.
+  anthropicApiKey String?
+
+  // Voice. voiceId is an OpenAI Realtime voice for live calls (the read-aloud
+  // path maps it onto a Smallest voice). voiceApiKey is the per-user
+  // Smallest.ai key for read-aloud TTS, encrypted at rest like the others.
+  voiceApiKey String?
+  voiceId     String  @default("marin")
+
+  // Memory routing: which bucket new memories save to, and whether the
+  // current chat runs incognito (no recall, no save, no history).
+  activeMemoryBucket String  @default("general")
+  incognitoMode      Boolean @default(false)
+
+  // Active personality (swappable "skin" for the agent's voice).
+  activePersonalityId String?
+
+  // Currently-selected chat session. All entry points (web/cron/telegram)
+  // append to this conversation; the sidebar switches it.
+  activeConversationId String?
+
+  // Telegram linking
+  telegramChatId             String?   @unique
+  telegramLinkToken          String?   @unique
+  telegramLinkTokenExpiresAt DateTime?
+
+  // Agent identity, stored as text
+  soulPrompt      String?
+  identityPrompt  String?
+  userPrompt      String?
+
+  // Context compaction
+  compactionCount       Int       @default(0)
+  lastCompactionSummary String?
+  lastCompactionAt      DateTime?
+  tokensAtCompaction    Int?
+  memoryFlushCount      Int       @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  messages        Message[]
+  memories        Memory[]
+  cronJobs        CronJob[]
+  personalities   Personality[]
+  conversations   Conversation[]
+  memoryBuckets   MemoryBucket[]
+  customModels    CustomModel[]
+  skills          Skill[]
+  mcpServers      McpServer[]
+  generatedImages GeneratedImage[]
+
+  @@index([userId])
+  @@map("composio_claw_instance")
+}
+
+// Agent-generated images. Stored in the DB because the serverless filesystem
+// is read-only (and per-lambda) - a file written by the generating function
+// is invisible to the lambda serving /api/image/[id].
+model GeneratedImage {
+  id         String   @id @default(uuid())
+  instanceId String
+  mimeType   String   @default("image/png")
+  data       Bytes
+  createdAt  DateTime @default(now())
+
+  instance ComposioClawInstance @relation(fields: [instanceId], references: [id], onDelete: Cascade)
+
+  @@index([instanceId])
+  @@map("composio_claw_generated_image")
+}
+
+// Named, invokable agent skills authored in natural language. Each renders
+// into the system prompt as a capability the agent can perform, gathering any
+// missing required inputs from the user before acting. enabled = injected.
+model Skill {
+  id             String   @id @default(cuid())
+  instanceId     String
+  name           String
+  whenToUse      String
+  instructions   String[]
+  requiredInputs Json
+  enabled        Boolean  @default(true)
+  isPreset       Boolean  @default(false)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  instance ComposioClawInstance @relation(fields: [instanceId], references: [id], onDelete: Cascade)
+
+  @@unique([instanceId, name])
+  @@index([instanceId])
+  @@map("composio_claw_skill")
+}
+
+// User-added models beyond the Claude presets (e.g. "openai/gpt-4o"). Each
+// optionally carries a BYO provider API key, encrypted at rest via crypto.ts
+// (same enc:v1: envelope as composioApiKey). When a key is present the agent
+// calls the provider directly; otherwise the id routes through the gateway.
+model CustomModel {
+  id             String   @id @default(cuid())
+  instanceId     String
+  modelId        String
+  label          String
+  provider       String
+  providerApiKey String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  instance ComposioClawInstance @relation(fields: [instanceId], references: [id], onDelete: Cascade)
+
+  @@unique([instanceId, modelId])
+  @@index([instanceId])
+  @@map("composio_claw_custom_model")
+}
+
+// Per-user MCP (Model Context Protocol) servers - e.g. Composio MCP URLs.
+// The agent connects to each at run time and merges its tools. The `url`
+// embeds an auth token, so it's encrypted at rest (enc:v1: envelope).
+model McpServer {
+  id         String   @id @default(cuid())
+  instanceId String
+  label      String
+  url        String
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  instance ComposioClawInstance @relation(fields: [instanceId], references: [id], onDelete: Cascade)
+
+  @@index([instanceId])
+  @@map("composio_claw_mcp_server")
+}
+
+// User-editable knowledge buckets. `slug` is the stable key stored in
+// Memory.category; label/description/alwaysInject are editable. The four
+// seeded masters are marked isSystem. "general" is the protected default.
+model MemoryBucket {
+  id           String   @id @default(cuid())
+  instanceId   String
+  slug         String
+  label        String
+  description  String?
+  alwaysInject Boolean  @default(false)
+  isSystem     Boolean  @default(false)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  instance ComposioClawInstance @relation(fields: [instanceId], references: [id], onDelete: Cascade)
+
+  @@unique([instanceId, slug])
+  @@index([instanceId])
+  @@map("composio_claw_memory_bucket")
+}
+
+model Conversation {
+  id         String @id @default(cuid())
+  instanceId String
+  title      String @default("New chat")
+
+  // Last personality used in this session, so a mid-conversation switch can be
+  // detected and the new voice forced against the established tone.
+  lastPersonalityId String?
+
+  // Voice calls only. The persona the SPOKEN agent was dispatched with, which
+  // it cannot change for the life of the call. The delegate that does the work
+  // pins to this so the call can't end up speaking in the old voice while
+  // wording replies as a newly-picked persona. Sentinel "none" = the call
+  // started on the default voice (distinct from null = not a voice call).
+  voicePersonaId String?
+
+  // The persona PROMPT/name captured at dispatch - the same text handed to the
+  // spoken agent. Pinning the id alone is not enough: editing or deleting the
+  // personality mid-call would still desync the two agents (or drop the
+  // delegate to the default character mid-sentence), so the call reads this
+  // snapshot instead of re-resolving the row every turn.
+  voicePersonaPrompt String?
+  voicePersonaName   String?
+
+  // Set while an agent run is executing for this session (cleared on finish/
+  // error). DB-backed so background runs are visible across processes /
+  // serverless instances; treat stale values (older than max run duration)
+  // as dead.
+  activeRunStartedAt DateTime?
+
+  // Per-session context/compaction state (each session has its own context
+  // window, independent of other sessions).
+  compactionCount       Int       @default(0)
+  lastCompactionSummary String?
+  lastCompactionAt      DateTime?
+  tokensAtCompaction    Int?
+  memoryFlushCount      Int       @default(0)
+
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  lastMessageAt DateTime @default(now())
+
+  instance ComposioClawInstance @relation(fields: [instanceId], references: [id], onDelete: Cascade)
+  messages Message[]
+
+  @@index([instanceId, lastMessageAt])
+  @@map("composio_claw_conversation")
+}
+
+model Personality {
+  id         String   @id @default(cuid())
+  instanceId String
+  name       String
+  prompt     String
+  emoji      String?
+  avatarKey  String?
+  isPreset   Boolean  @default(false)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  instance ComposioClawInstance @relation(fields: [instanceId], references: [id], onDelete: Cascade)
+
+  @@unique([instanceId, name])
+  @@index([instanceId])
+  @@map("composio_claw_personality")
+}
+
+model Message {
+  id             String        @id @default(cuid())
+  instanceId     String
+  conversationId String?
+  role           MessageRole
+  content        Json
+  source         MessageSource @default(web)
+  messageType    MessageType   @default(regular)
+
+  inputTokens      Int?
+  outputTokens     Int?
+  cacheReadTokens  Int?
+  cacheWriteTokens Int?
+
+  createdAt    DateTime             @default(now())
+  instance     ComposioClawInstance @relation(fields: [instanceId], references: [id], onDelete: Cascade)
+  conversation Conversation?        @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  @@index([instanceId, createdAt])
+  @@index([conversationId, createdAt])
+  @@map("composio_claw_message")
+}
+
+model Memory {
+  id         String                      @id @default(cuid())
+  instanceId String
+  content    String
+  category   String                      @default("general")
+  embedding  Unsupported("VECTOR(1024)")
+  createdAt  DateTime                    @default(now())
+
+  instance ComposioClawInstance @relation(fields: [instanceId], references: [id], onDelete: Cascade)
+
+  @@index([instanceId, createdAt])
+  @@index([instanceId, category])
+  @@index([instanceId, category, createdAt(sort: Desc)], map: "composio_claw_memory_instance_category_created_idx")
+  @@map("composio_claw_memory")
+}
+
+model CronJob {
+  id         String    @id @default(cuid())
+  instanceId String
+  expression String
+  prompt     String
+  timezone   String    @default("UTC")
+  enabled    Boolean   @default(true)
+  lastRunAt  DateTime?
+  nextRunAt  DateTime?
+
+  lockedAt  DateTime?
+  lockedBy  String?
+  lastError String?
+
+  // Auto-pause: consecutive failed runs. Reset on success; at the threshold
+  // the job is disabled and the user notified, so a broken schedule can't
+  // fail silently every night forever.
+  consecutiveFailures Int @default(0)
+
+  // QStash one-shot message id for the next scheduled fire (push scheduling).
+  // Cancelled when the job is disabled or deleted. Null when QStash is off.
+  qstashMessageId String?
+
+  instance ComposioClawInstance @relation(fields: [instanceId], references: [id], onDelete: Cascade)
+  runs     CronRun[]
+
+  @@index([instanceId, nextRunAt])
+  @@map("composio_claw_cron_job")
+}
+
+// One row per scheduled-job execution - the audit trail behind the run
+// history UI and the auto-pause counter. Kept lean: a short result snippet,
+// not the full output (that lives in the Scheduled tasks conversation).
+model CronRun {
+  id         String    @id @default(cuid())
+  jobId      String
+  instanceId String
+  status     String // "running" | "succeeded" | "failed"
+  trigger    String    @default("schedule") // "schedule" | "manual"
+  startedAt  DateTime  @default(now())
+  finishedAt DateTime?
+  error      String?
+  resultText String? // first ~500 chars of the agent's reply
+
+  inputTokens  Int @default(0)
+  outputTokens Int @default(0)
+
+  job CronJob @relation(fields: [jobId], references: [id], onDelete: Cascade)
+
+  @@index([jobId, startedAt(sort: Desc)])
+  @@index([instanceId, startedAt(sort: Desc)])
+  @@map("composio_claw_cron_run")
+}
+
+model OnboardingState {
+  id             String   @id @default(cuid())
+  userId         String   @unique
+  currentStep     String
+  name            String   @default("")
+  writingStyle    String? // the professional/primary voice
+  funWritingStyle String? // the second, fun voice
+  personality     String?
+  emoji           String?
+  lore           String   @default("") @db.Text
+  anthropicModel String   @default("house/kimi-k3")
+  // Set by Settings -> "Re-run setup": the dashboard shows the wizard again
+  // (answers above are preserved) even though the instance already exists.
+  redoRequested Boolean  @default(false)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("onboarding_state")
+}

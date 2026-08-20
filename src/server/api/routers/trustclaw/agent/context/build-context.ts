@@ -1,0 +1,348 @@
+import { z } from "zod";
+import { db } from "~/server/clients/db";
+import type { Prisma } from "~/generated/prisma/client";
+import type {
+  ReconstructedMessage,
+  JsonValue,
+  ToolResultOutput,
+} from "../types";
+import {
+  shouldCompact,
+  shouldFlushMemory,
+  type CompactionSettings,
+} from "./token-estimation";
+import { runCompaction } from "../compaction/run-compaction";
+import { runMemoryFlush } from "../compaction/memory-flush";
+import { COMPACTION_SUMMARY_PREFIX } from "../compaction/prompts";
+
+export const MESSAGE_SAFETY_CAP = 200;
+
+// Lone surrogates in strings produce invalid JSON when serialized for the Anthropic API.
+// This can happen when external tool results (e.g. from Composio) contain malformed Unicode.
+const LONE_SURROGATE_RE =
+  /[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/g;
+
+function sanitizeString(str: string): string {
+  return str.replace(LONE_SURROGATE_RE, "\uFFFD");
+}
+
+function deepSanitize<T>(value: T): T {
+  if (typeof value === "string") {
+    return sanitizeString(value) as T;
+  }
+  if (Array.isArray(value)) {
+    return value.map(deepSanitize) as T;
+  }
+  if (value !== null && typeof value === "object") {
+    const out: Record<string, unknown> = {};
+    for (const [k, v] of Object.entries(value)) {
+      out[k] = deepSanitize(v);
+    }
+    return out as T;
+  }
+  return value;
+}
+
+export const contentPartSchema = z.object({
+  type: z.string(),
+  text: z.string().optional(),
+});
+
+export const contentSchema = z.array(contentPartSchema);
+
+export const plainRecordSchema = z.record(z.unknown());
+
+export const jsonValueSchema: z.ZodType<JsonValue> = z.lazy(() =>
+  z.union([
+    z.null(),
+    z.string(),
+    z.number(),
+    z.boolean(),
+    z.array(jsonValueSchema),
+    z.record(jsonValueSchema),
+  ]),
+);
+
+export { sanitizeString, deepSanitize };
+
+export function toJsonValue(value: unknown): JsonValue {
+  const parsed = jsonValueSchema.safeParse(value ?? {});
+  return parsed.success ? deepSanitize(parsed.data) : {};
+}
+
+export function toToolResultOutput(value: unknown): ToolResultOutput {
+  return { type: "json", value: toJsonValue(value) };
+}
+
+export function toPlainRecord(value: unknown): Record<string, unknown> {
+  const raw: unknown = JSON.parse(JSON.stringify(value ?? {}));
+  return plainRecordSchema.parse(raw);
+}
+
+export function toPlainRecordSafe(value: unknown): Record<string, unknown> {
+  const result = plainRecordSchema.safeParse(
+    JSON.parse(JSON.stringify(value ?? {})),
+  );
+  if (!result.success) {
+    console.error(
+      "[toPlainRecordSafe] Non-record tool input fell back to {}:",
+      typeof value,
+    );
+  }
+  return result.success ? result.data : {};
+}
+
+export function toPrismaJson(value: unknown): Prisma.InputJsonValue {
+  return toJsonValue(
+    JSON.parse(JSON.stringify(value ?? {})),
+  ) satisfies JsonValue as Prisma.InputJsonValue;
+}
+
+export async function loadContextMessages(
+  conversationId: string,
+  lastCompactionAt: Date | null,
+) {
+  // Prisma applies `take` at the database query level, so ordering matters
+  // when more than MESSAGE_SAFETY_CAP regular messages exist since the last
+  // compaction point. We want the NEWEST capped messages (recent context is
+  // what matters to the agent), so order descending, take the cap, then
+  // reverse back into chronological order before returning.
+  const rows = await db.message.findMany({
+    where: {
+      conversationId,
+      messageType: "regular",
+      ...(lastCompactionAt ? { createdAt: { gte: lastCompactionAt } } : {}),
+    },
+    orderBy: { createdAt: "desc" },
+    take: MESSAGE_SAFETY_CAP,
+    select: {
+      role: true,
+      content: true,
+      createdAt: true,
+    },
+  });
+  // Drop rows whose content never got filled (aborted/errored streams leave
+  // empty assistant rows) - they'd otherwise become "(empty)" turns in every
+  // future model context.
+  return rows
+    .reverse()
+    .filter((r) => Array.isArray(r.content) && r.content.length > 0);
+}
+
+type UserContent = Extract<ReconstructedMessage, { role: "user" }>["content"];
+
+export function buildContext(
+  dbMessages: Awaited<ReturnType<typeof loadContextMessages>>,
+  lastCompactionSummary: string | null,
+  // null on regenerate: the loaded history already ends with the user turn.
+  userContent: UserContent | null,
+): ReconstructedMessage[] {
+  const aiMessages = deepSanitize(reconstructMessages(dbMessages));
+
+  // Anthropic requires the first message to be a user turn. The
+  // MESSAGE_SAFETY_CAP window can land on an assistant/tool row (200+ short
+  // messages with no compaction yet), and each new turn adds two rows, so the
+  // bad parity persists - every subsequent call 400s. The compaction summary
+  // (unshifted below) satisfies the requirement when present.
+  if (!lastCompactionSummary) {
+    const firstUser = aiMessages.findIndex((m) => m.role === "user");
+    if (firstUser > 0) aiMessages.splice(0, firstUser);
+  }
+
+  if (lastCompactionSummary) {
+    aiMessages.unshift({
+      role: "user" as const,
+      content: sanitizeString(
+        `${COMPACTION_SUMMARY_PREFIX}\n\n<summary>\n${lastCompactionSummary}\n</summary>`,
+      ),
+    });
+  }
+
+  // userContent is a plain string for text-only turns, or an array of content
+  // parts (text + image/file) when files are attached.
+  if (userContent !== null) {
+    aiMessages.push({
+      role: "user" as const,
+      content:
+        typeof userContent === "string"
+          ? sanitizeString(userContent)
+          : userContent,
+    });
+  }
+
+  return aiMessages;
+}
+
+const dynamicToolPartSchema = z.object({
+  type: z.literal("dynamic-tool"),
+  toolCallId: z.string(),
+  toolName: z.string(),
+  state: z.string(),
+  input: z.unknown().optional(),
+  output: z.unknown().optional(),
+});
+
+export function reconstructMessages(
+  messages: Array<{
+    role: string;
+    content: unknown;
+  }>,
+): ReconstructedMessage[] {
+  const result: ReconstructedMessage[] = [];
+
+  for (const msg of messages) {
+    const role = msg.role === "assistant" ? "assistant" : "user";
+
+    const contentArray = Array.isArray(msg.content) ? msg.content : [];
+    const parsed = contentSchema.safeParse(contentArray);
+    const contentParts = parsed.success ? parsed.data : [];
+
+    const textContent = contentParts
+      .filter((p) => p.type === "text" && p.text)
+      .map((p) => p.text!)
+      .join("\n");
+
+    if (role === "user") {
+      result.push({ role: "user", content: textContent || "(empty)" });
+      continue;
+    }
+
+    // Extract dynamic-tool parts from content JSON
+    const toolParts = contentArray
+      .map((item: unknown) => dynamicToolPartSchema.safeParse(item))
+      .filter(
+        (r): r is z.SafeParseSuccess<z.infer<typeof dynamicToolPartSchema>> =>
+          r.success,
+      )
+      .map((r) => r.data);
+
+    if (toolParts.length === 0) {
+      result.push({ role: "assistant", content: textContent || "(empty)" });
+      continue;
+    }
+
+    const assistantContent: Array<
+      | { type: "text"; text: string }
+      | {
+          type: "tool-call";
+          toolCallId: string;
+          toolName: string;
+          input: Record<string, unknown>;
+        }
+    > = [];
+    if (textContent) {
+      assistantContent.push({ type: "text", text: textContent });
+    }
+    for (const tc of toolParts) {
+      assistantContent.push({
+        type: "tool-call",
+        toolCallId: tc.toolCallId,
+        toolName: tc.toolName,
+        input: toPlainRecordSafe(tc.input),
+      });
+    }
+    result.push({ role: "assistant", content: assistantContent });
+
+    result.push({
+      role: "tool",
+      content: toolParts.map((tc) => ({
+        type: "tool-result" as const,
+        toolCallId: tc.toolCallId,
+        toolName: tc.toolName,
+        output: toToolResultOutput(tc.output),
+      })),
+    });
+  }
+
+  return result;
+}
+
+export async function runPostResponseTasks(params: {
+  instanceId: string;
+  conversationId: string;
+  conversation: {
+    anthropicModel: string;
+    compactionCount: number;
+    memoryFlushCount: number;
+    lastCompactionSummary: string | null;
+    lastCompactionAt: Date | null;
+  };
+  contextTokens: number;
+  settings: CompactionSettings;
+  prunedMessages: ReconstructedMessage[];
+}): Promise<void> {
+  const {
+    instanceId,
+    conversationId,
+    conversation,
+    contextTokens,
+    settings,
+    prunedMessages,
+  } = params;
+
+  if (
+    shouldFlushMemory(
+      contextTokens,
+      settings,
+      conversation.compactionCount,
+      conversation.memoryFlushCount,
+    )
+  ) {
+    try {
+      await runMemoryFlush({
+        instanceId,
+        conversationId,
+        anthropicModel: conversation.anthropicModel,
+        messages: prunedMessages,
+        compactionCount: conversation.compactionCount,
+      });
+    } catch {
+      // Flush failure is non-fatal
+    }
+  }
+
+  if (shouldCompact(contextTokens, settings)) {
+    try {
+      const freshDbMessages = await loadContextMessages(
+        conversationId,
+        conversation.lastCompactionAt,
+      );
+
+      // Find the cut over DB rows (newest-first accumulation of ~chars/4
+      // estimates until keepRecentTokens). Rows before the cut are
+      // summarized; rows at/after it stay loadable. Storing the first KEPT
+      // row's createdAt as lastCompactionAt is what keeps the recent window
+      // alive - `new Date()` here would silently drop it (every existing
+      // message would predate the boundary).
+      let accumulated = 0;
+      let cutRowIndex = 0;
+      for (let i = freshDbMessages.length - 1; i >= 0; i--) {
+        accumulated += Math.ceil(
+          JSON.stringify(freshDbMessages[i]!.content).length / 4,
+        );
+        if (accumulated >= settings.keepRecentTokens) {
+          cutRowIndex = i;
+          break;
+        }
+      }
+      if (cutRowIndex <= 0) return;
+
+      const messagesToCompact = reconstructMessages(
+        freshDbMessages.slice(0, cutRowIndex),
+      );
+      const cutAt = freshDbMessages[cutRowIndex]!.createdAt;
+
+      await runCompaction({
+        instanceId,
+        conversationId,
+        anthropicModel: conversation.anthropicModel,
+        messagesToCompact,
+        cutAt,
+        previousSummary: conversation.lastCompactionSummary,
+        compactionCount: conversation.compactionCount,
+      });
+    } catch {
+      // Compaction failure is non-fatal - next turn will retry
+    }
+  }
+}
