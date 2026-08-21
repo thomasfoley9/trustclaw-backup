@@ -67,6 +67,7 @@ function taskRow(overrides: Record<string, unknown> = {}) {
     nudgeCount: 0,
     escalationRung: 0,
     createdAt: new Date("2026-08-20T10:00:00Z"),
+    updatedAt: new Date("2026-08-20T10:00:00Z"),
     ...overrides,
   };
 }

@@ -1,5 +1,6 @@
 import { timingSafeEqual } from "node:crypto";
-import { NextResponse } from "next/server";
+import { after, NextResponse } from "next/server";
+import { runEaSweeps } from "~/server/ea/sweep";
 import { Prisma } from "~/generated/prisma/client";
 import { z } from "zod";
 import { env } from "~/env";
@@ -214,6 +215,19 @@ export async function GET(request: Request) {
       await scheduleNextFire(orphan.id, orphan.nextRunAt);
     }
   }
+
+  // EA chase sweep: deterministic code, runs in the background after the
+  // response so due jobs are never delayed. A quiet sweep makes zero LLM
+  // calls; instances with presence off are never touched. Never throws
+  // (per-instance failures are contained inside runEaSweeps).
+  after(
+    runEaSweeps(now).catch((err) =>
+      console.error(
+        "[cron/sweeper] ea sweep failed:",
+        err instanceof Error ? err.message : err,
+      ),
+    ),
+  );
 
   return NextResponse.json({
     dispatched: claimedJobs.length,

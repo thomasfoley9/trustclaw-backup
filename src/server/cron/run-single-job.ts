@@ -8,6 +8,9 @@ import {
   sendTelegramMessageChunked,
 } from "~/server/clients/telegram";
 import { scheduleNextFire, cancelScheduledFire } from "~/server/clients/qstash";
+import { postToEaChannel } from "~/server/clients/slack";
+import { bumpRungsAfterBrief } from "~/server/ea/sweep";
+import { EA_BRIEF_SYSTEM_KIND } from "~/server/ea/seed";
 
 // One scheduled job = one agent run = one CronRun record. Replaces the old
 // per-instance batching, where a single poisoned job took down its batchmates
@@ -55,7 +58,15 @@ export async function runSingleCronJob({
       enabled: true,
       lockedBy: true,
       consecutiveFailures: true,
-      instance: { select: { telegramChatId: true } },
+      systemKind: true,
+      instance: {
+        select: {
+          telegramChatId: true,
+          presenceEnabled: true,
+          eaSlackEnabled: true,
+          eaSlackChannelId: true,
+        },
+      },
     },
   });
   // Deleted while queued, or claimed by someone else - not ours to run.
@@ -112,7 +123,24 @@ export async function runSingleCronJob({
       outputTokens: result.totalUsage.outputTokens ?? 0,
     });
 
-    if (job.instance.telegramChatId && text) {
+    if (job.systemKind === EA_BRIEF_SYSTEM_KIND) {
+      // The full brief lives in #ea ONLY (PRD: other channels never carry
+      // scheduled content). After delivery, rung-1 tasks the brief carried
+      // move to rung 2 ("2nd ask" delivered).
+      if (
+        job.instance.presenceEnabled &&
+        job.instance.eaSlackEnabled &&
+        job.instance.eaSlackChannelId &&
+        text
+      ) {
+        await postToEaChannel(job.instanceId, text).catch((error) =>
+          console.error("[cron/run] ea brief delivery failed:", error),
+        );
+        await bumpRungsAfterBrief(job.instanceId).catch((error) =>
+          console.error("[cron/run] post-brief rung bump failed:", error),
+        );
+      }
+    } else if (job.instance.telegramChatId && text) {
       await sendTelegramMessageChunked(
         job.instance.telegramChatId,
         text,

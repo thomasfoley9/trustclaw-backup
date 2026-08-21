@@ -42,6 +42,7 @@ const taskSelect = {
   nudgeCount: true,
   escalationRung: true,
   createdAt: true,
+  updatedAt: true,
 } as const;
 
 type TaskRow = {
@@ -59,6 +60,7 @@ type TaskRow = {
   nudgeCount: number;
   escalationRung: number;
   createdAt: Date;
+  updatedAt: Date;
 };
 
 export interface TaskView {
@@ -75,6 +77,7 @@ export interface TaskView {
   nudgeCount: number;
   escalationRung: number;
   createdAt: string;
+  updatedAt: string;
 }
 
 export function toTaskView(task: TaskRow): TaskView {
@@ -92,6 +95,7 @@ export function toTaskView(task: TaskRow): TaskView {
     nudgeCount: task.nudgeCount,
     escalationRung: task.escalationRung,
     createdAt: task.createdAt.toISOString(),
+    updatedAt: task.updatedAt.toISOString(),
   };
 }
 
@@ -201,6 +205,17 @@ export async function killTask(
     ackedAt: new Date(),
     snoozedUntil: null,
   });
+}
+
+// Attach prepared work (a Gmail draft id or doc URL) to a task. Called by the
+// agent after it builds the deliverable, so the next nudge ships with the
+// work attached.
+export async function attachDraft(
+  instanceId: string,
+  ref: string,
+  draftRef: string,
+): Promise<TaskView | null> {
+  return transition(instanceId, ref, { draftRef });
 }
 
 export async function listTasks(

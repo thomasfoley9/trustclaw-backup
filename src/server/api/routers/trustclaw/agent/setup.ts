@@ -33,9 +33,10 @@ import {
   type CompactionSettings,
 } from "./context/token-estimation";
 import { stripToolResultEchoes } from "./strip-tool-echoes";
+import { applyEaLeash } from "~/server/ea/leash";
 import type { ReconstructedMessage } from "./types";
 
-type MessageSource = "web" | "telegram" | "cron";
+type MessageSource = "web" | "telegram" | "cron" | "slack" | "sms";
 
 /**
  * Wraps every tool's execute function to sanitize its return value,
@@ -151,6 +152,8 @@ export async function prepareAgentRun(
       identityPrompt: true,
       userPrompt: true,
       anthropicModel: true,
+      presenceEnabled: true,
+      eaSlackChannelId: true,
     },
   });
 
@@ -537,11 +540,21 @@ export async function prepareAgentRun(
     incognito,
   });
 
-  const allTools: ToolSet = sanitizeToolResults({
-    ...composioTools,
-    ...customTools,
-    ...mcp.tools,
-  });
+  // The EA leash wraps send-class capability while Presence Mode is on:
+  // outbound sends intercept into drafts plus approval tasks, enforced here
+  // in code, never only in the prompt. Presence off = legacy behavior.
+  const allTools: ToolSet = applyEaLeash(
+    sanitizeToolResults({
+      ...composioTools,
+      ...customTools,
+      ...mcp.tools,
+    }),
+    {
+      instanceId,
+      enabled: instance.presenceEnabled,
+      eaSlackChannelId: instance.eaSlackChannelId,
+    },
+  );
 
   // Resolve the model first (house models ride owner keys; Claude/custom
   // models ride the user's own key). Fails closed with a PRECONDITION_FAILED

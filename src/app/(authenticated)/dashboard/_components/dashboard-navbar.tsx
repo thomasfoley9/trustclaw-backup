@@ -8,6 +8,7 @@ import {
   MessageCircle,
   PanelRight,
   Puzzle,
+  Radio,
   Settings,
 } from "lucide-react";
 import { Button } from "~/components/ui/button";
@@ -32,6 +33,7 @@ export function DashboardNavbar() {
   const isChat = pathname === "/dashboard";
   const isSettings = pathname.startsWith("/dashboard/settings");
   const isToolkits = pathname.startsWith("/dashboard/toolkits");
+  const isChannels = pathname.startsWith("/dashboard/channels");
   const terminalOpen = useTerminalStore((s) => s.terminalOpen);
   const setTerminalOpen = useTerminalStore((s) => s.setTerminalOpen);
   const mobileTerminalOpen = useTerminalStore((s) => s.mobileTerminalOpen);
@@ -124,6 +126,23 @@ export function DashboardNavbar() {
             </Button>
           </TooltipTrigger>
           <TooltipContent>Toolkits</TooltipContent>
+        </Tooltip>
+
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              asChild
+              variant="ghost"
+              size="icon"
+              aria-label="Channels"
+              className={`h-10 w-10 ${isChannels ? "bg-primary/15 text-primary" : ""}`}
+            >
+              <Link href="/dashboard/channels">
+                <Radio className="h-4 w-4" />
+              </Link>
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>Channels</TooltipContent>
         </Tooltip>
 
         <Tooltip>

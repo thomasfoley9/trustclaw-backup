@@ -2,7 +2,7 @@ import { z } from "zod";
 
 export const eaTaskSchema = z.object({
   action: z
-    .enum(["create", "complete", "snooze", "kill", "list"])
+    .enum(["create", "complete", "snooze", "kill", "list", "attach_draft"])
     .describe("The action to perform on the task ledger"),
   title: z
     .string()
@@ -34,7 +34,7 @@ export const eaTaskSchema = z.object({
     .string()
     .optional()
     .describe(
-      "Reference to attached prepared work: a Gmail draft id or doc URL (create only)",
+      "Reference to attached prepared work: a Gmail draft id or doc URL (create and attach_draft)",
     ),
   taskId: z
     .string()

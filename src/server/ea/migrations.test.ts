@@ -35,10 +35,15 @@ describe("EA migrations", () => {
         expect(upper).not.toMatch(/\bRENAME\b/);
         expect(upper).not.toMatch(/\bTRUNCATE\b/);
         expect(
-          /^(CREATE TABLE|CREATE (UNIQUE )?INDEX|ALTER TABLE)/.test(upper),
+          /^(CREATE TABLE|CREATE (UNIQUE )?INDEX|ALTER TABLE|ALTER TYPE)/.test(
+            upper,
+          ),
         ).toBe(true);
         if (upper.startsWith("ALTER TABLE")) {
           expect(upper).toMatch(/ADD (COLUMN|CONSTRAINT)/);
+        }
+        if (upper.startsWith("ALTER TYPE")) {
+          expect(upper).toMatch(/ADD VALUE/);
         }
       }
     }

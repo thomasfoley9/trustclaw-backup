@@ -6,6 +6,7 @@ import {
   snoozeTask,
   killTask,
   listTasks,
+  attachDraft,
 } from "~/server/ea/task-service";
 import { eaTaskSchema, type EaTaskInput } from "./ea-task.schema";
 
@@ -98,6 +99,18 @@ export function createEaTaskTool(
           const task = await killTask(instanceId, taskId);
           if (!task) return { error: `No task found for '${taskId}'` };
           return { killed: true, task };
+        }
+
+        case "attach_draft": {
+          if (!taskId) {
+            return { error: "'taskId' is required for attach_draft" };
+          }
+          if (!draftRef) {
+            return { error: "'draftRef' is required for attach_draft" };
+          }
+          const task = await attachDraft(instanceId, taskId, draftRef);
+          if (!task) return { error: `No task found for '${taskId}'` };
+          return { attached: true, task };
         }
 
         case "list": {

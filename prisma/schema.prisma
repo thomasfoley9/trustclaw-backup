@@ -18,6 +18,9 @@ enum MessageSource {
   web
   telegram
   cron
+  sms
+  slack
+  voice_call
 }
 
 enum MessageType {
@@ -155,6 +158,24 @@ model ComposioClawInstance {
   // IDs (T-14). Bumped atomically (UPDATE ... RETURNING) so concurrent task
   // creation can never mint the same number twice.
   eaTaskCounter Int @default(0)
+
+  // Presence Mode master switch (the kill switch): off means zero proactive
+  // outreach on every channel; inbound still works. Defaults OFF for every
+  // instance - this is a multi-user codebase.
+  presenceEnabled Boolean @default(false)
+
+  // Per-channel toggles and state. Slack: the #ea channel id (posts as the
+  // user via their Composio Slack connection) and the inbound polling cursor
+  // (last processed Slack ts). SMS: verified number + verification flow state
+  // (same token pattern as Telegram linking). SMS ships dark until A2P clears.
+  eaSlackEnabled         Boolean   @default(false)
+  eaSlackChannelId       String?
+  eaSlackCursorTs        String?
+  eaSmsEnabled           Boolean   @default(false)
+  eaPhoneNumber          String?
+  eaPhoneVerifiedAt      DateTime?
+  eaPhoneVerifyCode      String?
+  eaPhoneVerifyExpiresAt DateTime?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -391,6 +412,10 @@ model CronJob {
   enabled    Boolean   @default(true)
   lastRunAt  DateTime?
   nextRunAt  DateTime?
+
+  // EA system jobs ("ea_brief") get special handling: result delivery to the
+  // #ea Slack channel and post-run ladder bumps. Null = a normal user job.
+  systemKind String?
 
   lockedAt  DateTime?
   lockedBy  String?

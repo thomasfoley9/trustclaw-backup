@@ -56,8 +56,16 @@ import { createSkill } from "./createSkill";
 import { updateSkill } from "./updateSkill";
 import { deleteSkill } from "./deleteSkill";
 import { toggleSkill } from "./toggleSkill";
+import { getChannels } from "./getChannels";
+import { updateChannels } from "./updateChannels";
+import { startPhoneVerification } from "./startPhoneVerification";
+import { confirmPhoneVerification } from "./confirmPhoneVerification";
 
 export const trustclawRouter = router({
+  getChannels,
+  updateChannels,
+  startPhoneVerification,
+  confirmPhoneVerification,
   getInstance,
   getStatus,
   createInstance,
