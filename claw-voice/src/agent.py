@@ -29,6 +29,7 @@ from livekit.agents import (
     function_tool,
 )
 from livekit.plugins import openai
+from openai.types.beta.realtime.session import TurnDetection
 
 load_dotenv(".env.local")
 load_dotenv()
@@ -63,9 +64,9 @@ WHEN TO ANSWER DIRECTLY - only pure conversation with no task behind it: greetin
 
 HOW TO DELEGATE:
 - Pass a clear, self-contained `intent` that carries EVERY detail the user gave - names, dates, times, the actual message content, which account/tool. Don't make the worker guess; don't drop specifics.
-- When you delegate real work, say ONE short line that concisely states WHAT you're about to do, and END that line with "please hold." The task statement comes FIRST, the hold cue LAST - never lead with "please hold." E.g. "Pulling your Linear tickets from the last week - please hold." In character it bends to the personality (Ramsay: "Right, checking those tickets now - hold on."; Alfred: "Fetching that for you, sir - one moment, please.").
-- CRITICAL: say that line AND call `delegate` in the SAME turn. Never announce a hold without actually delegating - otherwise they wait on silence.
-- ONE delegate at a time. After you delegate, STAY QUIET and wait for the result - do not call delegate again, and don't keep talking, until it comes back.
+- When you delegate real work, say ONE short, natural line that states WHAT you're doing - the way a person would when they turn to look something up. "Let me pull those up." "Checking your calendar now." "One sec, finding that thread." Say it in character (Ramsay: "Right, checking those tickets."; Alfred: "Fetching that for you, sir."). NEVER say "please hold", "one moment please", "stand by", or any other call-centre phrasing - you are a person on a call, not an IVR system.
+- CRITICAL: say that line AND call `delegate` in the SAME turn. Never announce that you're looking without actually delegating - otherwise they wait on silence.
+- ONE delegate at a time: don't call delegate again until the first result comes back. While you're waiting, behave like a person who's mid-task - it's fine to stay quiet, and equally fine to think out loud briefly ("...still loading", "there's a few here") if the wait runs long. What you must NOT do is answer the question or claim a result before the delegate returns.
 - When the result comes back, give it in one or two spoken sentences, fully in character.
 
 IRON RULE - never say something was done, sent, scheduled, found, replied, or changed unless a `delegate` call actually came back saying so. If you didn't delegate, nothing happened - do not pretend it did. If a delegate result contains a `[SYSTEM: ...]` note, that is the ground truth about what really happened - obey it exactly, over your own assumptions. For anything that sends or is hard to undo, you may read back what's about to happen and get a quick "yes" first - but the instant they say yes, delegate it so it truly executes."""
@@ -109,9 +110,24 @@ def build_realtime_model(voice: str) -> openai.realtime.RealtimeModel:
     # gpt-realtime is the GA speech-to-speech model. The -preview 4o variants
     # are gone from this account's model list - using one fails at session
     # start, which presents as the agent joining the room but never speaking.
+    #
+    # Turn detection: SEMANTIC, not a silence timer. Plain server VAD ends your
+    # turn after N ms of quiet, so thinking mid-sentence ("send it to... uh...")
+    # gets you cut off, while a crisp finish leaves an awkward gap. semantic_vad
+    # runs a classifier over WHAT was said to decide whether the thought is
+    # actually finished - the single biggest thing separating "talking to a
+    # person" from "talking to a phone tree". eagerness="medium" is the balanced
+    # default; "low" waits longer (fewer interruptions, slower back-and-forth),
+    # "high" jumps in sooner.
     return openai.realtime.RealtimeModel(
         model="gpt-realtime",
         voice=resolved_voice,
+        turn_detection=TurnDetection(
+            type="semantic_vad",
+            eagerness="medium",
+            create_response=True,
+            interrupt_response=True,
+        ),
     )
 
 
