@@ -24,6 +24,7 @@ export async function runEaSweeps(now: Date): Promise<void> {
       eaSlackEnabled: true,
       eaSlackChannelId: true,
       eaSlackCursorTs: true,
+      eaSlackOwnerUserId: true,
     },
   });
 
@@ -45,6 +46,7 @@ interface SweepInstance {
   eaSlackEnabled: boolean;
   eaSlackChannelId: string | null;
   eaSlackCursorTs: string | null;
+  eaSlackOwnerUserId: string | null;
 }
 
 async function sweepInstance(
@@ -69,6 +71,7 @@ async function sweepInstance(
         id: instance.id,
         eaSlackChannelId: instance.eaSlackChannelId,
         eaSlackCursorTs: instance.eaSlackCursorTs,
+        eaSlackOwnerUserId: instance.eaSlackOwnerUserId,
       },
       now,
     ).catch((err) =>

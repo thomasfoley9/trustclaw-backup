@@ -67,6 +67,23 @@ describe("parseReply", () => {
     );
     expect(parseReply("snooze until the acme deal closes", NOW)).toBe(null);
   });
+
+  it("never reads a number buried in prose as a task id (destructive-guard)", () => {
+    // "done, sent all 5 emails" must NOT complete T-5.
+    expect(parseReply("done, sent all 5 emails", NOW)).toEqual({
+      kind: "done",
+      taskRef: null,
+    });
+    // "kill it, been 2 days" must NOT kill T-2.
+    expect(parseReply("kill it, been 2 days", NOW)).toEqual({
+      kind: "kill",
+      taskRef: null,
+    });
+    // "snooze 5 days" is a duration, not task T-5.
+    const snoozed = parseReply("snooze 5 days", NOW);
+    expect(snoozed?.kind).toBe("snooze");
+    if (snoozed?.kind === "snooze") expect(snoozed.taskRef).toBeNull();
+  });
 });
 
 describe("resolveSnoozeUntil", () => {

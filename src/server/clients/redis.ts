@@ -311,3 +311,37 @@ export async function slidingWindowAllow(
     return true;
   }
 }
+
+/**
+ * Fail-CLOSED sliding-window limit for endpoints where the limit is the ONLY
+ * defense and running wide open is worse than a brief false-deny - e.g. the
+ * owner-funded SMS verify send. Returns "allow" / "deny" / "unavailable":
+ * unavailable means Redis is unconfigured OR unreachable (the eval threw), and
+ * the caller MUST treat that as a block. isRedisConfigured() alone can't see
+ * runtime reachability, so this closes the configured-but-down gap.
+ */
+export async function slidingWindowCheck(
+  key: string,
+  windowMs: number,
+  maxRequests: number,
+): Promise<"allow" | "deny" | "unavailable"> {
+  const r = getRedis();
+  if (!r) return "unavailable";
+  try {
+    const now = Date.now();
+    const member = `${now}-${crypto.randomUUID()}`;
+    const result = await r.eval(
+      RATE_LIMIT_LUA,
+      1,
+      `ratelimit:${key}`,
+      String(now),
+      String(windowMs),
+      String(maxRequests),
+      member,
+    );
+    return result === 1 || result === "1" ? "allow" : "deny";
+  } catch (err) {
+    console.error("[redis] strict rate-limit check failed (blocking):", err);
+    return "unavailable";
+  }
+}

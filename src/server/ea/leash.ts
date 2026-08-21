@@ -38,6 +38,20 @@ const META_TOOL_MARKERS = [
   "REMOTE_BASH_TOOL",
 ];
 
+// Meta-tools that execute arbitrary shell/code: their payload is not a set of
+// inspectable Composio slugs (a shell line can `curl` an email API directly),
+// so string-scanning for send slugs cannot cover them. Under Presence Mode
+// they are always intercepted rather than allowed draft-only.
+const ALWAYS_BLOCK_MARKERS = ["REMOTE_WORKBENCH", "REMOTE_BASH_TOOL"];
+
+// The explicit list above is not exhaustive - any connected app can add a
+// send-capable slug (X/Twitter post, WhatsApp, Teams, Discord, ...). This
+// catch-all matches slug-shaped send verbs in a serialized payload so an
+// unlisted sender is intercepted too. The leash's stated posture: a false
+// positive costs one clarifying message, a false negative costs trust.
+const SEND_VERB_PATTERN =
+  /[A-Z0-9]+_(?:SEND|POST|REPLY|PUBLISH|TWEET|DM|SCHEDULE_MESSAGE|CREATE_MESSAGE|CREATE_EVENT|UPDATE_EVENT|DELETE_EVENT)(?:_[A-Z0-9]+)*/g;
+
 const CHANNEL_ARG = /"channel"\s*:\s*"([^"]+)"/g;
 
 export interface LeashContext {
@@ -49,6 +63,16 @@ export interface LeashContext {
 export function findSendClassSlugs(serializedInput: string): string[] {
   const upper = serializedInput.toUpperCase();
   return SEND_CLASS.filter((slug) => upper.includes(slug));
+}
+
+// Broadened detector for payload scanning: the explicit list PLUS any
+// slug-shaped send verb. Deduped, explicit names first.
+export function findSendSlugsInPayload(serializedInput: string): string[] {
+  const upper = serializedInput.toUpperCase();
+  const explicit = SEND_CLASS.filter((slug) => upper.includes(slug));
+  const matched = new Set<string>(explicit);
+  for (const m of upper.matchAll(SEND_VERB_PATTERN)) matched.add(m[0]);
+  return [...matched];
 }
 
 export function slackPostsConfinedToEa(
@@ -65,10 +89,12 @@ export function decideLeash(
   serializedInput: string,
   ctx: Pick<LeashContext, "eaSlackChannelId">,
 ): { blocked: false } | { blocked: true; slugs: string[] } {
-  const slugs = findSendClassSlugs(serializedInput);
+  const slugs = findSendSlugsInPayload(serializedInput);
   if (slugs.length === 0) return { blocked: false };
 
-  const onlySlack = slugs.every((s) => s.startsWith("SLACK_SEND"));
+  const onlySlack = slugs.every(
+    (s) => s.startsWith("SLACK_SEND") || s.startsWith("SLACK_SCHEDULE"),
+  );
   if (onlySlack && slackPostsConfinedToEa(serializedInput, ctx.eaSlackChannelId)) {
     return { blocked: false };
   }
@@ -134,10 +160,18 @@ export function applyEaLeash(tools: ToolSet, ctx: LeashContext): ToolSet {
       continue;
     }
 
+    const isAlwaysBlock =
+      isMetaTool && ALWAYS_BLOCK_MARKERS.some((m) => upperName.includes(m));
+
     const originalExecute = tool.execute;
     wrapped[name] = {
       ...tool,
       execute: async (...args: Parameters<typeof originalExecute>) => {
+        // Arbitrary-code meta-tools can send without a recognizable slug, so
+        // they are intercepted unconditionally under Presence Mode.
+        if (isAlwaysBlock) {
+          return interceptToApproval(ctx, [upperName]);
+        }
         let serialized = "";
         try {
           serialized = JSON.stringify(args[0] ?? {});

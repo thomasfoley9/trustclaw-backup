@@ -1,7 +1,7 @@
 import { TRPCError } from "@trpc/server";
 import { protectedProcedure } from "~/server/api/trpc";
 import { db } from "~/server/clients/db";
-import { ensureEaChannel } from "~/server/clients/slack";
+import { ensureEaChannel, postToEaChannel } from "~/server/clients/slack";
 import { seedEaSystemJobs, disableEaSystemJobs } from "~/server/ea/seed";
 import { pauselessReenable } from "~/server/ea/sweep";
 import { updateChannelsInput } from "./updateChannels.schema";
@@ -35,6 +35,23 @@ export const updateChannels = protectedProcedure
     if (input.eaSlackEnabled === true && !instance.eaSlackChannelId) {
       try {
         await ensureEaChannel(instance.id);
+        // Fail closed: only enable Slack presence if we can actually post. The
+        // welcome post's own ts becomes the inbound cursor, so no prior
+        // conversation in an adopted #ea channel is ever replayed as commands,
+        // and being a ledger-verified own post it seeds the owner-id gate.
+        const welcome = await postToEaChannel(
+          instance.id,
+          "Presence Mode is on. I'll post nudges and briefs here, and you can reply with commands like \"done T-14\" or \"snooze T-9 til friday\". Only messages from you are acted on.",
+        );
+        if (!welcome.ok || !welcome.ts) {
+          throw new Error(
+            "Couldn't post to your #ea channel. Check the Slack connection in Toolkits, then retry.",
+          );
+        }
+        await db.composioClawInstance.update({
+          where: { id: instance.id },
+          data: { eaSlackCursorTs: welcome.ts },
+        });
       } catch (err) {
         throw new TRPCError({
           code: "PRECONDITION_FAILED",

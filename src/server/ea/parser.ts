@@ -13,11 +13,20 @@ export type ParsedReply =
   | { kind: "send_ready"; taskRef: string | null }
   | { kind: "whats_due" };
 
-const TASK_REF = /\b(?:t[-\s]?)?(\d{1,5})\b/i;
+// An EXPLICIT ref ("T-14", "t14", "task 14", "#14") is honored anywhere. A
+// BARE number is honored ONLY when it is the lone trailing argument after the
+// command word(s) ("done 14", "cancel 7") - never a number buried in prose.
+// Without that guard "snooze 5 days" snoozes T-5 and "done, sent all 5 emails"
+// completes T-5: destructive, unconfirmed, on the wrong task. When nothing
+// resolves, the handlers ask which task instead of guessing.
+const EXPLICIT_TASK_REF = /(?:\bt(?:ask)?[-\s]?|#)(\d{1,5})\b/i;
+const LONE_TRAILING_NUMBER = /^(?:[a-z][a-z'-]*\s+){1,2}(\d{1,5})$/i;
 
 function extractTaskRef(text: string): string | null {
-  const match = TASK_REF.exec(text);
-  return match?.[1] ? `T-${match[1]}` : null;
+  const explicit = EXPLICIT_TASK_REF.exec(text);
+  if (explicit?.[1]) return `T-${explicit[1]}`;
+  const lone = LONE_TRAILING_NUMBER.exec(text.trim());
+  return lone?.[1] ? `T-${lone[1]}` : null;
 }
 
 // Resolve a relative snooze phrase to a concrete PT timestamp. Returns null

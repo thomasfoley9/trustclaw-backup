@@ -123,4 +123,29 @@ describe("decideLeash", () => {
     });
     expect(decideLeash(input, ctx).blocked).toBe(true);
   });
+
+  it("blocks unlisted send-capable slugs, not just the hardcoded list", () => {
+    // Slugs the explicit SEND_CLASS list never enumerated - a false negative
+    // here would let the agent post publicly while Presence Mode is on.
+    for (const slug of [
+      "TWITTER_CREATION_OF_A_POST",
+      "WHATSAPP_SEND_MESSAGE",
+      "DISCORD_POST_MESSAGE",
+      "LINKEDIN_CREATE_LINKED_IN_POST",
+    ]) {
+      const input = JSON.stringify({ tools: [{ tool_slug: slug }] });
+      expect(decideLeash(input, ctx).blocked).toBe(true);
+    }
+  });
+
+  it("does not block read-only slugs via the broadened matcher", () => {
+    const input = JSON.stringify({
+      tools: [
+        { tool_slug: "GMAIL_FETCH_EMAILS" },
+        { tool_slug: "SLACK_FETCH_CONVERSATION_HISTORY" },
+        { tool_slug: "GOOGLECALENDAR_EVENTS_LIST" },
+      ],
+    });
+    expect(decideLeash(input, ctx).blocked).toBe(false);
+  });
 });

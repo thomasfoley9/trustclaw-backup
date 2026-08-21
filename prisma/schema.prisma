@@ -176,6 +176,16 @@ model ComposioClawInstance {
   eaPhoneVerifiedAt      DateTime?
   eaPhoneVerifyCode      String?
   eaPhoneVerifyExpiresAt DateTime?
+  // Wrong-code guesses on the current verify code; cleared on a fresh code or
+  // success. Caps brute force of the 6-digit code (see confirmPhoneVerification).
+  eaPhoneVerifyAttempts  Int       @default(0)
+  // Slack user id of the OWNER (the identity the EA posts as). Inbound #ea
+  // messages are only acted on when authored by this id - without it any
+  // channel member could drive the agent. Learned from the EA's own
+  // ledger-verified posts (see ea/inbound.ts). A partial unique index on
+  // (eaPhoneNumber WHERE eaPhoneVerifiedAt IS NOT NULL) is added in the
+  // migration so one number can't be verified by two instances.
+  eaSlackOwnerUserId     String?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

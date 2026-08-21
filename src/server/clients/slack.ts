@@ -39,7 +39,7 @@ export async function postToEaChannel(
   try {
     const instance = await db.composioClawInstance.findUnique({
       where: { id: instanceId },
-      select: { eaSlackChannelId: true },
+      select: { eaSlackChannelId: true, eaSlackOwnerUserId: true },
     });
     const channel = instance?.eaSlackChannelId;
     if (!channel) return { ok: false, ts: null };
@@ -64,6 +64,21 @@ export async function postToEaChannel(
         channel,
         ts,
       });
+    }
+
+    // Every EA post is authored by the OWNER's Slack identity, so a successful
+    // send is a trustworthy source for the owner id that gates inbound. Capture
+    // it once, from this ledger-verified message, never from an inbound one.
+    if (!instance?.eaSlackOwnerUserId) {
+      const author = asString(asRecord(result.data.message)?.user);
+      if (author) {
+        await db.composioClawInstance
+          .update({
+            where: { id: instanceId },
+            data: { eaSlackOwnerUserId: author },
+          })
+          .catch(() => undefined);
+      }
     }
     return { ok: true, ts };
   } catch (err) {
@@ -131,6 +146,8 @@ export interface EaInboundMessage {
   ts: string;
   text: string;
   threadTs: string | null;
+  // Slack user id of the author. Inbound is gated on this matching the owner.
+  user: string | null;
 }
 
 // Read #ea messages newer than the stored cursor, oldest first. Thread
@@ -166,7 +183,14 @@ export async function fetchEaMessagesSince(
       if (!ts) return [];
       // Skip non-message events (joins, topic changes) which carry a subtype.
       if (asString(m.subtype)) return [];
-      return [{ ts, text, threadTs: asString(m.thread_ts) ?? null }];
+      return [
+        {
+          ts,
+          text,
+          threadTs: asString(m.thread_ts) ?? null,
+          user: asString(m.user) ?? null,
+        },
+      ];
     });
   // Slack returns newest first; process oldest first so the cursor advances
   // monotonically.

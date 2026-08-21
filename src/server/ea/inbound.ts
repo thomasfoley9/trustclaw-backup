@@ -37,6 +37,10 @@ interface InboundInstance {
   id: string;
   eaSlackChannelId: string;
   eaSlackCursorTs: string | null;
+  // Slack user id of the owner. Only messages authored by this id are acted
+  // on. Learned lazily from the EA's own (ledger-verified) posts, so an
+  // arbitrary channel member can't drive the agent as the owner.
+  eaSlackOwnerUserId: string | null;
 }
 
 export async function processEaInbound(
@@ -51,21 +55,49 @@ export async function processEaInbound(
 
   let agentRuns = 0;
   let processed = 0;
+  // Local shadow of the persisted owner id so a capture earlier in this tick
+  // gates later messages in the same tick.
+  let ownerUserId = instance.eaSlackOwnerUserId;
 
   for (const msg of messages) {
     if (processed >= EA_CONFIG.maxInboundMessagesPerTick) break;
 
     const fingerprint = `slack_in:${instance.eaSlackChannelId}:${msg.ts}`;
 
-    // Loop guard first: our own posts advance the cursor and nothing else.
-    const isOwn =
-      msg.text.startsWith(EA_PREFIX) ||
-      (await wasSeen(
-        instance.id,
-        slackOutFingerprint(instance.eaSlackChannelId, msg.ts),
-      ));
+    // Loop guard: our own posts advance the cursor and nothing else. Two
+    // signals, with DIFFERENT trust. The ts ledger (wasSeen) is authoritative -
+    // only messages we actually sent are in it. The visible EA_PREFIX is a
+    // human-readability marker and is trivially forgeable by any channel
+    // member, so it may suppress a message but must NEVER be trusted to
+    // establish identity.
+    const isLedgerOwn = await wasSeen(
+      instance.id,
+      slackOutFingerprint(instance.eaSlackChannelId, msg.ts),
+    );
+    const isOwn = isLedgerOwn || msg.text.startsWith(EA_PREFIX);
 
     if (isOwn) {
+      // Learn the owner id ONLY from a ledger-verified own post (authored by
+      // the owner's Slack identity). Capturing from the forgeable prefix would
+      // let a non-owner poison the gate and then drive the agent.
+      if (isLedgerOwn && !ownerUserId && msg.user) {
+        ownerUserId = msg.user;
+        await db.composioClawInstance
+          .update({
+            where: { id: instance.id },
+            data: { eaSlackOwnerUserId: msg.user },
+          })
+          .catch(() => undefined);
+      }
+      await advanceCursor(instance.id, msg.ts);
+      continue;
+    }
+
+    // AUTHORIZATION GATE: only the owner may drive the agent. Fail closed -
+    // if the owner id isn't known yet, or the author isn't the owner, skip.
+    // (Posts as the owner's own Slack identity read back with the owner id;
+    // any other member, admin, or Slack Connect guest is ignored.)
+    if (!ownerUserId || msg.user !== ownerUserId) {
       await advanceCursor(instance.id, msg.ts);
       continue;
     }
