@@ -110,9 +110,16 @@ export const env = createEnv({
     TELEGRAM_BOT_TOKEN: process.env.TELEGRAM_BOT_TOKEN,
     TELEGRAM_BOT_USERNAME: process.env.TELEGRAM_BOT_USERNAME,
     TELEGRAM_WEBHOOK_SECRET: process.env.TELEGRAM_WEBHOOK_SECRET,
-    TWILIO_ACCOUNT_SID: process.env.TWILIO_ACCOUNT_SID,
-    TWILIO_AUTH_TOKEN: process.env.TWILIO_AUTH_TOKEN,
-    TWILIO_FROM_NUMBER: process.env.TWILIO_FROM_NUMBER,
+    // Legacy fallbacks: these credentials were first added under short names
+    // (`sid` / `authtokentwilio` / `outnumber`). Vercel marks them Sensitive,
+    // which makes the values unreadable and the KEYS unrenameable, so the code
+    // accepts either name. Canonical names win; drop the fallbacks once the
+    // vars are re-added as TWILIO_*.
+    TWILIO_ACCOUNT_SID: process.env.TWILIO_ACCOUNT_SID ?? process.env.sid,
+    TWILIO_AUTH_TOKEN:
+      process.env.TWILIO_AUTH_TOKEN ?? process.env.authtokentwilio,
+    TWILIO_FROM_NUMBER:
+      process.env.TWILIO_FROM_NUMBER ?? process.env.outnumber,
     DATABASE_URL: process.env.DATABASE_URL,
     REDIS_URL: process.env.REDIS_URL,
     WORKER_QUEUE_ENABLED: process.env.WORKER_QUEUE_ENABLED,
