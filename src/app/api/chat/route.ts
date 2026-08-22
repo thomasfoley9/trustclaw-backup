@@ -356,7 +356,21 @@ export async function POST(request: Request) {
       // Drive the run to completion ourselves and read provider errors
       // directly off the source stream (they arrive as 'error' PARTS, which
       // consumeStream's onError does not surface).
+      // Abort-flag check, INLINE. The setInterval poll below is unreliable in
+      // Vercel's after() background phase (timers can be throttled once the
+      // response is sent), so also poll here where execution is guaranteed to
+      // reach on every streamed chunk. Throttled to ~1s so a fast stream does
+      // not hammer Redis. This is what makes Stop actually stop a background run.
+      let lastAbortCheck = 0;
       for await (const part of result.fullStream) {
+        if (runController.signal.aborted) break;
+        if (isRedisConfigured() && Date.now() - lastAbortCheck > 1000) {
+          lastAbortCheck = Date.now();
+          if (await isRunAbortRequested(conversationId)) {
+            runController.abort();
+            break;
+          }
+        }
         switch (part.type) {
           case "text-start":
             if (partialText) partialText += "\n\n";

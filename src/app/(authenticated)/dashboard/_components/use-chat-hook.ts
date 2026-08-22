@@ -127,8 +127,14 @@ export function useChatHook({ initialMessages, streamId, conversationId }: {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ conversationId }),
-    }).catch(() => undefined);
-  }, [conversationId]);
+    })
+      .then(() => {
+        // Reflect the stop in the UI without waiting for the next poll: the
+        // server clears activeRunStartedAt on abort, so re-read it now.
+        void utils.trustclaw.getConversations.invalidate();
+      })
+      .catch(() => undefined);
+  }, [conversationId, utils]);
 
   return {
     sendMessage,

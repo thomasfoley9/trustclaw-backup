@@ -7,7 +7,25 @@ import { TrustClawChatSkeleton } from "./trustclaw-chat.skeleton";
 import { ChatView } from "./chat-view";
 
 export function TrustClawChat() {
-  const conversationsQuery = trpc.trustclaw.getConversations.useQuery();
+  const conversationsQuery = trpc.trustclaw.getConversations.useQuery(
+    undefined,
+    {
+      // While a run is executing in the background, activeRunStartedAt is the
+      // only signal that it has ended (natural finish or Stop). Without polling
+      // the composer stays stuck showing "Answering in the background" and the
+      // Stop button never clears. Poll only while a run is flagged, so idle
+      // conversations pay nothing.
+      refetchInterval: (query) => {
+        const conv = query.state.data?.conversations?.find(
+          (c) => c.id === query.state.data?.activeConversationId,
+        );
+        const started = conv?.activeRunStartedAt;
+        const active =
+          !!started && Date.now() - new Date(started).getTime() < 5 * 60 * 1000;
+        return active ? 4000 : false;
+      },
+    },
+  );
   const activeConversationId = conversationsQuery.data?.activeConversationId;
 
   const historyQuery = trpc.trustclaw.getHistory.useInfiniteQuery(
