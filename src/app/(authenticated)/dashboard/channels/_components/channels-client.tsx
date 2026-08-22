@@ -22,6 +22,22 @@ import {
 } from "~/components/core/toast-notifications";
 import { ChannelsClientSkeleton } from "./channels-client.skeleton";
 
+// People type "(415) 555-0132", "415-555-0132" or "4155550132"; the API wants
+// strict E.164. Normalise here instead of rejecting with a regex error the
+// user can't act on. A 10-digit input is assumed +1 (NANP); anything already
+// carrying a country code keeps it.
+function toE164(raw: string): string {
+  const trimmed = raw.trim();
+  if (!trimmed) return trimmed;
+  const hadPlus = trimmed.startsWith("+");
+  const digits = trimmed.replace(/\D/g, "");
+  if (!digits) return trimmed;
+  if (hadPlus) return `+${digits}`;
+  if (digits.length === 10) return `+1${digits}`;
+  if (digits.length === 11 && digits.startsWith("1")) return `+${digits}`;
+  return `+${digits}`;
+}
+
 export function ChannelsClient() {
   const utils = trpc.useUtils();
   const { data, isLoading, error, refetch } =
@@ -179,7 +195,7 @@ export function ChannelsClient() {
                   disabled={startVerification.isPending || !phone}
                   onClick={() =>
                     void startVerification
-                      .mutateAsync({ phoneNumber: phone.trim() })
+                      .mutateAsync({ phoneNumber: toE164(phone) })
                       .catch(() => undefined)
                   }
                 >

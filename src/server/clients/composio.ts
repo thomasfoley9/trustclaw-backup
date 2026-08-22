@@ -9,6 +9,12 @@ export function createComposioClient(apiKey: string) {
   return new Composio({
     apiKey,
     provider: new VercelProvider(),
+    // Composio now rejects direct tools.execute() calls that do not name a
+    // toolkit version ("Toolkit version not specified"), which broke every
+    // code-path execution (EA Slack posts, channel setup, sending drafts).
+    // "latest" pins all toolkits to their current version; swap to explicit
+    // per-toolkit pins if a breaking toolkit change ever needs freezing.
+    toolkitVersions: "latest",
   });
 }
 
