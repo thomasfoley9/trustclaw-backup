@@ -17,9 +17,14 @@ export async function executeComposio(
   args: Record<string, unknown>,
 ): Promise<ComposioExecResult> {
   const { client, composioUserId } = await getComposioForInstance(instanceId);
+  // Composio now rejects tools.execute() that doesn't name a toolkit version
+  // ("Toolkit version not specified"). The SDK-level toolkitVersions config is
+  // NOT honored on this direct execute path (verified against the live error),
+  // so pin per call. "latest" tracks the current published version.
   const response = await client.tools.execute(slug, {
     userId: composioUserId,
     arguments: args,
+    version: "latest",
   });
   return {
     successful: response.successful === true,

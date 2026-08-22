@@ -97,6 +97,12 @@ interface PrepareAgentRunParams {
   // delegate from the voice (or drop it to the default character mid-call).
   pinnedPersonaPrompt?: string | null;
   pinnedPersonaName?: string | null;
+  // Skips the Presence Mode send-leash for runs the user explicitly authorised
+  // in advance - their own scheduled jobs. Presence Mode governs what the EA
+  // does on its OWN initiative; it must not silently stop a cron job the user
+  // set up from sending. Defaults false so any new caller stays guarded, and
+  // the autonomous drafter (which also runs as source "cron") keeps its leash.
+  bypassLeash?: boolean;
 }
 
 interface PrepareAgentRunResult {
@@ -133,6 +139,7 @@ export async function prepareAgentRun(
     dedicatedConversationTitle,
     attachments = [],
     regenerate = false,
+    bypassLeash = false,
     pinnedPersonalityId = null,
     pinnedPersonaPrompt = null,
     pinnedPersonaName = null,
@@ -551,7 +558,7 @@ export async function prepareAgentRun(
     }),
     {
       instanceId,
-      enabled: instance.presenceEnabled,
+      enabled: instance.presenceEnabled && !bypassLeash,
       eaSlackChannelId: instance.eaSlackChannelId,
     },
   );

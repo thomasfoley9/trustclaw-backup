@@ -95,6 +95,11 @@ export async function runSingleCronJob({
       instanceId: job.instanceId,
       userMessage: `<scheduled-task>\n${job.prompt}\n</scheduled-task>`,
       source: "cron",
+      // A scheduled job IS the user's standing authorisation to act, so
+      // Presence Mode must not intercept its sends into approval tasks. The
+      // EA's own autonomous drafting (ea/draft-runner) deliberately does NOT
+      // set this and stays leashed.
+      bypassLeash: true,
       dedicatedConversationTitle: "Scheduled tasks",
     });
     const { agent, messages, closeMcp } = prepareResult.result;
