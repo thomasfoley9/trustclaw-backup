@@ -1,7 +1,11 @@
 import { TRPCError } from "@trpc/server";
 import { protectedProcedure } from "~/server/api/trpc";
 import { db } from "~/server/clients/db";
-import { ensureEaChannel, postToEaChannel } from "~/server/clients/slack";
+import {
+  ensureEaChannel,
+  postToEaChannel,
+  repointEaChannel,
+} from "~/server/clients/slack";
 import { seedEaSystemJobs, disableEaSystemJobs } from "~/server/ea/seed";
 import { pauselessReenable } from "~/server/ea/sweep";
 import { updateChannelsInput } from "./updateChannels.schema";
@@ -22,6 +26,7 @@ export const updateChannels = protectedProcedure
         id: true,
         presenceEnabled: true,
         eaSlackChannelId: true,
+        eaSlackCursorTs: true,
         user: { select: { timezone: true } },
       },
     });
@@ -32,9 +37,24 @@ export const updateChannels = protectedProcedure
       });
     }
 
-    if (input.eaSlackEnabled === true && !instance.eaSlackChannelId) {
+    // Gate on the CURSOR, not just the channel id: ensureEaChannel persists the
+    // id before the welcome post runs, so a partial failure (channel created,
+    // post failed) must re-run this block on retry or the cursor/owner-id
+    // seeding is silently skipped forever. ensureEaChannel is idempotent.
+    // An explicit eaSlackChannel always re-runs the block (repoint), even when
+    // a channel is already configured.
+    const wantsRepoint = !!input.eaSlackChannel;
+    if (
+      wantsRepoint ||
+      (input.eaSlackEnabled === true &&
+        (!instance.eaSlackChannelId || !instance.eaSlackCursorTs))
+    ) {
       try {
-        await ensureEaChannel(instance.id);
+        if (wantsRepoint) {
+          await repointEaChannel(instance.id, input.eaSlackChannel!);
+        } else {
+          await ensureEaChannel(instance.id);
+        }
         // Fail closed: only enable Slack presence if we can actually post. The
         // welcome post's own ts becomes the inbound cursor, so no prior
         // conversation in an adopted #ea channel is ever replayed as commands,

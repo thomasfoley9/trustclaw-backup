@@ -327,48 +327,52 @@ export async function POST(request: Request) {
     throw error;
   }
 
-  // Drive the run to completion independently of the client connection, then
-  // settle the pre-created assistant row: onFinish fills it on success; on
-  // failure it becomes a visible error bubble (silent no-reply failures are
-  // worse than ugly ones); on user-initiated stop the partial streamed so far
-  // is persisted (the UI keeps showing it, so a reload must not lose it).
-  after(async () => {
-    let runError: unknown = null;
-    // Everything streamed so far, in persisted-message shape. On abort this is
-    // the ground truth for the partial reply: onFinish never fires, and
-    // onAbort's steps miss the in-flight step's text.
-    const partialToolParts: Array<Record<string, unknown>> = [];
-    const toolPartByCallId = new Map<string, Record<string, unknown>>();
-    let partialText = "";
-    // Stop must reach runs on other serverless instances: /api/chat/stop sets
-    // a Redis flag (it can't touch this process's AbortController), and this
-    // poller turns the flag into a local abort.
-    const abortPoll = isRedisConfigured()
-      ? setInterval(() => {
-          isRunAbortRequested(conversationId)
-            .then((requested) => {
-              if (requested) runController.abort();
-            })
-            .catch(() => undefined);
-        }, 2000)
-      : null;
+  // The agent's UI stream (text + tools) for the client and the resumable
+  // store, with the error parser attached (live viewers get friendly error
+  // text; the capture feeds the persisted error bubble). Created BEFORE the
+  // live consumer below so both stream branches exist before consumption drives
+  // the source - a late-joining branch could otherwise miss early chunks.
+  const streamContext = getStreamContext();
+  const uiStream = result.toUIMessageStream({
+    onError: (error) => {
+      capturedError = error;
+      return parseAgentError(error, { model: selectedModel });
+    },
+  });
+
+  // Shared capture state, populated by the LIVE consumer below and read by the
+  // after() settle block. On a stopped run this is the only record of the
+  // partial reply: onFinish never fires on abort, and onAbort's steps miss the
+  // in-flight step's text - only a live reader of the delta stream has it.
+  const partialToolParts: Array<Record<string, unknown>> = [];
+  const toolPartByCallId = new Map<string, Record<string, unknown>>();
+  let partialText = "";
+  let runError: unknown = null;
+
+  // LIVE run consumer. MUST run concurrently with generation (started before
+  // the response returns, kept alive by the open response stream), NOT deferred
+  // in after() - a deferred reader only sees an already-buffered stream, so it
+  // both captures the partial too late and can't catch a mid-run Stop.
+  // Consuming fullStream as its own branch here:
+  //   - captures partial text/tool parts as they stream (for a stopped run)
+  //   - reads provider 'error' PARTS (consumeStream's onError misses these)
+  //   - polls the Redis abort flag inline (~1s) and turns it into a real
+  //     runController.abort(), which terminates streamText for EVERY consumer.
+  //     THIS is what actually makes Stop stop a background run.
+  const runConsumer = (async () => {
+    let lastAbortCheck = 0;
     try {
-      // Drive the run to completion ourselves and read provider errors
-      // directly off the source stream (they arrive as 'error' PARTS, which
-      // consumeStream's onError does not surface).
-      // Abort-flag check, INLINE. The setInterval poll below is unreliable in
-      // Vercel's after() background phase (timers can be throttled once the
-      // response is sent), so also poll here where execution is guaranteed to
-      // reach on every streamed chunk. Throttled to ~1s so a fast stream does
-      // not hammer Redis. This is what makes Stop actually stop a background run.
-      let lastAbortCheck = 0;
       for await (const part of result.fullStream) {
         if (runController.signal.aborted) break;
         if (isRedisConfigured() && Date.now() - lastAbortCheck > 1000) {
           lastAbortCheck = Date.now();
-          if (await isRunAbortRequested(conversationId)) {
-            runController.abort();
-            break;
+          try {
+            if (await isRunAbortRequested(conversationId)) {
+              runController.abort();
+              break;
+            }
+          } catch {
+            // Fail-open: a Redis hiccup must not kill a live run.
           }
         }
         switch (part.type) {
@@ -408,21 +412,27 @@ export async function POST(request: Request) {
       }
     } catch (error) {
       runError = error;
-    } finally {
-      if (abortPoll) clearInterval(abortPoll);
-      runError = runError ?? capturedError;
-      const emptyRowFilter = {
-        conversationId,
-        role: "assistant" as const,
-        source: "web" as const,
-        content: { equals: [] },
-      };
-      // Branch on ROW STATE, not error plumbing: onFinish fills the row on
-      // success, so a still-empty row means the run either produced nothing or
-      // was stopped mid-stream.
+    }
+  })();
+
+  // Settle the pre-created assistant row once the run ends. after() keeps this
+  // alive past the response close so the DB write always lands; the capture
+  // already happened live above. onFinish fills the row on natural success, so
+  // a still-empty row here means the run was stopped mid-stream or produced
+  // nothing.
+  after(async () => {
+    await runConsumer.catch(() => undefined);
+    runError = runError ?? capturedError;
+    const emptyRowFilter = {
+      conversationId,
+      role: "assistant" as const,
+      source: "web" as const,
+      content: { equals: [] },
+    };
+    try {
       if (runController.signal.aborted) {
         // Persist the partial the user watched stream in. The empty-row filter
-        // makes this a no-op if onAbort already settled the row.
+        // makes this a no-op if onFinish already settled the row.
         const text = stripToolResultEchoes(partialText).trim();
         const stoppedParts: Array<Record<string, unknown>> = [
           ...partialToolParts,
@@ -452,6 +462,7 @@ export async function POST(request: Request) {
           })
           .catch(() => undefined);
       }
+    } finally {
       // Abort and zero-step failures never reach onFinish's mcp.close -
       // idempotent, so double-close on the happy path is fine.
       await closeMcp().catch(() => undefined);
@@ -461,17 +472,6 @@ export async function POST(request: Request) {
       );
       await markRunEnded(conversationId, claimedAt);
     }
-  });
-
-  const streamContext = getStreamContext();
-  // The agent's UI stream, text and tools alike, with the error parser
-  // attached (live viewers get the friendly error text, and the capture feeds
-  // the persisted error bubble).
-  const uiStream = result.toUIMessageStream({
-    onError: (error) => {
-      capturedError = error;
-      return parseAgentError(error, { model: selectedModel });
-    },
   });
   return createUIMessageStreamResponse({
     stream: uiStream,

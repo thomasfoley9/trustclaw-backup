@@ -45,9 +45,12 @@ export async function postToEaChannel(
     if (!channel) return { ok: false, ts: null };
 
     const body = options.skipPrefix ? text : `${EA_PREFIX}${text}`;
+    // Current SLACK_SEND_MESSAGE schema rejects `text` outright ("Use
+    // markdown_text for normal content, or fallback_text with blocks") -
+    // verified against the live error. markdown_text is the plain-content field.
     const result = await executeComposio(instanceId, "SLACK_SEND_MESSAGE", {
       channel,
-      text: body,
+      markdown_text: body,
       ...(options.threadTs ? { thread_ts: options.threadTs } : {}),
     });
     if (!result.successful) {
@@ -135,6 +138,42 @@ export async function ensureEaChannel(instanceId: string): Promise<string> {
     }
   }
 
+  await db.composioClawInstance.update({
+    where: { id: instanceId },
+    data: { eaSlackChannelId: channelId },
+  });
+  return channelId;
+}
+
+// Point the EA at a specific EXISTING channel by exact name. Find-only by
+// design: an explicit name must already exist with the user as a member -
+// a typo should error, never quietly spawn a new channel. Overwrites the
+// stored channel id; the caller re-posts the welcome and reseeds the cursor
+// so nothing already said in the adopted channel replays as commands.
+export async function repointEaChannel(
+  instanceId: string,
+  name: string,
+): Promise<string> {
+  const found = await executeComposio(instanceId, "SLACK_FIND_CHANNELS", {
+    query: name,
+    exact_match: true,
+    types: "public_channel,private_channel",
+    member_only: true,
+  });
+  if (!found.successful) {
+    throw new Error(
+      `Couldn't search your Slack channels: ${found.error ?? "unknown Slack error"}`,
+    );
+  }
+  const exact = asArray(found.data.channels)
+    .map(asRecord)
+    .find((c) => c && asString(c.name) === name);
+  const channelId = exact ? asString(exact.id) : undefined;
+  if (!channelId) {
+    throw new Error(
+      `No channel named "${name}" that you're a member of. Check the name in Slack and retry.`,
+    );
+  }
   await db.composioClawInstance.update({
     where: { id: instanceId },
     data: { eaSlackChannelId: channelId },

@@ -17,14 +17,16 @@ export async function executeComposio(
   args: Record<string, unknown>,
 ): Promise<ComposioExecResult> {
   const { client, composioUserId } = await getComposioForInstance(instanceId);
-  // Composio now rejects tools.execute() that doesn't name a toolkit version
-  // ("Toolkit version not specified"). The SDK-level toolkitVersions config is
-  // NOT honored on this direct execute path (verified against the live error),
-  // so pin per call. "latest" tracks the current published version.
+  // The SDK (0.6.3) throws "Toolkit version not specified" CLIENT-SIDE whenever
+  // the resolved version is "latest" - passing version:"latest" IS the trigger,
+  // not the fix (index.mjs:2181: `if (toolkitVersion === "latest" &&
+  // !body.dangerouslySkipVersionCheck) throw ...`). The skip flag is the SDK's
+  // own supported escape hatch: the version still resolves and executes; we
+  // just opt out of the pin-a-concrete-version guardrail.
   const response = await client.tools.execute(slug, {
     userId: composioUserId,
     arguments: args,
-    version: "latest",
+    dangerouslySkipVersionCheck: true,
   });
   return {
     successful: response.successful === true,
