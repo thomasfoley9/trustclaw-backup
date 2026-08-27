@@ -1,7 +1,7 @@
 import { TRPCError } from "@trpc/server";
 import { protectedProcedure } from "~/server/api/trpc";
 import { db } from "~/server/clients/db";
-import { encryptSecret } from "~/server/clients/crypto";
+import { encryptSecret, decryptSecret } from "~/server/clients/crypto";
 import { setComposioApiKeyInput } from "./setComposioApiKey.schema";
 
 const COMPOSIO_BASE_URL = "https://backend.composio.dev";
@@ -41,7 +41,7 @@ export const setComposioApiKey = protectedProcedure
 
     const instance = await db.composioClawInstance.findUnique({
       where: { userId },
-      select: { id: true },
+      select: { id: true, composioApiKey: true, eaSlackEnabled: true },
     });
     if (!instance) {
       throw new TRPCError({
@@ -52,10 +52,41 @@ export const setComposioApiKey = protectedProcedure
 
     await validateAgainstComposio(input.apiKey);
 
+    // The EA's Slack binding (channel id, owner-id gate, inbound cursor) was
+    // captured through whatever Composio account backed the OLD key. A
+    // different key can mean a different Slack connection, workspace, or user,
+    // and a stale binding under a new connection either dead-letters posts or,
+    // worse, gates inbound on the wrong Slack user id. Fail closed: reset the
+    // binding so the next Slack enable re-seeds channel, owner, and cursor
+    // through the new connection (updateChannels re-runs ensureEaChannel when
+    // the trio is empty). Re-entering the SAME key (no account change) keeps
+    // the binding untouched. An undecryptable old key counts as changed.
+    let keyChanged = true;
+    if (instance.composioApiKey) {
+      try {
+        keyChanged = decryptSecret(instance.composioApiKey) !== input.apiKey;
+      } catch {
+        keyChanged = true;
+      }
+    }
+
     await db.composioClawInstance.update({
       where: { userId },
-      data: { composioApiKey: encryptSecret(input.apiKey) },
+      data: {
+        composioApiKey: encryptSecret(input.apiKey),
+        ...(keyChanged && {
+          eaSlackEnabled: false,
+          eaSlackChannelId: null,
+          eaSlackCursorTs: null,
+          eaSlackOwnerUserId: null,
+        }),
+      },
     });
 
-    return { ok: true as const };
+    return {
+      ok: true as const,
+      // True when Slack presence was actually on and got disabled by the
+      // reset - the UI uses this to tell the user to re-enable on Channels.
+      eaSlackReset: keyChanged && instance.eaSlackEnabled,
+    };
   });

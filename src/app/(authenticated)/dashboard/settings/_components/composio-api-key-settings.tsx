@@ -30,19 +30,32 @@ export function ComposioApiKeySettings() {
   const [editing, setEditing] = useState(false);
 
   const setKey = trpc.trustclaw.setComposioApiKey.useMutation({
-    onSuccess: () => {
-      showSuccessToast("Composio API key saved");
+    onSuccess: (data) => {
+      // A key change re-points every integration at a different Composio
+      // account, so the EA's Slack binding was reset server-side. Say so -
+      // silently-disabled presence is exactly the failure mode we avoid.
+      showSuccessToast(
+        data.eaSlackReset
+          ? "Composio API key saved. Slack presence was reset - re-enable it on Channels to bind #ea through the new account."
+          : "Composio API key saved",
+      );
       setApiKey("");
       setEditing(false);
       void utils.trustclaw.getComposioKeyStatus.invalidate();
+      void utils.trustclaw.getChannels.invalidate();
     },
     onError: trpcToastOnError,
   });
 
   const clearKey = trpc.trustclaw.clearComposioApiKey.useMutation({
-    onSuccess: () => {
-      showSuccessToast("Composio API key removed");
+    onSuccess: (data) => {
+      showSuccessToast(
+        data.eaSlackReset
+          ? "Composio API key removed. Slack presence was reset along with it."
+          : "Composio API key removed",
+      );
       void utils.trustclaw.getComposioKeyStatus.invalidate();
+      void utils.trustclaw.getChannels.invalidate();
     },
     onError: trpcToastOnError,
   });
